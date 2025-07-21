@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String @id @default(cuid())
+  username             String @unique
+  passwordHash         String
+  role                 String // 'player' | 'admin'
+  securityQuestion     String
+  securityAnswerHash   String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relations
+  tribes               Tribe[]
+  
+  @@map("users")
+}
+
+model GameState {
+  id                   String @id @default(cuid())
+  turn                 Int    @default(1)
+  mapSeed              BigInt?
+  mapSettings          Json?
+  startingLocations    Json   // Array of hex coordinate strings
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relations
+  hexes                Hex[]
+  tribes               Tribe[]
+  chiefRequests        ChiefRequest[]
+  assetRequests        AssetRequest[]
+  journeys             Journey[]
+  diplomaticProposals  DiplomaticProposal[]
+  turnHistory          TurnHistory[]
+  
+  @@map("game_states")
+}
+
+model Hex {
+  id           String @id @default(cuid())
+  q            Int
+  r            Int
+  terrain      String // TerrainType enum as string
+  poiType      String? // POIType enum as string
+  poiId        String?
+  poiDifficulty Int?
+  poiRarity    String? // POIRarity enum as string
+  gameStateId  String
+  
+  // Relations
+  gameState    GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  garrisons    Garrison[]
+  
+  @@unique([gameStateId, q, r])
+  @@map("hexes")
+}
+
+model Tribe {
+  id                String @id @default(cuid())
+  playerId          String?
+  isAI              Boolean @default(false)
+  aiType            String? // AIType enum as string
+  playerName        String
+  tribeName         String
+  icon              String
+  color             String
+  stats             Json    // TribeStats object
+  location          String  // Hex coordinate string
+  globalResources   Json    // GlobalResources object
+  turnSubmitted     Boolean @default(false)
+  actions           Json    // Array of GameAction objects
+  lastTurnResults   Json    // Array of GameAction objects
+  exploredHexes     Json    // Array of hex coordinate strings
+  rationLevel       String  // RationLevel enum as string
+  completedTechs    Json    // Array of tech IDs
+  assets            Json    // Array of asset names
+  currentResearch   Json?   // ResearchProject object
+  journeyResponses  Json    // Array of journey response objects
+  gameStateId       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  user              User? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  gameState         GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  garrisons         Garrison[]
+  chiefRequests     ChiefRequest[]
+  assetRequests     AssetRequest[]
+  journeys          Journey[]
+  diplomaticProposalsFrom DiplomaticProposal[] @relation("ProposalFrom")
+  diplomaticProposalsTo   DiplomaticProposal[] @relation("ProposalTo")
+  diplomacyFrom     DiplomaticRelation[] @relation("DiplomacyFrom")
+  diplomacyTo       DiplomaticRelation[] @relation("DiplomacyTo")
+  
+  @@map("tribes")
+}
+
+model Garrison {
+  id          String @id @default(cuid())
+  hexQ        Int
+  hexR        Int
+  troops      Int
+  weapons     Int
+  chiefs      Json   // Array of Chief objects
+  tribeId     String
+  hexId       String
+  
+  // Relations
+  tribe       Tribe @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  hex         Hex @relation(fields: [hexId], references: [id], onDelete: Cascade)
+  
+  @@unique([tribeId, hexId])
+  @@map("garrisons")
+}
+
+model ChiefRequest {
+  id                   String @id @default(cuid())
+  tribeId              String
+  chiefName            String
+  radixAddressSnippet  String
+  status               String // ChiefRequestStatus enum as string
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  gameStateId          String
+  
+  // Relations
+  tribe                Tribe @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  gameState            GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  
+  @@map("chief_requests")
+}
+
+model AssetRequest {
+  id                   String @id @default(cuid())
+  tribeId              String
+  assetName            String
+  radixAddressSnippet  String
+  status               String // AssetRequestStatus enum as string
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  gameStateId          String
+  
+  // Relations
+  tribe                Tribe @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  gameState            GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  
+  @@map("asset_requests")
+}
+
+model Journey {
+  id                String @id @default(cuid())
+  ownerTribeId      String
+  type              String // JourneyType enum as string
+  origin            String // Hex coordinate string
+  destination       String // Hex coordinate string
+  path              Json   // Array of hex coordinate strings
+  currentLocation   String // Hex coordinate string
+  force             Json   // Force object with troops, weapons, chiefs
+  payload           Json   // Payload object with resources
+  arrivalTurn       Int
+  responseDeadline  Int?
+  scavengeType      String? // 'Food' | 'Scrap' | 'Weapons'
+  tradeOffer        Json?   // Trade offer object
+  status            String  // 'en_route' | 'awaiting_response' | 'returning'
+  gameStateId       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  tribe             Tribe @relation(fields: [ownerTribeId], references: [id], onDelete: Cascade)
+  gameState         GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  
+  @@map("journeys")
+}
+
+model DiplomaticProposal {
+  id              String @id @default(cuid())
+  fromTribeId     String
+  toTribeId       String
+  statusChangeTo  String // DiplomaticStatus enum as string
+  expiresOnTurn   Int
+  fromTribeName   String
+  reparations     Json?  // Reparations object
+  gameStateId     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  fromTribe       Tribe @relation("ProposalFrom", fields: [fromTribeId], references: [id], onDelete: Cascade)
+  toTribe         Tribe @relation("ProposalTo", fields: [toTribeId], references: [id], onDelete: Cascade)
+  gameState       GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  
+  @@map("diplomatic_proposals")
+}
+
+model DiplomaticRelation {
+  id              String @id @default(cuid())
+  fromTribeId     String
+  toTribeId       String
+  status          String // DiplomaticStatus enum as string
+  truceUntilTurn  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  fromTribe       Tribe @relation("DiplomacyFrom", fields: [fromTribeId], references: [id], onDelete: Cascade)
+  toTribe         Tribe @relation("DiplomacyTo", fields: [toTribeId], references: [id], onDelete: Cascade)
+  
+  @@unique([fromTribeId, toTribeId])
+  @@map("diplomatic_relations")
+}
+
+model TurnHistory {
+  id              String @id @default(cuid())
+  turn            Int
+  tribeRecords    Json   // Array of TribeHistoryRecord objects
+  gameStateId     String
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  gameState       GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  
+  @@unique([gameStateId, turn])
+  @@map("turn_history")
+}

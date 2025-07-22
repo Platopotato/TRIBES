@@ -4,11 +4,13 @@ services:
     name: radix-tribes-backend
     env: node
     plan: free
+    rootDir: .
     buildCommand: |
-      cd shared && npm install && npm run build &&
-      cd ../backend && npm install && npm run build
-    startCommand: |
-      cd backend && npm start
+      npm install --prefix shared &&
+      npm run build --prefix shared &&
+      npm install --prefix backend &&
+      npm run build --prefix backend
+    startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -26,10 +28,13 @@ services:
   - type: web
     name: radix-tribes-frontend
     env: static
+    rootDir: .
     buildCommand: |
-      cd shared && npm install && npm run build &&
-      cd ../frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
+      npm install --prefix shared &&
+      npm run build --prefix shared &&
+      npm install --prefix frontend &&
+      npm run build --prefix frontend
+    staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://radix-tribes-backend.onrender.com

@@ -1,4 +1,4 @@
-import { TerrainType, POIType } from '../types';
+import { TerrainType, POIType } from '../types.js';
 
 export const TERRAIN_DESCRIPTIONS: Record<TerrainType, { description: string, modifiers: string }> = {
     [TerrainType.Plains]: {

@@ -71,8 +71,11 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
   );
 
   return (
-    <Card title="Technology" actions={cardActions}>
+    <Card title="Technology">
       <div className="space-y-3">
+        <div className="flex justify-end mb-3">
+          {cardActions}
+        </div>
         {renderContent()}
         {completedTechs.length > 0 && (
           <div className="pt-3 border-t border-slate-700">

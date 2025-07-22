@@ -25,13 +25,14 @@ services:
         value: https://radix-tribes-frontend.onrender.com
     healthCheckPath: /health
 
-  # Frontend Static Site
-  - type: static_site
+  # Frontend Web Service (serving static files)
+  - type: web
     name: radix-tribes-frontend
+    env: static
     buildCommand: |
       cd shared && npm install && npm run build &&
       cd ../frontend && npm install && npm run build
-    publishPath: ./frontend/dist
+    staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://radix-tribes-backend.onrender.com

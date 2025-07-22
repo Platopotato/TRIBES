@@ -64,7 +64,16 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         
         return (
             <g className="pointer-events-none transform-gpu transition-transform group-hover:-translate-y-1 duration-200">
-                <text x="0" y={-size * 0.1} textAnchor="middle" className="select-none" fontSize={size * 0.8} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
+                <circle
+                    cx="0"
+                    cy={-size * 0.1}
+                    r={size * 0.5}
+                    fill={tribe.color}
+                    stroke="rgba(0,0,0,0.3)"
+                    strokeWidth="1"
+                    style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
+                />
+                <text x="0" y={-size * 0.1} textAnchor="middle" className="select-none" fontSize={size * 0.6} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                     {icon}
                 </text>
                 {troops > 0 && (
@@ -96,7 +105,16 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                 const xOffset = startX + index * (iconSize / 1.8);
                 return (
                     <g key={tribe.id} transform={`translate(${xOffset}, 0)`}>
-                         <text x="0" y={iconSize * 0.1} textAnchor="middle" className="select-none" fontSize={iconSize * 0.8} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
+                        <circle
+                            cx="0"
+                            cy={iconSize * 0.1}
+                            r={iconSize * 0.4}
+                            fill={tribe.color}
+                            stroke="rgba(0,0,0,0.3)"
+                            strokeWidth="0.5"
+                            style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }}
+                        />
+                        <text x="0" y={iconSize * 0.1} textAnchor="middle" className="select-none" fontSize={iconSize * 0.5} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                             {icon}
                         </text>
                     </g>

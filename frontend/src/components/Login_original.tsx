@@ -28,9 +28,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-900">
       <div className="mb-8">
-        <img 
-          src="https://platopotato.com/game/radix-tribes/logo.png" 
-          alt="Radix Tribes Logo" 
+        <img
+          src="https://www.platopotato.com/NFT/Tribes/assets/Tribeslogo.png"
+          alt="Radix Tribes Logo"
           className="h-24 w-auto mx-auto"
         />
       </div>

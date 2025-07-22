@@ -12,7 +12,7 @@ const RegistrationSuccess: React.FC<RegistrationSuccessProps> = ({ username, onC
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/radix-logo.png" alt="Radix Tribes Logo" className="mx-auto h-16 w-auto mb-4" />
+          <img src="https://www.platopotato.com/NFT/Tribes/assets/Tribeslogo.png" alt="Radix Tribes Logo" className="mx-auto h-16 w-auto mb-4" />
         </div>
         
         <Card>

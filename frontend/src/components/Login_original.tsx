@@ -27,11 +27,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-900">
-      <div className="mb-8">
+      <div className="mb-8 max-w-sm w-full">
         <img
           src="https://www.platopotato.com/NFT/Tribes/assets/Tribeslogo.png"
           alt="Radix Tribes Logo"
-          className="h-32 w-auto mx-auto rounded-lg border-2 border-amber-500 p-2 bg-slate-800/50"
+          className="w-full h-32 object-contain rounded-lg border-2 border-amber-500 p-4 bg-slate-800/50"
         />
       </div>
       <Card title="Login" className="max-w-sm w-full">

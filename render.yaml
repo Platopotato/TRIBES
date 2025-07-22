@@ -37,4 +37,5 @@ services:
 databases:
   - name: radix-tribes-redis
     databaseName: radix_tribes_redis
-    plan: starter
+    user: redis
+    plan: free

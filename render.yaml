@@ -6,9 +6,9 @@ services:
     plan: free
     rootDir: .
     buildCommand: |
-      npm install --prefix shared &&
+      npm install --prefix shared --include=dev &&
       npm run build --prefix shared &&
-      npm install --prefix backend &&
+      npm install --prefix backend --include=dev &&
       npm run build --prefix backend
     startCommand: npm start --prefix backend
     envVars:
@@ -30,9 +30,9 @@ services:
     env: static
     rootDir: .
     buildCommand: |
-      npm install --prefix shared &&
+      npm install --prefix shared --include=dev &&
       npm run build --prefix shared &&
-      npm install --prefix frontend &&
+      npm install --prefix frontend --include=dev &&
       npm run build --prefix frontend
     staticPublishPath: frontend/dist
     envVars:

@@ -6,20 +6,17 @@ services:
     plan: free
     buildCommand: |
       cd shared && npm install && npm run build &&
-      cd ../backend && npm install && npm run build &&
-      npx prisma generate
+      cd ../backend && npm install && npm run build
     startCommand: |
-      cd backend &&
-      npx prisma migrate deploy &&
-      npm start
+      cd backend && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: DATABASE_URL
+      - key: REDIS_URL
         fromDatabase:
-          name: radix-tribes-postgres
+          name: radix-tribes-redis
           property: connectionString
       - key: FRONTEND_URL
         value: https://radix-tribes-frontend.onrender.com
@@ -38,7 +35,6 @@ services:
         value: https://radix-tribes-backend.onrender.com
 
 databases:
-  - name: radix-tribes-postgres
-    databaseName: radix_tribes
-    user: postgres
-    plan: free
+  - name: radix-tribes-redis
+    databaseName: radix_tribes_redis
+    plan: starter

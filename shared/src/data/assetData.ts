@@ -2,9 +2,9 @@ import { TechnologyEffect, TechnologyEffectType, TerrainType, GameAsset } from '
 
 export const ALL_ASSETS: GameAsset[] = [
     {
-        name: "Dune Buggy",
+        name: "Dune_Buggy",
         description: "A fast, lightweight vehicle ideal for crossing open terrain quickly, though it offers little protection.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/buggy.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/dune_buggy.gif",
         effects: [
             { type: TechnologyEffectType.MovementSpeedBonus, value: 0.20 },
             { type: TechnologyEffectType.CombatBonusDefense, value: -0.10, terrain: TerrainType.Plains },
@@ -12,41 +12,41 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Ghillie Mantle",
+        name: "Ghillie_Mantle",
         description: "A camouflage cloak made of synthetic fibers and local flora, offering superb concealment in forests.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/ghillie.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/ghillie_mantle.gif",
         effects: [
             { type: TechnologyEffectType.CombatBonusDefense, value: 0.25, terrain: TerrainType.Forest }
         ]
     },
     {
-        name: "Advanced Sonar",
+        name: "Advanced_Sonar",
         description: "A recovered piece of old-world tech that can detect dense scrap deposits deep underground.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/sonar.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/advanced_sonar.gif",
         effects: [
             { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.20, resource: 'Scrap' }
         ]
     },
     {
-        name: "Hydro-Purifier",
+        name: "Hydro_Purifier",
         description: "A portable device that makes questionable water sources safe, drastically improving the success of finding food.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/purifier.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/hydro_purifier.gif",
         effects: [
             { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.20, resource: 'Food' }
         ]
     },
     {
-        name: "Bunker Buster",
+        name: "Bunker_Buster",
         description: "A heavy-duty explosive charge designed to breach fortified positions in urban environments.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/buster.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/bunker_buster.gif",
         effects: [
             { type: TechnologyEffectType.CombatBonusAttack, value: 0.25, terrain: TerrainType.Ruins }
         ]
     },
     {
-        name: "Junk-Forged Armor",
+        name: "Junk_Forged_Armor",
         description: "Layers of scrap metal and hardened leather, providing a baseline improvement to troop survivability.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/junk_armor.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/junk_forged_armor.gif",
         effects: [
             { type: TechnologyEffectType.CombatBonusDefense, value: 0.05 }
         ]
@@ -60,7 +60,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Seed Vault",
+        name: "Seed_Vault",
         description: "A collection of pre-war seeds, genetically engineered for resilience. Provides a small, steady supply of food.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/seed_vault.gif",
         effects: [
@@ -68,15 +68,15 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Scrap Compressor",
+        name: "Scrap_Compressor",
         description: "An automated hydraulic press that compacts loose junk into usable scrap plates.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/compressor.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/scrap_compressor.gif",
         effects: [
             { type: TechnologyEffectType.PassiveScrapGeneration, value: 5 }
         ]
     },
     {
-        name: "Mountaineering Gear",
+        name: "Mountaineering_Gear",
         description: "Picks, ropes, and climbing harnesses that allow for aggressive maneuvers in treacherous mountain terrain.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/mountaineering_gear.gif",
         effects: [
@@ -84,7 +84,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Swamp Skiff",
+        name: "Swamp_Skiff",
         description: "A flat-bottomed boat perfect for navigating murky bogs, allowing for better defensive positioning.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/swamp_skiff.gif",
         effects: [
@@ -92,7 +92,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Desert Cloaks",
+        name: "Desert_Cloaks",
         description: "Flowing robes that provide protection from the sun and sand, helping troops blend into the desert landscape.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/desert_cloaks.gif",
         effects: [
@@ -100,7 +100,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Barbed Wire",
+        name: "Barbed_Wire",
         description: "Spools of rusted, sharp wire, perfect for creating defensive perimeters in open plains.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/barbed_wire.gif",
         effects: [
@@ -108,7 +108,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Ambush Netting",
+        name: "Ambush_Netting",
         description: "Lightweight nets that can be quickly deployed from treetops, entangling enemies in forest ambushes.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/ambush_netting.gif",
         effects: [
@@ -116,7 +116,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Scrap Cannon",
+        name: "Scrap_Cannon",
         description: "A crude but effective projectile launcher, deadly when used in the open badlands.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/scrap_cannon.gif",
         effects: [
@@ -124,7 +124,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Radiation Suit",
+        name: "Radiation_Suit",
         description: "A lead-lined suit that offers some protection against hazardous environments.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/radiation_suit.gif",
         effects: [
@@ -132,15 +132,15 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Scout's Medkit",
+        name: "Scouts_Medkit",
         description: "A pouch containing bandages, herbal remedies, and stimulants, increasing the amount of foraged food.",
-        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/medkit.gif",
+        key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/scouts_medkit.gif",
         effects: [
             { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.15, resource: 'Food' }
         ]
     },
     {
-        name: "Masterwork Tools",
+        name: "Masterwork_Tools",
         description: "A set of high-quality pre-war tools, invaluable for salvaging and repairing complex weapon systems.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/masterwork_tools.gif",
         effects: [
@@ -148,7 +148,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Ballistic Shields",
+        name: "Ballistic_Shields",
         description: "Heavy shields made from repurposed vehicle armor, excellent for defending fortified positions in ruins.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/ballistic_shields.gif",
         effects: [
@@ -156,7 +156,7 @@ export const ALL_ASSETS: GameAsset[] = [
         ]
     },
     {
-        name: "Ratchet Set",
+        name: "Ratchet_Set",
         description: "A complete set of wrenches and ratchets, making the disassembly of junk for scrap far more efficient.",
         key_image_url: "https://www.platopotato.com/NFT/Tribes/assets/ratchet_set.gif",
         effects: [

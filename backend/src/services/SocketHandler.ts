@@ -721,6 +721,22 @@ export class SocketHandler {
       }
     });
 
+    // Admin password update handler
+    socket.on('admin:updateAdminPassword', async (newPassword: string) => {
+      console.log(`🔒 Admin updating admin password`);
+      try {
+        const success = await this.gameService.database.updateAdminPassword(newPassword);
+        if (success) {
+          socket.emit('admin_password_updated', 'Admin password updated successfully');
+        } else {
+          socket.emit('admin_password_error', 'Failed to update admin password');
+        }
+      } catch (error) {
+        console.error(`❌ Error updating admin password:`, error);
+        socket.emit('admin_password_error', 'Error updating admin password');
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
     });

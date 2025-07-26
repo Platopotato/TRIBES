@@ -62,6 +62,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
   const [deadlineHours, setDeadlineHours] = useState(24);
   const [deadlineMinutes, setDeadlineMinutes] = useState(0);
+  const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -194,6 +196,19 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleClearTurnDeadline = () => {
     if (confirm('Are you sure you want to clear the current turn deadline?')) {
       client.clearTurnDeadline();
+    }
+  };
+
+  const handleUpdateAdminPassword = () => {
+    if (newAdminPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (confirm('Are you sure you want to update the admin password? Make sure you remember the new password!')) {
+      client.updateAdminPassword(newAdminPassword);
+      setNewAdminPassword('');
+      setShowAdminPasswordModal(false);
     }
   };
 
@@ -982,6 +997,38 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            <Card title="Security Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="p-3 rounded border bg-amber-900/20 border-amber-600">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-lg">⚠️</span>
+                    <span className="font-bold text-sm">Security Notice</span>
+                  </div>
+                  <p className="text-sm text-amber-200">
+                    The admin password is currently using environment variable or hardcoded fallback.
+                    For production security, set ADMIN_PASSWORD environment variable.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => setShowAdminPasswordModal(true)}
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  🔒 Update Admin Password
+                </Button>
+
+                <div className="text-sm text-neutral-400">
+                  <p><strong>Safe Migration Steps:</strong></p>
+                  <ol className="list-decimal list-inside space-y-1 mt-2">
+                    <li>Update password using button above</li>
+                    <li>Test login with new password</li>
+                    <li>Set ADMIN_PASSWORD environment variable on server</li>
+                    <li>Restart server to use environment variable</li>
+                  </ol>
+                </div>
+              </div>
+            </Card>
+
             <Card title="Game Data Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <p className="text-neutral-400 leading-relaxed">Save the entire game state, all users, passwords, ticker messages, and announcements to a file, or load a previous backup.</p>
@@ -1441,6 +1488,69 @@ GAME STATISTICS:
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   Set Deadline
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Password Modal */}
+      {showAdminPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-red-400 mb-4">🔒 Update Admin Password</h3>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-red-900/20 border border-red-600">
+                <p className="text-sm font-medium text-red-300 mb-2">
+                  ⚠️ Important Security Update
+                </p>
+                <p className="text-sm text-red-200">
+                  This will immediately update the admin password. Make sure you remember the new password!
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  New Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={newAdminPassword}
+                  onChange={(e) => setNewAdminPassword(e.target.value)}
+                  placeholder="Enter new secure password (min 6 characters)"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="p-3 rounded bg-blue-900/20 border border-blue-600">
+                <p className="text-sm font-medium text-blue-300 mb-1">
+                  Next Steps After Update:
+                </p>
+                <ol className="text-sm text-blue-200 list-decimal list-inside space-y-1">
+                  <li>Test login with new password</li>
+                  <li>Set ADMIN_PASSWORD environment variable</li>
+                  <li>Restart server for full security</li>
+                </ol>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => {
+                    setShowAdminPasswordModal(false);
+                    setNewAdminPassword('');
+                  }}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateAdminPassword}
+                  disabled={newAdminPassword.length < 6}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Update Password
                 </Button>
               </div>
             </div>

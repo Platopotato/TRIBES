@@ -170,6 +170,14 @@ export const initClient = (
         alert(`Backup Error: ${message}`);
     });
 
+    socket.on('admin_password_updated', (message: string) => {
+        alert(`Success: ${message}`);
+    });
+
+    socket.on('admin_password_error', (message: string) => {
+        alert(`Error: ${message}`);
+    });
+
     socket.on('manual_backup_created', (filename: string) => {
         alert(`Manual backup created successfully: ${filename}`);
     });
@@ -253,6 +261,9 @@ export const toggleLoginAnnouncements = () => socket.emit('admin:toggleLoginAnno
 // Turn deadline emitters
 export const setTurnDeadline = createEmitter<any>('admin:setTurnDeadline');
 export const clearTurnDeadline = () => socket.emit('admin:clearTurnDeadline');
+
+// Admin password management
+export const updateAdminPassword = createEmitter<string>('admin:updateAdminPassword');
 
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');

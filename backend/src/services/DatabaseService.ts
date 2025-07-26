@@ -107,6 +107,18 @@ export class DatabaseService {
     };
   }
 
+  private getAdminPassword(): string {
+    // Check for environment variable first, fall back to hardcoded for safety
+    const envPassword = process.env.ADMIN_PASSWORD;
+    if (envPassword) {
+      console.log('🔒 Using admin password from environment variable');
+      return envPassword;
+    } else {
+      console.log('⚠️ Using hardcoded admin password - set ADMIN_PASSWORD environment variable for security');
+      return 'snoopy';
+    }
+  }
+
   private async ensureGameState(): Promise<void> {
     if (this.useDatabase && this.prisma) {
       // Check if we have any game state
@@ -117,13 +129,14 @@ export class DatabaseService {
         await this.createGameState(defaultState);
         
         // Create default admin user
+        const adminPassword = this.getAdminPassword();
         await this.createUser({
           id: 'user-admin',
           username: 'Admin',
-          passwordHash: this.mockHash('snoopy'),
+          passwordHash: this.mockHash(adminPassword),
           role: 'admin',
           securityQuestion: SECURITY_QUESTIONS[0],
-          securityAnswerHash: this.mockHash('snoopy')
+          securityAnswerHash: this.mockHash(adminPassword)
         });
       }
     }
@@ -291,6 +304,38 @@ export class DatabaseService {
     }
   }
 
+  async updateAdminPassword(newPassword: string): Promise<boolean> {
+    try {
+      console.log('🔒 Updating admin password...');
+      const hashedPassword = this.mockHash(newPassword);
+
+      if (this.useDatabase && this.prisma) {
+        await this.prisma.user.update({
+          where: { username: 'Admin' },
+          data: {
+            passwordHash: hashedPassword,
+            securityAnswerHash: hashedPassword // Also update security answer
+          }
+        });
+      } else {
+        // For file storage
+        const users = this.getUsersFromFile();
+        const adminUser = users.find(u => u.username === 'Admin');
+        if (adminUser) {
+          adminUser.passwordHash = hashedPassword;
+          adminUser.securityAnswerHash = hashedPassword;
+          this.saveUsersToFile(users);
+        }
+      }
+
+      console.log('✅ Admin password updated successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error updating admin password:', error);
+      return false;
+    }
+  }
+
   async findUserByUsername(username: string): Promise<User | null> {
     if (this.useDatabase && this.prisma) {
       const user = await this.prisma.user.findUnique({
@@ -367,14 +412,15 @@ export class DatabaseService {
   }
 
   private getDefaultUsers(): User[] {
+    const adminPassword = this.getAdminPassword();
     return [
       {
         id: 'user-admin',
         username: 'Admin',
-        passwordHash: this.mockHash('snoopy'),
+        passwordHash: this.mockHash(adminPassword),
         role: 'admin',
         securityQuestion: SECURITY_QUESTIONS[0],
-        securityAnswerHash: this.mockHash('snoopy')
+        securityAnswerHash: this.mockHash(adminPassword)
       }
     ];
   }

@@ -385,6 +385,7 @@ const App: React.FC = () => {
             onDeclareWar={(toTribeId) => playerTribe && handleDeclareWar(playerTribe.id, toTribeId)}
             onAcceptProposal={handleAcceptProposal}
             onRejectProposal={handleRejectProposal}
+            turnDeadline={gameState.turnDeadline}
           />
         );
     }

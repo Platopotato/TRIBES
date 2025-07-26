@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useRef, useEffect } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement, BackupStatus, BackupFile } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement, BackupStatus, BackupFile, TurnDeadline } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -59,6 +59,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [newAnnouncementPriority, setNewAnnouncementPriority] = useState<TickerPriority>('normal');
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [backupList, setBackupList] = useState<BackupFile[]>([]);
+  const [showDeadlineModal, setShowDeadlineModal] = useState(false);
+  const [deadlineHours, setDeadlineHours] = useState(24);
+  const [deadlineMinutes, setDeadlineMinutes] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -172,6 +175,26 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleCreateManualBackup = () => {
     client.createManualBackup();
+  };
+
+  const handleSetTurnDeadline = () => {
+    const now = Date.now();
+    const deadlineTime = now + (deadlineHours * 60 * 60 * 1000) + (deadlineMinutes * 60 * 1000);
+
+    const deadline: TurnDeadline = {
+      turn: gameState.turn,
+      deadline: deadlineTime,
+      isActive: true
+    };
+
+    client.setTurnDeadline(deadline);
+    setShowDeadlineModal(false);
+  };
+
+  const handleClearTurnDeadline = () => {
+    if (confirm('Are you sure you want to clear the current turn deadline?')) {
+      client.clearTurnDeadline();
+    }
   };
 
   // Set up backup status callback and fetch initial status
@@ -910,6 +933,55 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            <Card title="Turn Deadline Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Current Deadline:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-600 text-white'
+                    }`}>
+                      {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
+                        ? 'ACTIVE'
+                        : 'NONE SET'}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setShowDeadlineModal(true)}
+                    className="text-xs bg-blue-600 hover:bg-blue-700"
+                  >
+                    Set Deadline
+                  </Button>
+                </div>
+
+                {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn && (
+                  <div className="p-3 rounded border bg-blue-900/20 border-blue-600">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Turn {gameState.turnDeadline.turn} Deadline</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(gameState.turnDeadline.deadline).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleClearTurnDeadline}
+                        className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-neutral-400">
+                  <p>Set a deadline for the current turn to create urgency for players.</p>
+                  <p>Players will see a countdown timer in the header showing time remaining.</p>
+                </div>
+              </div>
+            </Card>
+
             <Card title="Game Data Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <p className="text-neutral-400 leading-relaxed">Save the entire game state, all users, passwords, ticker messages, and announcements to a file, or load a previous backup.</p>
@@ -1294,6 +1366,81 @@ GAME STATISTICS:
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   Add Announcement
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Turn Deadline Modal */}
+      {showDeadlineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-blue-400 mb-4">Set Turn Deadline</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Turn: {gameState.turn}
+                </label>
+                <p className="text-xs text-neutral-400">
+                  Setting deadline for the current turn
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Hours from now
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="168"
+                    value={deadlineHours}
+                    onChange={(e) => setDeadlineHours(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Minutes
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={deadlineMinutes}
+                    onChange={(e) => setDeadlineMinutes(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded bg-blue-900/20 border border-blue-600">
+                <p className="text-sm font-medium text-blue-300">
+                  Deadline will be set for:
+                </p>
+                <p className="text-sm text-blue-200">
+                  {new Date(Date.now() + (deadlineHours * 60 * 60 * 1000) + (deadlineMinutes * 60 * 1000)).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowDeadlineModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSetTurnDeadline}
+                  disabled={deadlineHours === 0 && deadlineMinutes === 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Set Deadline
                 </Button>
               </div>
             </div>

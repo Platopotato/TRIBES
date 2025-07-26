@@ -12,7 +12,8 @@ import {
   getAsset,
   TickerMessage,
   LoginAnnouncement,
-  FullBackupState
+  FullBackupState,
+  TurnDeadline
 } from '../../../shared/dist/index.js';
 
 export class SocketHandler {
@@ -686,6 +687,37 @@ export class SocketHandler {
         socket.emit('manual_backup_created', filename);
       } else {
         socket.emit('backup_error', 'Failed to create manual backup');
+      }
+    });
+
+    // Turn deadline management handlers
+    socket.on('admin:setTurnDeadline', async (deadline: TurnDeadline) => {
+      console.log(`⏰ Admin setting turn deadline for turn ${deadline.turn}: ${new Date(deadline.deadline).toLocaleString()}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          gameState.turnDeadline = deadline;
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Turn deadline set successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error setting turn deadline:`, error);
+      }
+    });
+
+    socket.on('admin:clearTurnDeadline', async () => {
+      console.log(`⏰ Admin clearing turn deadline`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          gameState.turnDeadline = undefined;
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Turn deadline cleared successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error clearing turn deadline:`, error);
       }
     });
 

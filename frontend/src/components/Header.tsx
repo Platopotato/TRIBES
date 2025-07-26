@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Tribe, User, GamePhase, TRIBE_ICONS } from '@radix-tribes/shared';
+import { Tribe, User, GamePhase, TRIBE_ICONS, TurnDeadline as TurnDeadlineType } from '@radix-tribes/shared';
 import Button from './ui/Button';
+import TurnDeadline from './TurnDeadline';
 
 interface HeaderProps {
   currentUser: User;
@@ -15,9 +16,10 @@ interface HeaderProps {
   onOpenNewspaper: () => void;
   turn: number;
   gamePhase: GamePhase | 'observing' | 'waiting';
+  turnDeadline?: TurnDeadlineType;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, onOpenNewspaper, turn, gamePhase }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, onOpenNewspaper, turn, gamePhase, turnDeadline }) => {
   const phaseText: {[key in typeof gamePhase]: string} = {
       planning: 'Action Planning',
       processing: 'Processing...',
@@ -64,9 +66,12 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
         )}
       </div>
       <div className="text-center sm:text-right mt-4 sm:mt-0 flex items-center space-x-4">
-        <div>
+        <div className="flex flex-col items-end space-y-2">
+          <div>
             <h2 className="text-lg font-semibold text-slate-300">Turn {turn}</h2>
             <p className={`text-sm ${getPhaseColor()}`}>{phaseText[gamePhase]}</p>
+          </div>
+          <TurnDeadline turnDeadline={turnDeadline} currentTurn={turn} />
         </div>
          {onNavigateToLeaderboard && (
              <Button onClick={onNavigateToLeaderboard} variant="secondary" className="flex items-center space-x-2">

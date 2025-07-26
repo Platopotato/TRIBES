@@ -314,6 +314,7 @@ export interface GameState {
     history?: TurnHistoryRecord[];
     ticker?: TickerState;
     loginAnnouncements?: LoginAnnouncementState;
+    turnDeadline?: TurnDeadline;
     // These are now primarily for use within the map editor for generating new base maps
     mapSeed?: number; 
     mapSettings?: MapSettings;
@@ -338,6 +339,12 @@ export interface BackupStatus {
     backupCount: number;
     lastBackup: Date | null;
     nextBackup: Date | null;
+}
+
+export interface TurnDeadline {
+    turn: number;
+    deadline: number; // timestamp
+    isActive: boolean;
 }
 
 export type TickerPriority = 'normal' | 'important' | 'urgent';

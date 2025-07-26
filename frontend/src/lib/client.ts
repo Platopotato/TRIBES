@@ -250,6 +250,10 @@ export const toggleLoginAnnouncement = createEmitter<string>('admin:toggleLoginA
 export const deleteLoginAnnouncement = createEmitter<string>('admin:deleteLoginAnnouncement');
 export const toggleLoginAnnouncements = () => socket.emit('admin:toggleLoginAnnouncements');
 
+// Turn deadline emitters
+export const setTurnDeadline = createEmitter<any>('admin:setTurnDeadline');
+export const clearTurnDeadline = () => socket.emit('admin:clearTurnDeadline');
+
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');

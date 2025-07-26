@@ -47,6 +47,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [showTurnSummary, setShowTurnSummary] = useState(false);
   const [summaryTurnsBack, setSummaryTurnsBack] = useState(1); // How many turns back to include
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -62,6 +64,26 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleConfirmNewGame = () => {
     onStartNewGame();
     setShowNewGameConfirm(false);
+  };
+
+  const handleResetPassword = (userId: string) => {
+    setResetPasswordUserId(userId);
+    setNewPassword('');
+  };
+
+  const handleConfirmPasswordReset = () => {
+    if (resetPasswordUserId && newPassword.trim()) {
+      // Emit password reset event
+      socket.emit('admin:resetPassword', { userId: resetPasswordUserId, newPassword: newPassword.trim() });
+      setResetPasswordUserId(null);
+      setNewPassword('');
+      alert(`Password reset successfully! New password: ${newPassword.trim()}`);
+    }
+  };
+
+  const handleCancelPasswordReset = () => {
+    setResetPasswordUserId(null);
+    setNewPassword('');
   };
 
   const handleSaveBackup = () => {
@@ -463,14 +485,24 @@ GAME STATISTICS:
                           <td className="p-2 text-slate-400 capitalize">{user.role}</td>
                           <td className="p-2 font-mono text-xs">{user.id}</td>
                           <td className="p-2">
-                            {user.role === 'player' && user.id !== currentUser.id && (
-                                <Button 
-                                    onClick={() => setUserToRemove(user)}
-                                    className="bg-red-800 hover:bg-red-700 text-xs py-1 px-2"
+                            <div className="flex space-x-2">
+                              {user.role === 'player' && (
+                                <Button
+                                    onClick={() => handleResetPassword(user.id)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-xs py-1 px-2"
                                 >
-                                    Remove
+                                    Reset Password
                                 </Button>
-                            )}
+                              )}
+                              {user.role === 'player' && user.id !== currentUser.id && (
+                                  <Button
+                                      onClick={() => setUserToRemove(user)}
+                                      className="bg-red-800 hover:bg-red-700 text-xs py-1 px-2"
+                                  >
+                                      Remove
+                                  </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -778,6 +810,41 @@ GAME STATISTICS:
                 </Button>
                 <Button onClick={() => setShowTurnSummary(false)} variant="secondary">
                   Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {resetPasswordUserId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-amber-400 mb-4">Reset User Password</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button onClick={handleCancelPasswordReset} variant="secondary">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmPasswordReset}
+                  disabled={!newPassword.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Reset Password
                 </Button>
               </div>
             </div>

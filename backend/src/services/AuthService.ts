@@ -18,10 +18,39 @@ export class AuthService {
     return `hashed_${data}_salted_v1`;
   }
 
+  private legacyMockHash(data: string): string {
+    // Legacy hash format for backward compatibility
+    return `hashed_${data}_salted`;
+  }
+
+  private isValidPassword(password: string, storedHash: string): boolean {
+    // Try current hash format first
+    if (storedHash === this.mockHash(password)) {
+      return true;
+    }
+    // Try legacy hash format for backward compatibility
+    if (storedHash === this.legacyMockHash(password)) {
+      return true;
+    }
+    // Try even simpler legacy format (just in case)
+    if (storedHash === `hashed_${password}`) {
+      return true;
+    }
+    return false;
+  }
+
   async login(username: string, password: string): Promise<{ user: User | null, error: string | null }> {
     const user = await this.gameService.findUserByUsername(username);
 
-    if (user && user.passwordHash === this.mockHash(password)) {
+    if (user && this.isValidPassword(password, user.passwordHash)) {
+      // If using legacy hash, update to new format
+      if (user.passwordHash !== this.mockHash(password)) {
+        console.log(`🔄 Updating legacy password hash for user: ${username}`);
+        await this.gameService.updateUser(user.id, {
+          passwordHash: this.mockHash(password)
+        });
+      }
+
       // Return user without sensitive data
       const { passwordHash, securityAnswerHash, ...safeUser } = user;
       return { user: safeUser as User, error: null };

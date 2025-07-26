@@ -333,6 +333,31 @@ export class SocketHandler {
       }
     });
 
+    socket.on('admin:resetPassword', async ({ userId, newPassword }: { userId: string, newPassword: string }) => {
+      console.log(`🔑 Admin resetting password for user: ${userId}`);
+      try {
+        // Find user by ID from all users
+        const allUsers = await this.gameService.getAllUsers();
+        const user = allUsers.find(u => u.id === userId);
+        if (user) {
+          const success = await this.authService.resetPassword(user.username, newPassword);
+          if (success) {
+            console.log(`✅ Password reset successful for user: ${user.username} (${userId})`);
+            socket.emit('password_reset_success', `Password reset successfully for user ${user.username}`);
+          } else {
+            console.log(`❌ Password reset failed for user: ${user.username} (${userId})`);
+            socket.emit('password_reset_error', 'Failed to reset password');
+          }
+        } else {
+          console.log(`❌ User not found: ${userId}`);
+          socket.emit('password_reset_error', 'User not found');
+        }
+      } catch (error) {
+        console.error(`❌ Error resetting password for user ${userId}:`, error);
+        socket.emit('password_reset_error', 'An error occurred while resetting password');
+      }
+    });
+
     socket.on('load_backup', async (backupData: { gameState: any, users: any[] }) => {
       console.log(`📥 Loading backup data with ${backupData.users.length} users and ${backupData.gameState.tribes.length} tribes`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);

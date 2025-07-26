@@ -360,6 +360,7 @@ export interface TickerMessage {
 export interface TickerState {
     messages: TickerMessage[];
     isEnabled: boolean;
+    scrollSpeed?: number; // Animation duration in seconds (default: 30)
 }
 
 export interface LoginAnnouncement {

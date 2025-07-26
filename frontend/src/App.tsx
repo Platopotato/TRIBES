@@ -404,10 +404,9 @@ const App: React.FC = () => {
       />
 
       {/* Ticker - only show when not on login/register screens */}
-      {gameState && view !== 'login' && view !== 'register' && view !== 'forgot_password' && (
+      {gameState && view !== 'login' && view !== 'register' && view !== 'forgot_password' && gameState.ticker && (
         <Ticker
-          messages={gameState.ticker?.messages || []}
-          isEnabled={gameState.ticker?.isEnabled || false}
+          ticker={gameState.ticker}
         />
       )}
     </div>

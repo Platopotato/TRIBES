@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { TickerMessage, TickerPriority } from '@radix-tribes/shared';
+import { TickerMessage, TickerPriority, TickerState } from '@radix-tribes/shared';
 
 interface TickerProps {
-  messages: TickerMessage[];
-  isEnabled: boolean;
+  ticker: TickerState;
 }
 
-const Ticker: React.FC<TickerProps> = ({ messages, isEnabled }) => {
+const Ticker: React.FC<TickerProps> = ({ ticker }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+
+  const { messages, isEnabled, scrollSpeed = 30 } = ticker;
 
   // Filter active messages and sort by priority
   const activeMessages = messages
@@ -70,7 +71,12 @@ const Ticker: React.FC<TickerProps> = ({ messages, isEnabled }) => {
         </div>
         
         <div className="flex-1 overflow-hidden">
-          <div className="animate-marquee whitespace-nowrap">
+          <div
+            className="whitespace-nowrap"
+            style={{
+              animation: `marquee ${scrollSpeed}s linear infinite`
+            }}
+          >
             <span className="text-sm font-medium">
               {currentMessage.message}
             </span>

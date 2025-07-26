@@ -591,6 +591,25 @@ export class SocketHandler {
       }
     });
 
+    socket.on('admin:updateTickerSpeed', async (speed: number) => {
+      console.log(`📰 Admin updating ticker speed to ${speed} seconds`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.ticker) {
+            gameState.ticker = { messages: [], isEnabled: true, scrollSpeed: speed };
+          } else {
+            gameState.ticker.scrollSpeed = speed;
+          }
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Ticker speed updated to ${speed} seconds`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating ticker speed:`, error);
+      }
+    });
+
     // Login announcement management handlers
     socket.on('admin:addLoginAnnouncement', async (announcement: LoginAnnouncement) => {
       console.log(`📢 Admin adding login announcement: ${announcement.title}`);

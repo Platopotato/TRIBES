@@ -53,6 +53,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showTickerModal, setShowTickerModal] = useState(false);
   const [newTickerMessage, setNewTickerMessage] = useState('');
   const [newTickerPriority, setNewTickerPriority] = useState<TickerPriority>('normal');
+  const [showTickerSpeedModal, setShowTickerSpeedModal] = useState(false);
+  const [newTickerSpeed, setNewTickerSpeed] = useState(30);
   const [showLoginAnnouncementModal, setShowLoginAnnouncementModal] = useState(false);
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementMessage, setNewAnnouncementMessage] = useState('');
@@ -128,6 +130,16 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleToggleTicker = () => {
     client.toggleTicker();
+  };
+
+  const handleUpdateTickerSpeed = () => {
+    if (newTickerSpeed < 5 || newTickerSpeed > 120) {
+      alert('Ticker speed must be between 5 and 120 seconds');
+      return;
+    }
+
+    client.updateTickerSpeed(newTickerSpeed);
+    setShowTickerSpeedModal(false);
   };
 
   const handleAddLoginAnnouncement = () => {
@@ -682,12 +694,24 @@ GAME STATISTICS:
                   </Button>
                 </div>
 
-                <Button
-                  onClick={() => setShowTickerModal(true)}
-                  className="w-full bg-amber-600 hover:bg-amber-700"
-                >
-                  Add News Message
-                </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => setShowTickerModal(true)}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    Add Message
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setNewTickerSpeed(gameState.ticker?.scrollSpeed || 30);
+                      setShowTickerSpeedModal(true);
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    ⚡ Speed: {gameState.ticker?.scrollSpeed || 30}s
+                  </Button>
+                </div>
 
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {gameState.ticker?.messages?.map(message => (
@@ -1603,6 +1627,61 @@ GAME STATISTICS:
                   className="bg-red-600 hover:bg-red-700"
                 >
                   Update Password
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ticker Speed Modal */}
+      {showTickerSpeedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">⚡ Ticker Speed Settings</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Scroll Speed (seconds)
+                </label>
+                <input
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={newTickerSpeed}
+                  onChange={(e) => setNewTickerSpeed(parseInt(e.target.value) || 30)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <p className="text-xs text-neutral-400 mt-1">
+                  How long it takes for text to scroll across the screen (5-120 seconds)
+                </p>
+              </div>
+
+              <div className="p-3 rounded bg-purple-900/20 border border-purple-600">
+                <p className="text-sm font-medium text-purple-300 mb-1">
+                  Speed Guide:
+                </p>
+                <ul className="text-sm text-purple-200 space-y-1">
+                  <li>• <strong>5-15s</strong>: Very fast (hard to read)</li>
+                  <li>• <strong>20-30s</strong>: Normal speed (recommended)</li>
+                  <li>• <strong>40-60s</strong>: Slow and easy to read</li>
+                  <li>• <strong>60+s</strong>: Very slow</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowTickerSpeedModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateTickerSpeed}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Update Speed
                 </Button>
               </div>
             </div>

@@ -299,6 +299,7 @@ export const addTickerMessage = createEmitter<any>('admin:addTickerMessage');
 export const toggleTickerMessage = createEmitter<string>('admin:toggleTickerMessage');
 export const deleteTickerMessage = createEmitter<string>('admin:deleteTickerMessage');
 export const toggleTicker = () => socket.emit('admin:toggleTicker');
+export const updateTickerSpeed = createEmitter<number>('admin:updateTickerSpeed');
 
 // Login announcement emitters
 export const addLoginAnnouncement = createEmitter<any>('admin:addLoginAnnouncement');

@@ -1,0 +1,46 @@
+services:
+  # Backend API Service
+  - type: web
+    name: radix-tribes-backend
+    env: node
+    plan: free
+    rootDir: .
+    buildCommand: |
+      npm install --prefix shared --include=dev &&
+      npm run build --prefix shared &&
+      npm install --prefix backend --include=dev &&
+      npm run build --prefix backend
+    startCommand: npm start --prefix backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: REDIS_URL
+        fromDatabase:
+          name: radix-tribes-redis
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://radix-tribes-frontend.onrender.com
+    healthCheckPath: /health
+
+  # Frontend Web Service (serving static files)
+  - type: web
+    name: radix-tribes-frontend
+    env: static
+    rootDir: .
+    buildCommand: |
+      npm install --prefix shared --include=dev &&
+      npm run build --prefix shared &&
+      npm install --prefix frontend --include=dev &&
+      npm run build --prefix frontend
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://radix-tribes-backend.onrender.com
+
+databases:
+  - name: radix-tribes-redis
+    databaseName: radix_tribes_redis
+    user: redis
+    plan: free

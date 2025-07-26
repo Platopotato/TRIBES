@@ -25711,9 +25711,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -25859,9 +25856,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -25972,9 +25966,6 @@
             "status": "Alliance"
           },
           "tribe-1753399895455": {
-            "status": "Neutral"
-          },
-          "tribe-1753465492028": {
             "status": "Neutral"
           }
         }
@@ -26098,9 +26089,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -26223,9 +26211,6 @@
             "status": "Neutral"
           },
           "tribe-1753399895455": {
-            "status": "Neutral"
-          },
-          "tribe-1753465492028": {
             "status": "Neutral"
           }
         }
@@ -26356,9 +26341,6 @@
             "status": "Neutral"
           },
           "tribe-1753399895455": {
-            "status": "Neutral"
-          },
-          "tribe-1753465492028": {
             "status": "Neutral"
           }
         }
@@ -26519,9 +26501,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -26645,9 +26624,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -26736,9 +26712,6 @@
           },
           "tribe-1753399895455": {
             "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
           }
         }
       },
@@ -26826,97 +26799,6 @@
             "status": "War"
           },
           "tribe-1753399895455": {
-            "status": "Neutral"
-          },
-          "tribe-1753465492028": {
-            "status": "Neutral"
-          }
-        }
-      },
-      {
-        "playerName": "Test22",
-        "tribeName": "The Bongas",
-        "icon": "wolf",
-        "color": "#9F7AEA",
-        "stats": {
-          "charisma": 7,
-          "intelligence": 7,
-          "leadership": 7,
-          "strength": 4
-        },
-        "id": "tribe-1753465492028",
-        "playerId": "user-1753465459285",
-        "location": "063.055",
-        "globalResources": {
-          "food": 100,
-          "scrap": 20,
-          "morale": 50
-        },
-        "garrisons": {
-          "063.055": {
-            "troops": 20,
-            "weapons": 10,
-            "chiefs": []
-          }
-        },
-        "actions": [],
-        "turnSubmitted": false,
-        "lastTurnResults": [],
-        "exploredHexes": [
-          "061.055",
-          "061.056",
-          "061.057",
-          "062.054",
-          "062.055",
-          "062.056",
-          "062.057",
-          "063.053",
-          "063.054",
-          "063.055",
-          "063.056",
-          "063.057",
-          "064.053",
-          "064.054",
-          "064.055",
-          "064.056",
-          "065.053",
-          "065.054",
-          "065.055"
-        ],
-        "rationLevel": "Normal",
-        "completedTechs": [],
-        "assets": [],
-        "currentResearch": null,
-        "journeyResponses": [],
-        "diplomacy": {
-          "tribe-1753206744408": {
-            "status": "Neutral"
-          },
-          "tribe-1753207512142": {
-            "status": "Neutral"
-          },
-          "tribe-1753215954115": {
-            "status": "Neutral"
-          },
-          "tribe-1753261678487": {
-            "status": "Neutral"
-          },
-          "tribe-1753268854793": {
-            "status": "Neutral"
-          },
-          "tribe-1753276255427": {
-            "status": "Neutral"
-          },
-          "tribe-1753297830263": {
-            "status": "Neutral"
-          },
-          "tribe-1753305345422": {
-            "status": "Neutral"
-          },
-          "tribe-1753343549684": {
-            "status": "Neutral"
-          },
-          "tribe-1753376208400": {
             "status": "Neutral"
           }
         }
@@ -27113,10 +26995,8 @@
     {
       "id": "user-admin",
       "username": "Admin",
-      "passwordHash": "hashed_snoopy_salted_v1",
       "role": "admin",
-      "securityQuestion": "What was your first pet's name?",
-      "securityAnswerHash": "hashed_snoopy_salted_v1"
+      "securityQuestion": "What was your first pet's name?"
     },
     {
       "id": "user-1753127181536",
@@ -27249,14 +27129,6 @@
       "username": "Sue-nami",
       "role": "player",
       "securityQuestion": "What was your first pet's name?"
-    },
-    {
-      "id": "user-1753465459285",
-      "username": "Test25",
-      "passwordHash": "hashed_111111_salted_v1",
-      "role": "player",
-      "securityQuestion": "What was your first pet's name?",
-      "securityAnswerHash": "hashed_111111_salted_v1"
     }
   ]
 }

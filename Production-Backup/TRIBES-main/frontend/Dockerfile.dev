@@ -1,0 +1,29 @@
+# Frontend Development Dockerfile
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./frontend/
+COPY shared/package*.json ./shared/
+
+# Install dependencies
+RUN cd frontend && npm install
+RUN cd shared && npm install
+
+# Copy source code
+COPY shared/ ./shared/
+COPY frontend/ ./frontend/
+
+# Build shared package
+RUN cd shared && npm run build
+
+# Expose port
+EXPOSE 5173
+
+# Set working directory to frontend
+WORKDIR /app/frontend
+
+# Start the development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

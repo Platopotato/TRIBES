@@ -11,12 +11,11 @@ interface HeaderProps {
   onNavigateToLeaderboard?: () => void;
   onOpenHelp: () => void;
   onOpenCodex: () => void;
-  onChangePassword: () => void;
   turn: number;
   gamePhase: GamePhase | 'observing' | 'waiting';
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, turn, gamePhase }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, turn, gamePhase }) => {
   const phaseText: {[key in typeof gamePhase]: string} = {
       planning: 'Action Planning',
       processing: 'Processing...',
@@ -41,13 +40,10 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
       <div className="flex items-center space-x-4">
         {playerTribe && (
           <>
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg"
-              style={{ backgroundColor: playerTribe.color }}
-            >
-                <span className="text-2xl drop-shadow-sm">
+            <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current text-amber-400">
                     {TRIBE_ICONS[playerTribe.icon]}
-                </span>
+                </svg>
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-wide">{playerTribe.tribeName}</h1>
@@ -88,12 +84,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
             <span>Help</span>
           </Button>
          {currentUser.role === 'admin' && <Button onClick={onNavigateToAdmin} variant="secondary">Admin Panel</Button>}
-         <Button onClick={onChangePassword} variant="secondary" className="flex items-center space-x-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414a6 6 0 015.743-7.743z" />
-            </svg>
-            <span>Change Password</span>
-          </Button>
          <Button onClick={onLogout}>Logout</Button>
       </div>
     </header>

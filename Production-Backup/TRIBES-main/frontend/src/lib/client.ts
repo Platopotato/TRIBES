@@ -123,14 +123,6 @@ export const initClient = (
     socket.on('alert', (message: string) => {
         alert(message);
     });
-
-    socket.on('password_change_success', (message: string) => {
-        alert(message);
-    });
-
-    socket.on('password_change_error', (message: string) => {
-        alert(`Error: ${message}`);
-    });
 };
 
 // Auth emitters with timeout handling
@@ -186,15 +178,13 @@ export const register = (data: { username: string, password: string, securityQue
 export const getUserQuestion = createEmitter<string>('get_security_question');
 export const verifySecurityAnswer = createEmitter<{ username: string, answer: string }>('verify_security_answer');
 export const resetPassword = createEmitter<{ username: string, newPassword: string }>('reset_password');
-export const adminResetPassword = createEmitter<{ userId: string, newPassword: string }>('admin:resetPassword');
-export const changePassword = createEmitter<{ currentPassword: string, newPassword: string }>('change_password');
 
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');
 export const processTurn = () => socket.emit('process_turn');
-export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
-export const removePlayer = createEmitter<string>('admin:removePlayer');
+export const updateTribe = createEmitter<Tribe>('update_tribe');
+export const removePlayer = createEmitter<string>('remove_player');
 export const startNewGame = () => socket.emit('start_new_game');
 export const loadBackup = createEmitter<FullBackupState>('load_backup');
 export const updateMap = createEmitter<{newMapData: HexData[], newStartingLocations: string[]}>('update_map');
@@ -208,7 +198,7 @@ export const approveAsset = createEmitter<string>('approve_asset');
 export const denyAsset = createEmitter<string>('deny_asset');
 
 // AI emitter
-export const addAITribe = (aiType?: string) => socket.emit('add_ai_tribe', aiType);
+export const addAITribe = () => socket.emit('add_ai_tribe');
 
 // Diplomacy emitters
 export const proposeAlliance = createEmitter<{ fromTribeId: string, toTribeId: string }>('propose_alliance');

@@ -40,6 +40,7 @@ interface DashboardProps {
   onNavigateToAdmin: () => void;
   onNavigateToLeaderboard: () => void;
   onChangePassword: () => void;
+  onOpenNewspaper: () => void;
   onProposeAlliance: (toTribeId: string) => void;
   onSueForPeace: (toTribeId: string, reparations: { food: number; scrap: number; weapons: number }) => void;
   onDeclareWar: (toTribeId: string) => void;
@@ -57,7 +58,7 @@ type DashboardView = 'results' | 'planning' | 'waiting';
 const formatHexCoords = (q: number, r: number) => `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal } = props;
   const otherTribes = allTribes.filter(t => t.id !== playerTribe?.id);
 
   const [plannedActions, setPlannedActions] = useState<GameAction[]>([]);
@@ -139,7 +140,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   if (!playerTribe && currentUser.role === 'admin') {
       return (
           <div className="p-8">
-              <Header currentUser={currentUser} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} onChangePassword={onChangePassword} turn={turn} gamePhase="observing" onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(true)} />
+              <Header currentUser={currentUser} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} onChangePassword={onChangePassword} onOpenNewspaper={onOpenNewspaper} turn={turn} gamePhase="observing" onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(true)} />
               <h2 className="text-2xl font-bold text-center mt-8">Admin Observer Mode</h2>
               <p className="text-center text-slate-400">Select "Admin Panel" from the header to view game details.</p>
               <MapView 
@@ -281,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <Header currentUser={currentUser} playerTribe={playerTribe} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} onNavigateToLeaderboard={onNavigateToLeaderboard} onChangePassword={onChangePassword} turn={turn} gamePhase={gamePhase} onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(true)} />
+      <Header currentUser={currentUser} playerTribe={playerTribe} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} onNavigateToLeaderboard={onNavigateToLeaderboard} onChangePassword={onChangePassword} onOpenNewspaper={onOpenNewspaper} turn={turn} gamePhase={gamePhase} onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(true)} />
       <main className="grid grid-cols-2 gap-6">
         <div className="col-span-1">
            <MapView

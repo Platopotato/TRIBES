@@ -168,6 +168,13 @@ const App: React.FC = () => {
     client.changePassword({ currentPassword, newPassword });
   };
 
+  const handleOpenNewspaper = () => {
+    if (gameState) {
+      const newspaperUrl = `https://www.platopotato.com/NFT/Newspaper/Turn${gameState.turn}.pdf`;
+      window.open(newspaperUrl, '_blank');
+    }
+  };
+
   const handleTribeCreate = async (tribeData: TribeCreationData) => {
     if (!currentUser || !gameState) return;
 
@@ -369,6 +376,7 @@ const App: React.FC = () => {
             onNavigateToAdmin={() => setView('admin')}
             onNavigateToLeaderboard={() => setView('leaderboard')}
             onChangePassword={() => setShowChangePasswordModal(true)}
+            onOpenNewspaper={handleOpenNewspaper}
             onProposeAlliance={(toTribeId) => playerTribe && handleProposeAlliance(playerTribe.id, toTribeId)}
             onSueForPeace={(toTribeId, reparations) => playerTribe && handleSueForPeace(playerTribe.id, toTribeId, reparations)}
             onDeclareWar={(toTribeId) => playerTribe && handleDeclareWar(playerTribe.id, toTribeId)}

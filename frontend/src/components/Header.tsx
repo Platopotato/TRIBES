@@ -12,11 +12,12 @@ interface HeaderProps {
   onOpenHelp: () => void;
   onOpenCodex: () => void;
   onChangePassword: () => void;
+  onOpenNewspaper: () => void;
   turn: number;
   gamePhase: GamePhase | 'observing' | 'waiting';
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, turn, gamePhase }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, onOpenNewspaper, turn, gamePhase }) => {
   const phaseText: {[key in typeof gamePhase]: string} = {
       planning: 'Action Planning',
       processing: 'Processing...',
@@ -75,6 +76,12 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
                 <span>Leaderboard</span>
             </Button>
          )}
+         <Button onClick={onOpenNewspaper} variant="secondary" className="flex items-center space-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+            <span>Newspaper</span>
+          </Button>
          <Button onClick={onOpenCodex} variant="secondary" className="flex items-center space-x-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />

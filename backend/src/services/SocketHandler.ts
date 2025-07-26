@@ -64,6 +64,9 @@ export class SocketHandler {
       console.log(`🔐 Login result:`, result);
       if (result.user) {
         console.log(`✅ Login successful for user: ${result.user.username}`);
+        // Store user ID on socket for authentication
+        (socket as any).userId = result.user.id;
+        (socket as any).username = result.user.username;
         socket.emit('login_success', result.user);
       } else {
         console.log(`❌ Login failed: ${result.error}`);
@@ -367,12 +370,18 @@ export class SocketHandler {
 
     socket.on('change_password', async ({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) => {
       const userId = (socket as any).userId;
+      const username = (socket as any).username;
+      console.log(`🔑 Password change request from socket`);
+      console.log(`🔍 Socket userId: ${userId}`);
+      console.log(`🔍 Socket username: ${username}`);
+
       if (!userId) {
+        console.log(`❌ Password change failed: Not authenticated - no userId on socket`);
         socket.emit('password_change_error', 'Not authenticated');
         return;
       }
 
-      console.log(`🔑 User ${userId} changing password`);
+      console.log(`🔑 User ${userId} (${username}) changing password`);
       try {
         // Find user by ID
         const allUsers = await this.gameService.getAllUsers();

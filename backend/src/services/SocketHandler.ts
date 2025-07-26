@@ -10,7 +10,8 @@ import {
   ALL_CHIEFS,
   getAsset,
   TickerMessage,
-  LoginAnnouncement
+  LoginAnnouncement,
+  FullBackupState
 } from '../../../shared/dist/index.js';
 
 export class SocketHandler {
@@ -399,9 +400,12 @@ export class SocketHandler {
       }
     });
 
-    socket.on('load_backup', async (backupData: { gameState: any, users: any[] }) => {
+    socket.on('load_backup', async (backupData: FullBackupState) => {
       console.log(`📥 Loading backup data with ${backupData.users.length} users and ${backupData.gameState.tribes.length} tribes`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔑 Password hashes included: ${backupData.userPasswords ? Object.keys(backupData.userPasswords).length : 0}`);
+      console.log(`📰 Ticker messages: ${backupData.gameState.ticker?.messages?.length || 0}`);
+      console.log(`📢 Login announcements: ${backupData.gameState.loginAnnouncements?.announcements?.length || 0}`);
 
       try {
         // Validate backup data
@@ -409,7 +413,7 @@ export class SocketHandler {
           throw new Error('Invalid backup data structure');
         }
 
-        // Load game state first
+        // Load game state first (includes ticker and login announcements)
         console.log(`🎮 Loading game state...`);
         await this.gameService.updateGameState(backupData.gameState);
         console.log(`✅ Game state loaded: ${backupData.gameState.tribes.length} tribes, turn ${backupData.gameState.turn}`);
@@ -421,7 +425,22 @@ export class SocketHandler {
           console.warn('⚠️ Admin user not found, this might cause issues');
         }
 
-        const usersToLoad = backupData.users.filter(u => u.username !== 'Admin');
+        let usersToLoad = backupData.users.filter((u: User) => u.username !== 'Admin');
+
+        // Restore password hashes if available
+        if (backupData.userPasswords) {
+          console.log(`🔑 Restoring password hashes for ${Object.keys(backupData.userPasswords).length} users`);
+          usersToLoad = usersToLoad.map((user: User) => {
+            if (backupData.userPasswords![user.id]) {
+              return {
+                ...user,
+                passwordHash: backupData.userPasswords![user.id]
+              };
+            }
+            return user;
+          });
+        }
+
         const finalUsers = adminUser ? [adminUser, ...usersToLoad] : usersToLoad;
 
         console.log(`👥 Loading ${finalUsers.length} users (${usersToLoad.length} from backup + ${adminUser ? 1 : 0} admin)`);
@@ -432,7 +451,12 @@ export class SocketHandler {
         await emitGameState();
         await emitUsers();
 
-        console.log(`🎉 Backup loaded successfully: ${backupData.gameState.tribes.length} tribes, ${backupData.users.length} users`);
+        console.log(`🎉 Enhanced backup loaded successfully:`);
+        console.log(`   - ${backupData.gameState.tribes.length} tribes`);
+        console.log(`   - ${backupData.users.length} users`);
+        console.log(`   - ${backupData.userPasswords ? Object.keys(backupData.userPasswords).length : 0} password hashes`);
+        console.log(`   - ${backupData.gameState.ticker?.messages?.length || 0} ticker messages`);
+        console.log(`   - ${backupData.gameState.loginAnnouncements?.announcements?.length || 0} login announcements`);
       } catch (error) {
         console.error('❌ Error loading backup:', error);
         console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
@@ -585,6 +609,37 @@ export class SocketHandler {
         }
       } catch (error) {
         console.error(`❌ Error toggling login announcements:`, error);
+      }
+    });
+
+    // Enhanced backup with passwords
+    socket.on('admin:requestEnhancedBackup', async () => {
+      console.log(`💾 Admin requesting enhanced backup with passwords`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        const allUsers = await this.gameService.getAllUsers();
+
+        if (gameState && allUsers) {
+          // Create password hash map (excluding admin for security)
+          const userPasswords: { [userId: string]: string } = {};
+          allUsers.forEach(user => {
+            if (user.username !== 'Admin' && user.passwordHash) {
+              userPasswords[user.id] = user.passwordHash;
+            }
+          });
+
+          const enhancedBackup: FullBackupState = {
+            gameState,
+            users: allUsers,
+            userPasswords
+          };
+
+          socket.emit('enhanced_backup_ready', enhancedBackup);
+          console.log(`✅ Enhanced backup sent: ${allUsers.length} users, ${Object.keys(userPasswords).length} passwords, ticker: ${gameState.ticker?.messages?.length || 0} messages, announcements: ${gameState.loginAnnouncements?.announcements?.length || 0}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error creating enhanced backup:`, error);
+        socket.emit('backup_error', 'Failed to create enhanced backup');
       }
     });
 

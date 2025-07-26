@@ -155,21 +155,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   };
 
   const handleSaveBackup = () => {
-    const backupState: FullBackupState = {
-        gameState: gameState,
-        users: allUsers
-    };
-    const stateString = JSON.stringify(backupState, null, 2);
-    const blob = new Blob([stateString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    a.href = url;
-    a.download = `radix-tribes-backup-${date}.json`;
-    document.body.appendChild(a);
-a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Request enhanced backup with password hashes
+    client.requestEnhancedBackup();
   };
 
   const handleLoadBackupClick = () => {
@@ -805,12 +792,12 @@ GAME STATISTICS:
 
             <Card title="Game Data Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
-                  <p className="text-neutral-400 leading-relaxed">Save the entire game state and all users to a file, or load a previous backup.</p>
+                  <p className="text-neutral-400 leading-relaxed">Save the entire game state, all users, passwords, ticker messages, and announcements to a file, or load a previous backup.</p>
                   <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={handleSaveBackup}>
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
-                    Save Game Backup
+                    Save Enhanced Backup (with Passwords)
                   </Button>
                   <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={handleLoadBackupClick}>
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -131,6 +131,24 @@ export const initClient = (
     socket.on('password_change_error', (message: string) => {
         alert(`Error: ${message}`);
     });
+
+    socket.on('enhanced_backup_ready', (backupData: FullBackupState) => {
+        // Download the enhanced backup
+        const stateString = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([stateString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+        a.href = url;
+        a.download = `radix-tribes-enhanced-backup-${date}-${time}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log('📥 Enhanced backup downloaded with passwords and announcements');
+    });
 };
 
 // Auth emitters with timeout handling
@@ -209,6 +227,7 @@ export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
 export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const startNewGame = () => socket.emit('start_new_game');
 export const loadBackup = createEmitter<FullBackupState>('load_backup');
+export const requestEnhancedBackup = () => socket.emit('admin:requestEnhancedBackup');
 export const updateMap = createEmitter<{newMapData: HexData[], newStartingLocations: string[]}>('update_map');
 
 // Chief/Asset emitters

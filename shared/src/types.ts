@@ -322,6 +322,7 @@ export interface GameState {
 export interface FullBackupState {
     gameState: GameState;
     users: User[];
+    userPasswords?: { [userId: string]: string }; // Password hashes for complete restoration
 }
 
 export type TickerPriority = 'normal' | 'important' | 'urgent';

@@ -212,7 +212,7 @@ a.click();
         morale: tribe.globalResources.morale,
         rationLevel: tribe.rationLevel,
         completedTechs: tribe.completedTechs.length,
-        currentResearch: tribe.currentResearch?.name || 'None',
+        currentResearch: tribe.currentResearch?.techId || 'None',
         history: tribeHistory,
         trends: trends
       };
@@ -776,7 +776,7 @@ GAME STATISTICS:
                 <Button onClick={handleDownloadTurnSummary} className="bg-amber-600 hover:bg-amber-700">
                   Download Summary
                 </Button>
-                <Button onClick={() => setShowTurnSummary(false)} variant="outline">
+                <Button onClick={() => setShowTurnSummary(false)} variant="secondary">
                   Close
                 </Button>
               </div>

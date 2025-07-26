@@ -195,6 +195,12 @@ export const toggleTickerMessage = createEmitter<string>('admin:toggleTickerMess
 export const deleteTickerMessage = createEmitter<string>('admin:deleteTickerMessage');
 export const toggleTicker = () => socket.emit('admin:toggleTicker');
 
+// Login announcement emitters
+export const addLoginAnnouncement = createEmitter<any>('admin:addLoginAnnouncement');
+export const toggleLoginAnnouncement = createEmitter<string>('admin:toggleLoginAnnouncement');
+export const deleteLoginAnnouncement = createEmitter<string>('admin:deleteLoginAnnouncement');
+export const toggleLoginAnnouncements = () => socket.emit('admin:toggleLoginAnnouncements');
+
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');

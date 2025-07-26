@@ -313,6 +313,7 @@ export interface GameState {
     diplomaticProposals: DiplomaticProposal[];
     history?: TurnHistoryRecord[];
     ticker?: TickerState;
+    loginAnnouncements?: LoginAnnouncementState;
     // These are now primarily for use within the map editor for generating new base maps
     mapSeed?: number; 
     mapSettings?: MapSettings;
@@ -335,5 +336,19 @@ export interface TickerMessage {
 
 export interface TickerState {
     messages: TickerMessage[];
+    isEnabled: boolean;
+}
+
+export interface LoginAnnouncement {
+    id: string;
+    title: string;
+    message: string;
+    priority: TickerPriority;
+    isActive: boolean;
+    createdAt: number;
+}
+
+export interface LoginAnnouncementState {
+    announcements: LoginAnnouncement[];
     isEnabled: boolean;
 }

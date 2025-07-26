@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
 import * as Auth from '../lib/auth';
-import { User } from '@radix-tribes/shared';
+import { User, LoginAnnouncement } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
+import LoginAnnouncements from './LoginAnnouncements';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
@@ -11,9 +12,11 @@ interface LoginProps {
   onNavigateToForgotPassword: () => void;
   loginError?: string;
   onClearError?: () => void;
+  announcements?: LoginAnnouncement[];
+  announcementsEnabled?: boolean;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNavigateToForgotPassword, loginError, onClearError }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNavigateToForgotPassword, loginError, onClearError, announcements = [], announcementsEnabled = false }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +38,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
           className="w-full h-32 object-contain rounded-lg border-2 border-amber-500 p-4 bg-slate-800/50"
         />
       </div>
+
+      <LoginAnnouncements
+        announcements={announcements}
+        isEnabled={announcementsEnabled}
+      />
+
       <Card title="Login" className="max-w-sm w-full">
         <form onSubmit={handleLogin} className="space-y-4">
           <div>

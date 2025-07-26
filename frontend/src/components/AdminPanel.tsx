@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useRef } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -53,6 +53,10 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showTickerModal, setShowTickerModal] = useState(false);
   const [newTickerMessage, setNewTickerMessage] = useState('');
   const [newTickerPriority, setNewTickerPriority] = useState<TickerPriority>('normal');
+  const [showLoginAnnouncementModal, setShowLoginAnnouncementModal] = useState(false);
+  const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
+  const [newAnnouncementMessage, setNewAnnouncementMessage] = useState('');
+  const [newAnnouncementPriority, setNewAnnouncementPriority] = useState<TickerPriority>('normal');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -117,6 +121,37 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleToggleTicker = () => {
     client.toggleTicker();
+  };
+
+  const handleAddLoginAnnouncement = () => {
+    if (newAnnouncementTitle.trim() && newAnnouncementMessage.trim()) {
+      const announcement: LoginAnnouncement = {
+        id: `announcement-${Date.now()}`,
+        title: newAnnouncementTitle.trim(),
+        message: newAnnouncementMessage.trim(),
+        priority: newAnnouncementPriority,
+        isActive: true,
+        createdAt: Date.now()
+      };
+
+      client.addLoginAnnouncement(announcement);
+      setNewAnnouncementTitle('');
+      setNewAnnouncementMessage('');
+      setNewAnnouncementPriority('normal');
+      setShowLoginAnnouncementModal(false);
+    }
+  };
+
+  const handleToggleLoginAnnouncement = (announcementId: string) => {
+    client.toggleLoginAnnouncement(announcementId);
+  };
+
+  const handleDeleteLoginAnnouncement = (announcementId: string) => {
+    client.deleteLoginAnnouncement(announcementId);
+  };
+
+  const handleToggleLoginAnnouncements = () => {
+    client.toggleLoginAnnouncements();
   };
 
   const handleSaveBackup = () => {
@@ -621,6 +656,82 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            <Card title="Login Announcements" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Login Announcements:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      gameState.loginAnnouncements?.isEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                      {gameState.loginAnnouncements?.isEnabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleToggleLoginAnnouncements}
+                    className={`text-xs ${
+                      gameState.loginAnnouncements?.isEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {gameState.loginAnnouncements?.isEnabled ? 'Disable' : 'Enable'}
+                  </Button>
+                </div>
+
+                <Button
+                  onClick={() => setShowLoginAnnouncementModal(true)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  Add Login Announcement
+                </Button>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {gameState.loginAnnouncements?.announcements?.map(announcement => (
+                    <div key={announcement.id} className={`p-3 rounded border ${
+                      announcement.priority === 'urgent' ? 'bg-red-900/20 border-red-600' :
+                      announcement.priority === 'important' ? 'bg-amber-900/20 border-amber-600' :
+                      'bg-blue-900/20 border-blue-600'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-xs font-bold uppercase tracking-wide">
+                              {announcement.priority}
+                            </span>
+                            <span className={`w-2 h-2 rounded-full ${
+                              announcement.isActive ? 'bg-green-400' : 'bg-gray-400'
+                            }`}></span>
+                          </div>
+                          <h4 className="font-bold text-sm mb-1">{announcement.title}</h4>
+                          <p className="text-sm">{announcement.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(announcement.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex space-x-1 ml-2">
+                          <Button
+                            onClick={() => handleToggleLoginAnnouncement(announcement.id)}
+                            className={`text-xs py-1 px-2 ${
+                              announcement.isActive ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'
+                            }`}
+                          >
+                            {announcement.isActive ? 'Hide' : 'Show'}
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteLoginAnnouncement(announcement.id)}
+                            className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )) || (
+                    <p className="text-gray-400 text-sm text-center py-4">No login announcements</p>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <Card title="World Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
                 <div className="space-y-4">
                     <p className="text-neutral-400 leading-relaxed">Edit the game world directly or start a new game on the current map.</p>
@@ -1008,6 +1119,74 @@ GAME STATISTICS:
                   className="bg-amber-600 hover:bg-amber-700"
                 >
                   Add Message
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Announcement Modal */}
+      {showLoginAnnouncementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-blue-400 mb-4">Add Login Announcement</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Priority Level
+                </label>
+                <select
+                  value={newAnnouncementPriority}
+                  onChange={(e) => setNewAnnouncementPriority(e.target.value as TickerPriority)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="normal">📢 Notice</option>
+                  <option value="important">⚠️ Important</option>
+                  <option value="urgent">🚨 Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={newAnnouncementTitle}
+                  onChange={(e) => setNewAnnouncementTitle(e.target.value)}
+                  placeholder="e.g., Server Maintenance"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={newAnnouncementMessage}
+                  onChange={(e) => setNewAnnouncementMessage(e.target.value)}
+                  placeholder="e.g., Server will be down for 30 minutes starting at 3 PM EST"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowLoginAnnouncementModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddLoginAnnouncement}
+                  disabled={!newAnnouncementTitle.trim() || !newAnnouncementMessage.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Add Announcement
                 </Button>
               </div>
             </div>

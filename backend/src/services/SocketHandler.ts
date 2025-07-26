@@ -9,7 +9,8 @@ import {
   DiplomaticStatus,
   ALL_CHIEFS,
   getAsset,
-  TickerMessage
+  TickerMessage,
+  LoginAnnouncement
 } from '../../../shared/dist/index.js';
 
 export class SocketHandler {
@@ -513,6 +514,77 @@ export class SocketHandler {
         }
       } catch (error) {
         console.error(`❌ Error toggling ticker:`, error);
+      }
+    });
+
+    // Login announcement management handlers
+    socket.on('admin:addLoginAnnouncement', async (announcement: LoginAnnouncement) => {
+      console.log(`📢 Admin adding login announcement: ${announcement.title}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.loginAnnouncements) {
+            gameState.loginAnnouncements = { announcements: [], isEnabled: true };
+          }
+          gameState.loginAnnouncements.announcements.push(announcement);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Login announcement added successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error adding login announcement:`, error);
+      }
+    });
+
+    socket.on('admin:toggleLoginAnnouncement', async (announcementId: string) => {
+      console.log(`📢 Admin toggling login announcement: ${announcementId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState && gameState.loginAnnouncements) {
+          const announcement = gameState.loginAnnouncements.announcements.find(a => a.id === announcementId);
+          if (announcement) {
+            announcement.isActive = !announcement.isActive;
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+            console.log(`✅ Login announcement toggled: ${announcement.isActive ? 'active' : 'inactive'}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error toggling login announcement:`, error);
+      }
+    });
+
+    socket.on('admin:deleteLoginAnnouncement', async (announcementId: string) => {
+      console.log(`📢 Admin deleting login announcement: ${announcementId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState && gameState.loginAnnouncements) {
+          gameState.loginAnnouncements.announcements = gameState.loginAnnouncements.announcements.filter(a => a.id !== announcementId);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Login announcement deleted successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error deleting login announcement:`, error);
+      }
+    });
+
+    socket.on('admin:toggleLoginAnnouncements', async () => {
+      console.log(`📢 Admin toggling login announcements status`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.loginAnnouncements) {
+            gameState.loginAnnouncements = { announcements: [], isEnabled: true };
+          } else {
+            gameState.loginAnnouncements.isEnabled = !gameState.loginAnnouncements.isEnabled;
+          }
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Login announcements ${gameState.loginAnnouncements.isEnabled ? 'enabled' : 'disabled'}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error toggling login announcements:`, error);
       }
     });
 

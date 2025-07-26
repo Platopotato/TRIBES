@@ -283,6 +283,8 @@ const App: React.FC = () => {
           onNavigateToForgotPassword={() => setView('forgot_password')}
           loginError={loginError}
           onClearError={() => setLoginError('')}
+          announcements={gameState?.loginAnnouncements?.announcements || []}
+          announcementsEnabled={gameState?.loginAnnouncements?.isEnabled || false}
         />;
       
       case 'register':

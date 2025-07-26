@@ -212,6 +212,16 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     }
   };
 
+  const handleResetAdminPassword = () => {
+    if (confirm('🚨 EMERGENCY RESET: This will reset the admin password back to "snoopy". Are you sure?')) {
+      client.resetAdminPassword();
+    }
+  };
+
+  const handleDebugPassword = () => {
+    client.debugAdminPassword();
+  };
+
   // Set up backup status callback and fetch initial status
   useEffect(() => {
     const handleBackupStatus = (status: BackupStatus, backupList: BackupFile[]) => {
@@ -1010,12 +1020,28 @@ GAME STATISTICS:
                   </p>
                 </div>
 
-                <Button
-                  onClick={() => setShowAdminPasswordModal(true)}
-                  className="w-full bg-red-600 hover:bg-red-700"
-                >
-                  🔒 Update Admin Password
-                </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    onClick={() => setShowAdminPasswordModal(true)}
+                    className="bg-red-600 hover:bg-red-700 text-xs"
+                  >
+                    🔒 Update
+                  </Button>
+
+                  <Button
+                    onClick={handleResetAdminPassword}
+                    className="bg-orange-600 hover:bg-orange-700 text-xs"
+                  >
+                    🚨 Reset
+                  </Button>
+
+                  <Button
+                    onClick={handleDebugPassword}
+                    className="bg-purple-600 hover:bg-purple-700 text-xs"
+                  >
+                    🔍 Debug
+                  </Button>
+                </div>
 
                 <div className="text-sm text-neutral-400">
                   <p><strong>Safe Migration Steps:</strong></p>

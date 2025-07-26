@@ -737,6 +737,46 @@ export class SocketHandler {
       }
     });
 
+    // Emergency admin password reset
+    socket.on('admin:resetAdminPassword', async () => {
+      console.log(`🚨 Admin resetting admin password to default`);
+      try {
+        const success = await this.gameService.database.updateAdminPassword('snoopy');
+        if (success) {
+          socket.emit('admin_password_updated', 'Admin password reset to default successfully');
+        } else {
+          socket.emit('admin_password_error', 'Failed to reset admin password');
+        }
+      } catch (error) {
+        console.error(`❌ Error resetting admin password:`, error);
+        socket.emit('admin_password_error', 'Error resetting admin password');
+      }
+    });
+
+    // Debug admin password
+    socket.on('admin:debugPassword', async () => {
+      console.log(`🔍 Admin debugging password state`);
+      try {
+        const adminUser = await this.gameService.findUserByUsername('Admin');
+        if (adminUser) {
+          console.log(`🔍 Admin user found, password hash: ${adminUser.passwordHash}`);
+          console.log(`🔍 Expected snoopy hash: ${this.gameService.database.hashPassword('snoopy')}`);
+          socket.emit('admin_debug_info', {
+            hasAdmin: true,
+            currentHash: adminUser.passwordHash,
+            snoopyHash: this.gameService.database.hashPassword('snoopy'),
+            envPassword: process.env.ADMIN_PASSWORD ? 'SET' : 'NOT SET'
+          });
+        } else {
+          console.log(`🔍 No admin user found`);
+          socket.emit('admin_debug_info', { hasAdmin: false });
+        }
+      } catch (error) {
+        console.error(`❌ Error debugging password:`, error);
+        socket.emit('admin_password_error', 'Error debugging password');
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
     });

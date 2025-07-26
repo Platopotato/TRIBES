@@ -336,6 +336,11 @@ export class DatabaseService {
     }
   }
 
+  // Public method for debugging
+  public hashPassword(password: string): string {
+    return this.mockHash(password);
+  }
+
   async findUserByUsername(username: string): Promise<User | null> {
     if (this.useDatabase && this.prisma) {
       const user = await this.prisma.user.findUnique({

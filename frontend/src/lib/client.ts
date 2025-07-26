@@ -3,6 +3,9 @@ import { GameState, User, FullBackupState, GameAction, Tribe, HexData } from '@r
 
 let socket: Socket;
 
+// Store current user for authentication restoration
+let currentUser: User | null = null;
+
 // Helper function to create a typed emitter
 const createEmitter = <T>(eventName: string) => (payload: T) => {
     console.log(`Attempting to emit ${eventName}:`, payload);
@@ -31,9 +34,30 @@ export const initClient = (
         transports: ['websocket', 'polling']
     });
 
+    // Initialize currentUser from sessionStorage if available
+    const storedUser = sessionStorage.getItem('radix_user');
+    if (storedUser) {
+        try {
+            currentUser = JSON.parse(storedUser);
+            console.log('🔄 Restored user from session storage:', currentUser?.username);
+        } catch (error) {
+            console.error('❌ Failed to parse stored user:', error);
+            sessionStorage.removeItem('radix_user');
+        }
+    }
+
     socket.on('connect', () => {
         console.log(`✅ Socket.IO Connected to server! Socket ID: ${socket.id}`);
         socket.emit('get_initial_state');
+
+        // Restore authentication if we have a current user
+        if (currentUser) {
+            console.log('🔄 Restoring authentication for:', currentUser.username);
+            socket.emit('restore_auth', {
+                userId: currentUser.id,
+                username: currentUser.username
+            });
+        }
     });
 
     socket.on('connect_error', (error) => {
@@ -61,6 +85,9 @@ export const initClient = (
         console.log('✅ Login successful:', user);
         // Store user in session storage immediately
         sessionStorage.setItem('radix_user', JSON.stringify(user));
+
+        // Store user for socket authentication restoration
+        currentUser = user;
 
         // Always call onLoginSuccess to set the current user
         // This ensures the user is logged in for both normal login and registration
@@ -186,6 +213,17 @@ export const initClient = (
     socket.on('socket_debug_info', (info: any) => {
         console.log('🔍 Socket Debug Info:', info);
         alert(`Socket Debug:\nSocket ID: ${info.socketId}\nUser ID: ${info.userId}\nUsername: ${info.username}\nAuthenticated: ${info.authenticated}`);
+    });
+
+    socket.on('auth_restored', ({ success }: { success: boolean }) => {
+        if (success) {
+            console.log('✅ Authentication restored successfully');
+        } else {
+            console.log('❌ Failed to restore authentication');
+            // Clear stored user if restoration failed
+            currentUser = null;
+            sessionStorage.removeItem('radix_user');
+        }
     });
 
     socket.on('manual_backup_created', (filename: string) => {
@@ -318,3 +356,9 @@ export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: strin
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
+
+// Logout function
+export const logout = () => {
+    sessionStorage.removeItem('radix_user');
+    currentUser = null; // Clear current user for socket authentication
+};

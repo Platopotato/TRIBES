@@ -65,6 +65,25 @@ export class SocketHandler {
       });
     });
 
+    // Restore authentication for existing sessions
+    socket.on('restore_auth', async ({ userId, username }: { userId: string, username: string }) => {
+      console.log(`🔄 Restoring authentication for socket ${socket.id}: userId=${userId}, username=${username}`);
+
+      // Verify the user exists
+      const allUsers = await this.gameService.getAllUsers();
+      const user = allUsers.find(u => u.id === userId && u.username === username);
+
+      if (user) {
+        (socket as any).userId = userId;
+        (socket as any).username = username;
+        console.log(`✅ Authentication restored for socket ${socket.id}`);
+        socket.emit('auth_restored', { success: true });
+      } else {
+        console.log(`❌ Failed to restore authentication for socket ${socket.id} - user not found`);
+        socket.emit('auth_restored', { success: false });
+      }
+    });
+
     // Initial state
     socket.on('get_initial_state', async () => {
       const gameState = await this.gameService.getGameState();

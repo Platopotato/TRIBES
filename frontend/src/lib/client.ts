@@ -183,6 +183,11 @@ export const initClient = (
         alert(`Debug Info:\nHas Admin: ${info.hasAdmin}\nCurrent Hash: ${info.currentHash}\nSnoopy Hash: ${info.snoopyHash}\nEnv Password: ${info.envPassword}`);
     });
 
+    socket.on('socket_debug_info', (info: any) => {
+        console.log('🔍 Socket Debug Info:', info);
+        alert(`Socket Debug:\nSocket ID: ${info.socketId}\nUser ID: ${info.userId}\nUsername: ${info.username}\nAuthenticated: ${info.authenticated}`);
+    });
+
     socket.on('manual_backup_created', (filename: string) => {
         alert(`Manual backup created successfully: ${filename}`);
     });
@@ -271,6 +276,7 @@ export const clearTurnDeadline = () => socket.emit('admin:clearTurnDeadline');
 export const updateAdminPassword = createEmitter<string>('admin:updateAdminPassword');
 export const resetAdminPassword = () => socket.emit('admin:resetAdminPassword');
 export const debugAdminPassword = () => socket.emit('admin:debugPassword');
+export const debugSocket = () => socket.emit('debug_socket');
 
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');

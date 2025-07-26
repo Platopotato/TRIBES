@@ -50,6 +50,21 @@ export class SocketHandler {
       this.io.emit('users_updated', users);
     };
 
+    console.log(`User connected: ${socket.id}`);
+
+    // Debug socket connection
+    socket.on('debug_socket', () => {
+      console.log(`🔍 Socket ${socket.id} debug requested`);
+      console.log(`🔍 Socket userId: ${(socket as any).userId}`);
+      console.log(`🔍 Socket username: ${(socket as any).username}`);
+      socket.emit('socket_debug_info', {
+        socketId: socket.id,
+        userId: (socket as any).userId,
+        username: (socket as any).username,
+        authenticated: !!(socket as any).userId
+      });
+    });
+
     // Initial state
     socket.on('get_initial_state', async () => {
       const gameState = await this.gameService.getGameState();
@@ -67,6 +82,7 @@ export class SocketHandler {
         // Store user ID on socket for authentication
         (socket as any).userId = result.user.id;
         (socket as any).username = result.user.username;
+        console.log(`🔗 Socket ${socket.id} authenticated as userId: ${result.user.id}, username: ${result.user.username}`);
         socket.emit('login_success', result.user);
       } else {
         console.log(`❌ Login failed: ${result.error}`);
@@ -371,12 +387,14 @@ export class SocketHandler {
     socket.on('change_password', async ({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) => {
       const userId = (socket as any).userId;
       const username = (socket as any).username;
-      console.log(`🔑 Password change request from socket`);
+      console.log(`🔑 Password change request from socket ${socket.id}`);
       console.log(`🔍 Socket userId: ${userId}`);
       console.log(`🔍 Socket username: ${username}`);
+      console.log(`🔍 Socket properties:`, Object.keys(socket as any).filter(key => !key.startsWith('_')));
 
       if (!userId) {
-        console.log(`❌ Password change failed: Not authenticated - no userId on socket`);
+        console.log(`❌ Password change failed: Not authenticated - no userId on socket ${socket.id}`);
+        console.log(`🔍 Available socket properties:`, Object.keys(socket as any));
         socket.emit('password_change_error', 'Not authenticated');
         return;
       }

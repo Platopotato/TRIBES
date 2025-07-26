@@ -222,6 +222,10 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     client.debugAdminPassword();
   };
 
+  const handleDebugSocket = () => {
+    client.debugSocket();
+  };
+
   // Set up backup status callback and fetch initial status
   useEffect(() => {
     const handleBackupStatus = (status: BackupStatus, backupList: BackupFile[]) => {
@@ -1020,26 +1024,35 @@ GAME STATISTICS:
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <Button
                     onClick={() => setShowAdminPasswordModal(true)}
                     className="bg-red-600 hover:bg-red-700 text-xs"
                   >
-                    🔒 Update
+                    🔒 Update Password
                   </Button>
 
                   <Button
                     onClick={handleResetAdminPassword}
                     className="bg-orange-600 hover:bg-orange-700 text-xs"
                   >
-                    🚨 Reset
+                    🚨 Emergency Reset
                   </Button>
+                </div>
 
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={handleDebugPassword}
                     className="bg-purple-600 hover:bg-purple-700 text-xs"
                   >
-                    🔍 Debug
+                    🔍 Debug Password
+                  </Button>
+
+                  <Button
+                    onClick={handleDebugSocket}
+                    className="bg-blue-600 hover:bg-blue-700 text-xs"
+                  >
+                    🔗 Debug Socket
                   </Button>
                 </div>
 

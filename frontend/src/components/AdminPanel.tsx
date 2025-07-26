@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
 import * as Auth from '../lib/auth';
+import * as client from '../lib/client';
 
 interface AdminPanelProps {
   gameState: GameState;
@@ -74,7 +75,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleConfirmPasswordReset = () => {
     if (resetPasswordUserId && newPassword.trim()) {
       // Emit password reset event
-      socket.emit('admin:resetPassword', { userId: resetPasswordUserId, newPassword: newPassword.trim() });
+      client.adminResetPassword({ userId: resetPasswordUserId, newPassword: newPassword.trim() });
       setResetPasswordUserId(null);
       setNewPassword('');
       alert(`Password reset successfully! New password: ${newPassword.trim()}`);

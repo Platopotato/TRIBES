@@ -178,6 +178,7 @@ export const register = (data: { username: string, password: string, securityQue
 export const getUserQuestion = createEmitter<string>('get_security_question');
 export const verifySecurityAnswer = createEmitter<{ username: string, answer: string }>('verify_security_answer');
 export const resetPassword = createEmitter<{ username: string, newPassword: string }>('reset_password');
+export const adminResetPassword = createEmitter<{ userId: string, newPassword: string }>('admin:resetPassword');
 
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');

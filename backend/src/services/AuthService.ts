@@ -81,4 +81,21 @@ export class AuthService {
     }
     return false;
   }
+
+  async removeUser(userId: string): Promise<boolean> {
+    try {
+      // Use GameService to remove user (it handles both database and file storage)
+      const success = await this.gameService.removeUser(userId);
+      if (success) {
+        console.log(`🗑️ User ${userId} removed successfully`);
+        return true;
+      } else {
+        console.error(`❌ Failed to remove user ${userId}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error removing user:', error);
+      return false;
+    }
+  }
 }

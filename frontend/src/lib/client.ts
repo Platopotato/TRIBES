@@ -183,8 +183,8 @@ export const resetPassword = createEmitter<{ username: string, newPassword: stri
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');
 export const processTurn = () => socket.emit('process_turn');
-export const updateTribe = createEmitter<Tribe>('update_tribe');
-export const removePlayer = createEmitter<string>('remove_player');
+export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
+export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const startNewGame = () => socket.emit('start_new_game');
 export const loadBackup = createEmitter<FullBackupState>('load_backup');
 export const updateMap = createEmitter<{newMapData: HexData[], newStartingLocations: string[]}>('update_map');
@@ -198,7 +198,7 @@ export const approveAsset = createEmitter<string>('approve_asset');
 export const denyAsset = createEmitter<string>('deny_asset');
 
 // AI emitter
-export const addAITribe = () => socket.emit('add_ai_tribe');
+export const addAITribe = (aiType?: string) => socket.emit('add_ai_tribe', aiType);
 
 // Diplomacy emitters
 export const proposeAlliance = createEmitter<{ fromTribeId: string, toTribeId: string }>('propose_alliance');

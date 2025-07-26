@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useRef } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -11,6 +11,7 @@ interface AdminPanelProps {
   users: User[];
   onBack: () => void;
   onNavigateToEditor: () => void;
+  onNavigateToGameEditor: () => void;
   onProcessTurn: () => void;
   onRemovePlayer: (userId: string) => void;
   onStartNewGame: () => void;
@@ -19,11 +20,12 @@ interface AdminPanelProps {
   onDenyChief: (requestId: string) => void;
   onApproveAsset: (requestId: string) => void;
   onDenyAsset: (requestId: string) => void;
-  onAddAITribe: () => void;
+  onAddAITribe: (aiType?: AIType) => void;
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = (props) => {
-  const { gameState, users, onBack, onNavigateToEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
+  const { gameState, users, onBack, onNavigateToEditor, onNavigateToGameEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
+  const [selectedAIType, setSelectedAIType] = useState<AIType>(AIType.Wanderer);
 
   // Safety checks
   if (!gameState) {
@@ -43,12 +45,15 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const [userToRemove, setUserToRemove] = useState<User | null>(null);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
+  const [showTurnSummary, setShowTurnSummary] = useState(false);
+  const [summaryTurnsBack, setSummaryTurnsBack] = useState(1); // How many turns back to include
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
 
   const handleConfirmRemove = () => {
     if (userToRemove) {
+      console.log('🗑️ Removing user:', userToRemove);
       onRemovePlayer(userToRemove.id);
       setUserToRemove(null);
     }
@@ -107,6 +112,192 @@ a.click();
       }
     };
     reader.readAsText(file);
+  };
+
+  const generateTurnSummary = (turnsBack: number = 1) => {
+    const currentTurn = gameState.turn;
+    const history = gameState.history || [];
+
+    const summary = allTribes.map(tribe => {
+      // Get garrison information
+      const garrisons = Object.entries(tribe.garrisons || {}).map(([location, garrison]) => ({
+        location,
+        troops: garrison.troops,
+        weapons: garrison.weapons,
+        chiefs: garrison.chiefs.length
+      }));
+
+      // Get current turn actions
+      const currentActions = tribe.actions.map(action => ({
+        type: action.actionType,
+        data: action.actionData
+      }));
+
+      // Get last turn results
+      const lastTurnResults = tribe.lastTurnResults.map(result => ({
+        type: result.actionType,
+        result: result.result || 'No result'
+      }));
+
+      // Detect chiefs that appeared this turn
+      const chiefsAppearedThisTurn = tribe.lastTurnResults
+        .filter(result => {
+          const resultText = result.result || '';
+          // Look for patterns that indicate chief acquisition
+          return resultText.includes('chief') ||
+                 resultText.includes('Chief') ||
+                 resultText.includes('leader') ||
+                 resultText.includes('Leader') ||
+                 resultText.includes('approved') && resultText.includes('request');
+        })
+        .map(result => ({
+          type: result.actionType,
+          description: result.result || 'Chief acquired'
+        }));
+
+      // Also check if any chiefs were approved via admin this turn
+      const approvedChiefsThisTurn = (gameState.chiefRequests || [])
+        .filter(req => req.tribeId === tribe.id && req.status === 'approved')
+        .map(req => ({
+          type: 'Admin Approval' as any,
+          description: `Chief "${req.chiefName}" was approved by admin`
+        }));
+
+      // Get historical data for this tribe
+      const tribeHistory = [];
+      for (let i = 1; i <= turnsBack && i < currentTurn; i++) {
+        const historicalTurn = currentTurn - i;
+        const turnRecord = history.find(h => h.turn === historicalTurn);
+        if (turnRecord) {
+          const tribeRecord = turnRecord.tribeRecords.find(tr => tr.tribeId === tribe.id);
+          if (tribeRecord) {
+            tribeHistory.push({
+              turn: historicalTurn,
+              score: tribeRecord.score,
+              troops: tribeRecord.troops,
+              garrisons: tribeRecord.garrisons
+            });
+          }
+        }
+      }
+
+      // Calculate trends
+      const currentStats = {
+        troops: garrisons.reduce((sum, g) => sum + g.troops, 0),
+        garrisons: garrisons.length,
+        score: 0 // We'd need to calculate this if needed
+      };
+
+      const trends = tribeHistory.length > 0 ? {
+        troopChange: currentStats.troops - tribeHistory[0].troops,
+        garrisonChange: currentStats.garrisons - tribeHistory[0].garrisons,
+        scoreChange: currentStats.score - tribeHistory[0].score
+      } : null;
+
+      return {
+        tribeName: tribe.tribeName,
+        playerName: tribe.playerName,
+        isAI: tribe.isAI,
+        aiType: tribe.aiType,
+        turnSubmitted: tribe.turnSubmitted,
+        homeBase: tribe.location,
+        resources: tribe.globalResources,
+        totalTroops: garrisons.reduce((sum, g) => sum + g.troops, 0),
+        totalWeapons: garrisons.reduce((sum, g) => sum + g.weapons, 0),
+        totalChiefs: garrisons.reduce((sum, g) => sum + g.chiefs, 0),
+        garrisons,
+        currentActions,
+        lastTurnResults,
+        chiefsAppearedThisTurn: [...chiefsAppearedThisTurn, ...approvedChiefsThisTurn],
+        morale: tribe.globalResources.morale,
+        rationLevel: tribe.rationLevel,
+        completedTechs: tribe.completedTechs.length,
+        currentResearch: tribe.currentResearch?.name || 'None',
+        history: tribeHistory,
+        trends: trends
+      };
+    });
+
+    return summary;
+  };
+
+  const handleDownloadTurnSummary = () => {
+    const summary = generateTurnSummary(summaryTurnsBack);
+    const summaryText = `RADIX TRIBES - TURN ${gameState.turn} SUMMARY
+Generated: ${new Date().toLocaleString()}
+============================================
+
+${summary.map(tribe => `
+TRIBE: ${tribe.tribeName}
+Leader: ${tribe.playerName} ${tribe.isAI ? `(AI - ${tribe.aiType})` : '(Human)'}
+Turn Status: ${tribe.turnSubmitted ? '✅ SUBMITTED' : '❌ NOT SUBMITTED'}
+Home Base: ${tribe.homeBase}
+
+RESOURCES:
+- Food: ${tribe.resources.food}
+- Scrap: ${tribe.resources.scrap}
+- Morale: ${tribe.morale}
+- Ration Level: ${tribe.rationLevel}
+
+MILITARY STRENGTH:
+- Total Troops: ${tribe.totalTroops}
+- Total Weapons: ${tribe.totalWeapons}
+- Total Chiefs: ${tribe.totalChiefs}
+
+GARRISONS:
+${tribe.garrisons.map(g => `  📍 ${g.location}: ${g.troops} troops, ${g.weapons} weapons, ${g.chiefs} chiefs`).join('\n')}
+
+CURRENT TURN ACTIONS:
+${tribe.currentActions.length > 0 ?
+  tribe.currentActions.map(a => `  🎯 ${a.type}: ${JSON.stringify(a.data)}`).join('\n') :
+  '  No actions planned'}
+
+LAST TURN RESULTS:
+${tribe.lastTurnResults.length > 0 ?
+  tribe.lastTurnResults.map(r => `  📊 ${r.type}: ${r.result}`).join('\n') :
+  '  No results from last turn'}
+
+CHIEFS APPEARED THIS TURN:
+${tribe.chiefsAppearedThisTurn.length > 0 ?
+  tribe.chiefsAppearedThisTurn.map(c => `  👑 ${c.type}: ${c.description}`).join('\n') :
+  '  No new chiefs this turn'}
+
+TECHNOLOGY:
+- Completed Technologies: ${tribe.completedTechs}
+- Current Research: ${tribe.currentResearch}
+
+HISTORICAL TRENDS (Last ${summaryTurnsBack} Turn${summaryTurnsBack > 1 ? 's' : ''}):
+${tribe.trends ? `
+- Troop Change: ${tribe.trends.troopChange > 0 ? '+' : ''}${tribe.trends.troopChange}
+- Garrison Change: ${tribe.trends.garrisonChange > 0 ? '+' : ''}${tribe.trends.garrisonChange}
+- Score Change: ${tribe.trends.scoreChange > 0 ? '+' : ''}${tribe.trends.scoreChange}` : '- No historical data available'}
+
+PREVIOUS TURN HISTORY:
+${tribe.history.length > 0 ?
+  tribe.history.map(h => `  📈 Turn ${h.turn}: ${h.troops} troops, ${h.garrisons} garrisons, Score: ${h.score}`).join('\n') :
+  '  No previous turn data available'}
+
+${'='.repeat(50)}
+`).join('')}
+
+GAME STATISTICS:
+- Total Tribes: ${summary.length}
+- Human Players: ${summary.filter(t => !t.isAI).length}
+- AI Players: ${summary.filter(t => t.isAI).length}
+- Turns Submitted: ${summary.filter(t => t.turnSubmitted).length}/${summary.length}
+- Total Military Units: ${summary.reduce((sum, t) => sum + t.totalTroops, 0)} troops, ${summary.reduce((sum, t) => sum + t.totalWeapons, 0)} weapons
+- New Chiefs This Turn: ${summary.reduce((sum, t) => sum + t.chiefsAppearedThisTurn.length, 0)}
+`;
+
+    const blob = new Blob([summaryText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `radix-tribes-turn-${gameState.turn}-summary.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const pendingChiefRequests = (chiefRequests || []).filter(r => r.status === 'pending');
@@ -299,6 +490,12 @@ a.click();
                       </svg>
                       Edit World Map
                     </Button>
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onNavigateToGameEditor}>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                      Game Editor
+                    </Button>
                      <Button
                         className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
                         onClick={() => setShowNewGameConfirm(true)}
@@ -313,13 +510,45 @@ a.click();
             
             <Card title="AI Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
-                  <p className="text-neutral-400 leading-relaxed">Add or manage computer-controlled tribes. There are currently <span className="text-amber-400 font-semibold">{aiTribesCount}</span> AI tribes in the game.</p>
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onAddAITribe}>
+                  <p className="text-neutral-400 leading-relaxed">Add computer-controlled tribes with different personalities. There are currently <span className="text-amber-400 font-semibold">{aiTribesCount}</span> AI tribes in the game.</p>
+
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-neutral-300">AI Personality</label>
+                    <select
+                      value={selectedAIType}
+                      onChange={(e) => setSelectedAIType(e.target.value as AIType)}
+                      className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value={AIType.Wanderer}>🚶 Wanderer - Random movement and exploration</option>
+                      <option value={AIType.Aggressive}>⚔️ Aggressive - Focuses on combat and attacking enemies</option>
+                      <option value={AIType.Defensive}>🛡️ Defensive - Builds fortifications and defends territory</option>
+                      <option value={AIType.Expansionist}>🏗️ Expansionist - Builds outposts and claims territory</option>
+                      <option value={AIType.Trader}>💰 Trader - Focuses on resource gathering and trading</option>
+                      <option value={AIType.Scavenger}>🔍 Scavenger - Prioritizes scavenging and resource collection</option>
+                    </select>
+                  </div>
+
+                  <Button
+                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
+                    onClick={() => onAddAITribe(selectedAIType)}
+                  >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Add Wanderer AI Tribe
+                    Add {selectedAIType} AI Tribe
                   </Button>
+
+                  <div className="mt-4 p-3 bg-neutral-700/50 rounded-lg">
+                    <h4 className="text-sm font-medium text-neutral-300 mb-2">AI Personality Guide:</h4>
+                    <div className="text-xs text-neutral-400 space-y-1">
+                      <div><strong>Aggressive:</strong> Builds weapons, attacks enemies, focuses on combat</div>
+                      <div><strong>Defensive:</strong> Fortifies positions, recruits troops, defends territory</div>
+                      <div><strong>Expansionist:</strong> Builds outposts, scouts new areas, claims territory</div>
+                      <div><strong>Trader:</strong> Gathers resources, trades with other tribes, diplomatic</div>
+                      <div><strong>Scavenger:</strong> Focuses on scavenging, explores for resources</div>
+                      <div><strong>Wanderer:</strong> Random behavior, unpredictable movement</div>
+                    </div>
+                  </div>
               </div>
             </Card>
 
@@ -337,6 +566,12 @@ a.click();
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                     </svg>
                     Load Game Backup
+                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={() => setShowTurnSummary(true)}>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View Turn Summary
                   </Button>
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
               </div>
@@ -389,6 +624,165 @@ a.click();
             onConfirm={handleConfirmNewGame}
             onCancel={() => setShowNewGameConfirm(false)}
         />
+      )}
+
+      {showTurnSummary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-neutral-600">
+              <div>
+                <h2 className="text-2xl font-bold text-amber-400">Turn {gameState.turn} Summary</h2>
+                <div className="flex items-center space-x-4 mt-2">
+                  <label className="text-sm text-neutral-300">Include previous turns:</label>
+                  <select
+                    value={summaryTurnsBack}
+                    onChange={(e) => setSummaryTurnsBack(Number(e.target.value))}
+                    className="bg-neutral-700 text-white rounded px-2 py-1 text-sm border border-neutral-600"
+                  >
+                    <option value={1}>Current turn only</option>
+                    <option value={2}>Last 2 turns</option>
+                    <option value={3}>Last 3 turns</option>
+                    <option value={5}>Last 5 turns</option>
+                    <option value={10}>Last 10 turns</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTurnSummary(false)}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-6">
+                {generateTurnSummary(summaryTurnsBack).map((tribe, index) => (
+                  <div key={index} className="bg-neutral-700 rounded-lg p-4 border border-neutral-600">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-amber-300">{tribe.tribeName}</h3>
+                        <p className="text-neutral-300">
+                          Leader: {tribe.playerName} {tribe.isAI ? `(AI - ${tribe.aiType})` : '(Human)'}
+                        </p>
+                        <p className={`text-sm font-semibold ${tribe.turnSubmitted ? 'text-green-400' : 'text-red-400'}`}>
+                          {tribe.turnSubmitted ? '✅ Turn Submitted' : '❌ Turn Not Submitted'}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-neutral-400">
+                        <p>Home: {tribe.homeBase}</p>
+                        <p>Morale: {tribe.morale}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-neutral-600 rounded p-3">
+                        <h4 className="font-semibold text-amber-200 mb-2">Resources</h4>
+                        <p className="text-sm">Food: {tribe.resources.food}</p>
+                        <p className="text-sm">Scrap: {tribe.resources.scrap}</p>
+                        <p className="text-sm">Rations: {tribe.rationLevel}</p>
+                      </div>
+
+                      <div className="bg-neutral-600 rounded p-3">
+                        <h4 className="font-semibold text-amber-200 mb-2">Military</h4>
+                        <p className="text-sm">Troops: {tribe.totalTroops}</p>
+                        <p className="text-sm">Weapons: {tribe.totalWeapons}</p>
+                        <p className="text-sm">Chiefs: {tribe.totalChiefs}</p>
+                      </div>
+
+                      <div className="bg-neutral-600 rounded p-3">
+                        <h4 className="font-semibold text-amber-200 mb-2">Technology</h4>
+                        <p className="text-sm">Completed: {tribe.completedTechs}</p>
+                        <p className="text-sm">Research: {tribe.currentResearch}</p>
+                      </div>
+
+                      {summaryTurnsBack > 1 && tribe.trends && (
+                        <div className="bg-neutral-600 rounded p-3">
+                          <h4 className="font-semibold text-amber-200 mb-2">Trends</h4>
+                          <p className={`text-sm ${tribe.trends.troopChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            Troops: {tribe.trends.troopChange >= 0 ? '+' : ''}{tribe.trends.troopChange}
+                          </p>
+                          <p className={`text-sm ${tribe.trends.garrisonChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            Garrisons: {tribe.trends.garrisonChange >= 0 ? '+' : ''}{tribe.trends.garrisonChange}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-amber-200 mb-2">Garrisons ({tribe.garrisons.length})</h4>
+                        <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
+                          {tribe.garrisons.map((g, i) => (
+                            <p key={i} className="text-neutral-300">
+                              📍 {g.location}: {g.troops}T, {g.weapons}W, {g.chiefs}C
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-amber-200 mb-2">Current Actions ({tribe.currentActions.length})</h4>
+                        <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
+                          {tribe.currentActions.length > 0 ? (
+                            tribe.currentActions.map((a, i) => (
+                              <p key={i} className="text-neutral-300">🎯 {a.type}</p>
+                            ))
+                          ) : (
+                            <p className="text-neutral-500">No actions planned</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-amber-200 mb-2">New Chiefs This Turn ({tribe.chiefsAppearedThisTurn.length})</h4>
+                        <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
+                          {tribe.chiefsAppearedThisTurn.length > 0 ? (
+                            tribe.chiefsAppearedThisTurn.map((c, i) => (
+                              <p key={i} className="text-green-400">👑 {c.description}</p>
+                            ))
+                          ) : (
+                            <p className="text-neutral-500">No new chiefs</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {summaryTurnsBack > 1 && tribe.history.length > 0 && (
+                      <div className="mt-4 bg-neutral-700 rounded p-3">
+                        <h4 className="font-semibold text-amber-200 mb-2">Previous Turn History</h4>
+                        <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
+                          {tribe.history.map((h, i) => (
+                            <p key={i} className="text-neutral-300">
+                              📈 Turn {h.turn}: {h.troops} troops, {h.garrisons} garrisons, Score: {h.score}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-between items-center p-6 border-t border-neutral-600">
+              <div className="text-sm text-neutral-400">
+                <p>Total Tribes: {generateTurnSummary(summaryTurnsBack).length} |
+                   Submitted: {generateTurnSummary(summaryTurnsBack).filter(t => t.turnSubmitted).length}/{generateTurnSummary(summaryTurnsBack).length} |
+                   New Chiefs: {generateTurnSummary(summaryTurnsBack).reduce((sum, t) => sum + t.chiefsAppearedThisTurn.length, 0)}
+                   {summaryTurnsBack > 1 ? ` | Showing ${summaryTurnsBack} turns` : ''}</p>
+              </div>
+              <div className="space-x-3">
+                <Button onClick={handleDownloadTurnSummary} className="bg-amber-600 hover:bg-amber-700">
+                  Download Summary
+                </Button>
+                <Button onClick={() => setShowTurnSummary(false)} variant="outline">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -137,6 +137,11 @@ export interface ResearchProject {
 
 export enum AIType {
   Wanderer = 'Wanderer',
+  Aggressive = 'Aggressive',
+  Defensive = 'Defensive',
+  Expansionist = 'Expansionist',
+  Trader = 'Trader',
+  Scavenger = 'Scavenger',
 }
 
 export enum DiplomaticStatus {

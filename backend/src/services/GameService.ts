@@ -3,12 +3,14 @@ import {
   Tribe,
   User,
   DiplomaticStatus,
+  AIType,
   generateMapData,
   processGlobalTurn,
   generateAITribe,
   generateAIActions,
   getHexesInRange,
   parseHexCoords,
+  formatHexCoords,
   SECURITY_QUESTIONS
 } from '../../../shared/dist/index.js';
 import { DatabaseService } from './DatabaseService.js';
@@ -58,6 +60,14 @@ export class GameService {
     await this.databaseService.updateUser(userId, updates);
   }
 
+  async removeUser(userId: string): Promise<boolean> {
+    return await this.databaseService.removeUser(userId);
+  }
+
+  async loadBackupUsers(users: User[]): Promise<void> {
+    await this.databaseService.loadBackupUsers(users);
+  }
+
   // Game-specific methods
   async processTurn(): Promise<void> {
     const gameState = await this.getGameState();
@@ -102,7 +112,7 @@ export class GameService {
       assets: [],
       currentResearch: null,
       journeyResponses: [],
-      diplomacy: {},
+      diplomacy: {}, // Note: This will be handled by separate DiplomaticRelation table in DB
     };
 
     // Set up diplomacy with existing tribes
@@ -117,25 +127,65 @@ export class GameService {
     return true;
   }
 
-  async addAITribe(): Promise<boolean> {
+  async addAITribe(aiType?: AIType, useRandomLocation: boolean = true): Promise<boolean> {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
     const occupied = new Set(gameState.tribes.map(t => t.location));
-    const start = gameState.startingLocations.find(loc => !occupied.has(loc));
+    let spawnLocation: string | null = null;
 
-    if (!start) return false;
+    if (useRandomLocation) {
+      // Try to find a random suitable location
+      const validHexes = gameState.mapData.filter(hex =>
+        ['Plains', 'Forest', 'Wasteland', 'Desert'].includes(hex.terrain) &&
+        !hex.poi &&
+        !occupied.has(formatHexCoords(hex.q, hex.r))
+      );
 
-    const aiTribe = generateAITribe(start, gameState.tribes.map(t => t.tribeName));
+      if (validHexes.length > 0) {
+        const randomHex = validHexes[Math.floor(Math.random() * validHexes.length)];
+        spawnLocation = formatHexCoords(randomHex.q, randomHex.r);
+      }
+    }
 
-    // Set up diplomacy
+    // Fallback to starting locations if random spawn failed
+    if (!spawnLocation) {
+      spawnLocation = gameState.startingLocations.find(loc => !occupied.has(loc)) || null;
+    }
+
+    if (!spawnLocation) return false;
+
+    const aiTribe = generateAITribe(
+      spawnLocation,
+      gameState.tribes.map(t => t.tribeName),
+      aiType,
+      gameState.mapData
+    );
+
+    // Set up diplomacy based on AI type
     gameState.tribes.forEach(t => {
-      aiTribe.diplomacy[t.id] = { status: DiplomaticStatus.War };
-      t.diplomacy[aiTribe.id] = { status: DiplomaticStatus.War };
+      let initialStatus = DiplomaticStatus.War;
+
+      // Traders start neutral with players, war with other AI
+      if (aiTribe.aiType === AIType.Trader && !t.isAI) {
+        initialStatus = DiplomaticStatus.Neutral;
+      }
+      // Defensive AI starts neutral with everyone unless attacked
+      else if (aiTribe.aiType === AIType.Defensive) {
+        initialStatus = DiplomaticStatus.Neutral;
+      }
+
+      aiTribe.diplomacy[t.id] = { status: initialStatus };
+      t.diplomacy[aiTribe.id] = { status: initialStatus };
     });
 
     gameState.tribes.push(aiTribe);
     await this.updateGameState(gameState);
     return true;
+  }
+
+  // Legacy method for backward compatibility
+  async addWandererAITribe(): Promise<boolean> {
+    return this.addAITribe(AIType.Wanderer, true);
   }
 }

@@ -10,6 +10,7 @@ import {
   GameAction,
   TribeStats,
   FullBackupState,
+  AIType,
   INITIAL_GLOBAL_RESOURCES,
   INITIAL_GARRISON,
   getHexesInRange,
@@ -22,13 +23,14 @@ import Register from './components/Register';
 import RegistrationSuccess from './components/RegistrationSuccess';
 import AdminPanel from './components/AdminPanel';
 import MapEditor from './components/MapEditor';
+import GameEditor from './components/GameEditor';
 import ForgotPassword from './components/ForgotPassword';
 import Leaderboard from './components/Leaderboard';
 import TransitionScreen from './components/TransitionScreen';
 import * as Auth from './lib/auth';
 import * as client from './lib/client';
 
-type View = 'login' | 'register' | 'game' | 'admin' | 'create_tribe' | 'map_editor' | 'forgot_password' | 'leaderboard' | 'transition' | 'registration_success';
+type View = 'login' | 'register' | 'game' | 'admin' | 'create_tribe' | 'map_editor' | 'game_editor' | 'forgot_password' | 'leaderboard' | 'transition' | 'registration_success';
 
 type TribeCreationData = {
     playerName: string;
@@ -94,7 +96,11 @@ const App: React.FC = () => {
   
   const playerTribe = useMemo(() => {
     if (!currentUser || !gameState) return undefined;
-    return gameState.tribes.find(t => t.playerId === currentUser.id);
+    console.log('🔍 Looking for tribe with playerId:', currentUser.id);
+    console.log('🏘️ Available tribes:', gameState.tribes.map(t => ({ name: t.tribeName, playerId: t.playerId })));
+    const tribe = gameState.tribes.find(t => t.playerId === currentUser.id);
+    console.log('🎯 Found player tribe:', tribe ? tribe.tribeName : 'None');
+    return tribe;
   }, [currentUser, gameState]);
 
   useEffect(() => {
@@ -242,7 +248,7 @@ const App: React.FC = () => {
   const handleRequestAsset = (tribeId: string, assetName: string, radixAddressSnippet: string) => client.requestAsset({ tribeId, assetName, radixAddressSnippet });
   const handleApproveAsset = (requestId: string) => client.approveAsset(requestId);
   const handleDenyAsset = (requestId: string) => client.denyAsset(requestId);
-  const handleAddAITribe = () => client.addAITribe();
+  const handleAddAITribe = (aiType?: AIType) => client.addAITribe(aiType);
   const handleProposeAlliance = (fromTribeId: string, toTribeId: string) => client.proposeAlliance({ fromTribeId, toTribeId });
   const handleSueForPeace = (fromTribeId: string, toTribeId: string, reparations: { food: number; scrap: number; weapons: number; }) => client.sueForPeace({ fromTribeId, toTribeId, reparations });
   const handleAcceptProposal = (proposalId: string) => client.acceptProposal(proposalId);
@@ -291,6 +297,7 @@ const App: React.FC = () => {
             users={users}
             onBack={() => setView('game')}
             onNavigateToEditor={() => setView('map_editor')}
+            onNavigateToGameEditor={() => setView('game_editor')}
             onProcessTurn={handleProcessGlobalTurn}
             onRemovePlayer={handleRemovePlayer}
             onStartNewGame={handleStartNewGame}
@@ -304,13 +311,23 @@ const App: React.FC = () => {
       
       case 'map_editor':
         if (!currentUser || currentUser.role !== 'admin') { setView('login'); return null; }
-        return <MapEditor 
+        return <MapEditor
           initialMapData={gameState.mapData}
           initialMapSettings={gameState.mapSettings}
           initialMapSeed={gameState.mapSeed}
           initialStartLocations={gameState.startingLocations}
           onSave={handleUpdateMap}
           onCancel={() => setView('admin')}
+        />
+
+      case 'game_editor':
+        if (!currentUser || currentUser.role !== 'admin') { setView('login'); return null; }
+        return <GameEditor
+          gameState={gameState}
+          users={users}
+          onBack={() => setView('admin')}
+          onUpdateTribe={(tribe) => client.updateTribe(tribe)}
+          onRemovePlayer={(userId) => client.removePlayer(userId)}
         />
 
       case 'leaderboard':

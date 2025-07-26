@@ -30,7 +30,11 @@ export class SocketHandler {
     const emitGameState = async () => {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
+        console.log('📡 Emitting game state with', gameState.tribes.length, 'tribes');
+        console.log('🏘️ Tribe names:', gameState.tribes.map(t => t.tribeName));
         this.io.emit('gamestate_updated', gameState);
+      } else {
+        console.log('❌ No game state to emit');
       }
     };
 
@@ -98,10 +102,18 @@ export class SocketHandler {
 
     // Game events
     socket.on('create_tribe', async (newTribeData) => {
+      console.log('🏗️ Create tribe request received:', newTribeData);
+      const gameState = await this.gameService.getGameState();
+      console.log('🗺️ Current starting locations:', gameState?.startingLocations);
+      console.log('🏘️ Occupied locations:', gameState?.tribes.map(t => t.location));
+
       const success = await this.gameService.createTribe(newTribeData);
+      console.log('✅ Tribe creation result:', success);
+
       if (success) {
         await emitGameState();
       } else {
+        console.log('❌ Tribe creation failed - no available starting locations');
         socket.emit('alert', "No available starting locations.");
       }
     });
@@ -150,6 +162,7 @@ export class SocketHandler {
         users = users.filter(u => u.id !== userId);
       },
       'start_new_game': (state: GameState) => {
+        console.log('🎮 Starting new game...');
         state.tribes = [];
         state.chiefRequests = [];
         state.assetRequests = [];
@@ -157,6 +170,19 @@ export class SocketHandler {
         state.turn = 1;
         state.diplomaticProposals = [];
         state.history = [];
+
+        // Ensure we have starting locations - if not, generate some basic ones
+        if (!state.startingLocations || state.startingLocations.length === 0) {
+          console.log('🗺️ No starting locations found, generating default ones...');
+          // Generate some default starting locations around the center of the map
+          state.startingLocations = [
+            "050.050", "052.048", "048.052", "054.046", "046.054",
+            "056.044", "044.056", "058.042", "042.058", "060.040"
+          ];
+          console.log('✅ Generated starting locations:', state.startingLocations);
+        }
+
+        console.log('🎮 New game initialized with', state.startingLocations.length, 'starting locations');
       },
       'update_map': (state: GameState, users: User[], { newMapData, newStartingLocations }: any) => {
         state.mapData = newMapData;
@@ -197,8 +223,8 @@ export class SocketHandler {
         const req = state.assetRequests.find(r => r.id === reqId);
         if (req) req.status = 'denied';
       },
-      'add_ai_tribe': async (state: GameState) => {
-        await this.gameService.addAITribe();
+      'add_ai_tribe': async (state: GameState, users: User[], aiType?: string) => {
+        await this.gameService.addAITribe(aiType as any);
       }
     };
 
@@ -285,6 +311,72 @@ export class SocketHandler {
         gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p => p.id !== proposalId);
         await this.gameService.updateGameState(gameState);
         await emitGameState();
+      }
+    });
+
+    // Admin-specific handlers
+    socket.on('admin:updateTribe', createGenericHandler(actionHandlers['update_tribe']));
+    socket.on('admin:removePlayer', async (userId: string) => {
+      console.log(`🚫 Admin removing player: ${userId}`);
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        // Remove tribe associated with this player
+        gameState.tribes = gameState.tribes.filter(t => t.playerId !== userId);
+        await this.gameService.updateGameState(gameState);
+
+        // Remove user from auth system
+        await this.authService.removeUser(userId);
+
+        await emitGameState();
+        await emitUsers();
+        console.log(`✅ Player ${userId} removed successfully`);
+      }
+    });
+
+    socket.on('load_backup', async (backupData: { gameState: any, users: any[] }) => {
+      console.log(`📥 Loading backup data with ${backupData.users.length} users and ${backupData.gameState.tribes.length} tribes`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+      try {
+        // Validate backup data
+        if (!backupData.gameState || !backupData.users) {
+          throw new Error('Invalid backup data structure');
+        }
+
+        // Load game state first
+        console.log(`🎮 Loading game state...`);
+        await this.gameService.updateGameState(backupData.gameState);
+        console.log(`✅ Game state loaded: ${backupData.gameState.tribes.length} tribes, turn ${backupData.gameState.turn}`);
+
+        // Load users (preserve admin)
+        console.log(`👥 Loading users...`);
+        const adminUser = await this.gameService.findUserByUsername('Admin');
+        if (!adminUser) {
+          console.warn('⚠️ Admin user not found, this might cause issues');
+        }
+
+        const usersToLoad = backupData.users.filter(u => u.username !== 'Admin');
+        const finalUsers = adminUser ? [adminUser, ...usersToLoad] : usersToLoad;
+
+        console.log(`👥 Loading ${finalUsers.length} users (${usersToLoad.length} from backup + ${adminUser ? 1 : 0} admin)`);
+        await this.gameService.loadBackupUsers(finalUsers);
+        console.log(`✅ Users loaded successfully`);
+
+        // Emit updates
+        await emitGameState();
+        await emitUsers();
+
+        console.log(`🎉 Backup loaded successfully: ${backupData.gameState.tribes.length} tribes, ${backupData.users.length} users`);
+      } catch (error) {
+        console.error('❌ Error loading backup:', error);
+        console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
+        // Still try to emit current state in case of partial success
+        try {
+          await emitGameState();
+          await emitUsers();
+        } catch (emitError) {
+          console.error('❌ Error emitting state after backup failure:', emitError);
+        }
       }
     });
 

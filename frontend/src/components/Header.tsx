@@ -40,10 +40,13 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
       <div className="flex items-center space-x-4">
         {playerTribe && (
           <>
-            <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current text-amber-400">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg"
+              style={{ backgroundColor: playerTribe.color }}
+            >
+                <span className="text-2xl drop-shadow-sm">
                     {TRIBE_ICONS[playerTribe.icon]}
-                </svg>
+                </span>
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-wide">{playerTribe.tribeName}</h1>

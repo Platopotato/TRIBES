@@ -7,6 +7,7 @@ import {
   User,
   Tribe,
   generateMapData,
+  parseHexCoords,
   SECURITY_QUESTIONS
 } from '../../../shared/dist/index.js';
 
@@ -25,25 +26,38 @@ export class DatabaseService {
   }
 
   async initialize(): Promise<void> {
+    // Temporarily disable database and use file storage for testing
+    console.log('🗂️ Using file-based storage for testing (database disabled)');
+    this.useDatabase = false;
+    this.prisma = null;
+
+    // Ensure data directory exists for file storage
+    if (!fs.existsSync(this.dataDir)) {
+      fs.mkdirSync(this.dataDir, { recursive: true });
+    }
+
+    // TODO: Re-enable database once schema issues are fixed
+    /*
     try {
       // Try to connect to database
       this.prisma = new PrismaClient();
       await this.prisma.$connect();
       this.useDatabase = true;
       console.log('Connected to PostgreSQL database');
-      
+
       // Ensure we have a game state
       await this.ensureGameState();
     } catch (error) {
       console.warn('Failed to connect to database, falling back to file storage:', error);
       this.useDatabase = false;
       this.prisma = null;
-      
+
       // Ensure data directory exists for file storage
       if (!fs.existsSync(this.dataDir)) {
         fs.mkdirSync(this.dataDir, { recursive: true });
       }
     }
+    */
   }
 
   async disconnect(): Promise<void> {
@@ -232,6 +246,51 @@ export class DatabaseService {
     }
   }
 
+  async removeUser(userId: string): Promise<boolean> {
+    try {
+      if (this.useDatabase && this.prisma) {
+        await this.prisma.user.delete({
+          where: { id: userId }
+        });
+      } else {
+        const users = this.getUsersFromFile();
+        const filteredUsers = users.filter(u => u.id !== userId);
+        this.saveUsersToFile(filteredUsers);
+      }
+      return true;
+    } catch (error) {
+      console.error('❌ Error removing user from database:', error);
+      return false;
+    }
+  }
+
+  async loadBackupUsers(users: User[]): Promise<void> {
+    if (this.useDatabase && this.prisma) {
+      // For database: clear all users except admin and insert backup users
+      await this.prisma.user.deleteMany({
+        where: {
+          username: { not: 'Admin' }
+        }
+      });
+
+      for (const user of users.filter(u => u.username !== 'Admin')) {
+        await this.prisma.user.create({
+          data: {
+            id: user.id,
+            username: user.username,
+            passwordHash: user.passwordHash,
+            role: user.role,
+            securityQuestion: user.securityQuestion,
+            securityAnswerHash: user.securityAnswerHash
+          }
+        });
+      }
+    } else {
+      // For file storage: replace all users with backup users
+      this.saveUsersToFile(users);
+    }
+  }
+
   async findUserByUsername(username: string): Promise<User | null> {
     if (this.useDatabase && this.prisma) {
       const user = await this.prisma.user.findUnique({
@@ -384,21 +443,13 @@ export class DatabaseService {
   }
 
   private async updateGameStateInDb(gameState: GameState): Promise<void> {
-    // This is a complex operation that would need to update multiple tables
-    // For now, we'll implement a simplified version
-    // In a real implementation, you'd want to use transactions
-    
     if (!this.prisma) return;
 
-    // Update the main game state
-    await this.prisma.gameState.updateMany({
-      data: {
-        turn: gameState.turn,
-        startingLocations: gameState.startingLocations
-      }
-    });
+    console.log('💾 Skipping database update for now - keeping tribes in memory only');
+    console.log('💾 Game state has', gameState.tribes.length, 'tribes');
 
-    // Note: Updating tribes, garrisons, etc. would require more complex logic
-    // to handle creates, updates, and deletes properly
+    // TODO: Fix database schema issues and re-enable database persistence
+    // For now, just keep tribes in memory to test the frontend
+    return;
   }
 }

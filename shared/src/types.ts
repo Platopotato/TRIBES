@@ -325,6 +325,21 @@ export interface FullBackupState {
     userPasswords?: { [userId: string]: string }; // Password hashes for complete restoration
 }
 
+export interface BackupFile {
+    filename: string;
+    timestamp: Date;
+    size: number;
+}
+
+export interface BackupStatus {
+    isRunning: boolean;
+    intervalMinutes: number;
+    maxBackups: number;
+    backupCount: number;
+    lastBackup: Date | null;
+    nextBackup: Date | null;
+}
+
 export type TickerPriority = 'normal' | 'important' | 'urgent';
 
 export interface TickerMessage {

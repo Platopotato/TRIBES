@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
-import React, { useState, useRef } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement } from '@radix-tribes/shared';
+import React, { useState, useRef, useEffect } from 'react';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement, BackupStatus, BackupFile } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -57,6 +57,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementMessage, setNewAnnouncementMessage] = useState('');
   const [newAnnouncementPriority, setNewAnnouncementPriority] = useState<TickerPriority>('normal');
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
+  const [backupList, setBackupList] = useState<BackupFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -153,6 +155,39 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleToggleLoginAnnouncements = () => {
     client.toggleLoginAnnouncements();
   };
+
+  const handleRefreshBackupStatus = () => {
+    client.getBackupStatus();
+  };
+
+  const handleDownloadBackup = (filename: string) => {
+    client.downloadBackup(filename);
+  };
+
+  const handleDeleteBackup = (filename: string) => {
+    if (confirm(`Are you sure you want to delete backup: ${filename}?`)) {
+      client.deleteBackup(filename);
+    }
+  };
+
+  const handleCreateManualBackup = () => {
+    client.createManualBackup();
+  };
+
+  // Set up backup status callback and fetch initial status
+  useEffect(() => {
+    const handleBackupStatus = (status: BackupStatus, backupList: BackupFile[]) => {
+      setBackupStatus(status);
+      setBackupList(backupList);
+    };
+
+    client.setBackupStatusCallback(handleBackupStatus);
+    client.getBackupStatus();
+
+    return () => {
+      client.setBackupStatusCallback(null);
+    };
+  }, []);
 
   const handleSaveBackup = () => {
     // Request enhanced backup with password hashes
@@ -787,6 +822,91 @@ GAME STATISTICS:
                       <div><strong>Wanderer:</strong> Random behavior, unpredictable movement</div>
                     </div>
                   </div>
+              </div>
+            </Card>
+
+            <Card title="Auto-Backup System" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Auto-Backup Status:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      backupStatus?.isRunning ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                      {backupStatus?.isRunning ? 'RUNNING' : 'STOPPED'}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleRefreshBackupStatus}
+                    className="text-xs bg-blue-600 hover:bg-blue-700"
+                  >
+                    Refresh Status
+                  </Button>
+                </div>
+
+                {backupStatus && (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-neutral-400">Interval:</span>
+                      <span className="ml-2 font-medium">{backupStatus.intervalMinutes} minutes</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400">Backup Count:</span>
+                      <span className="ml-2 font-medium">{backupStatus.backupCount}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400">Last Backup:</span>
+                      <span className="ml-2 font-medium">
+                        {backupStatus.lastBackup ? new Date(backupStatus.lastBackup).toLocaleString() : 'None'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400">Next Backup:</span>
+                      <span className="ml-2 font-medium">
+                        {backupStatus.nextBackup ? new Date(backupStatus.nextBackup).toLocaleString() : 'Unknown'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleCreateManualBackup}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  Create Manual Backup Now
+                </Button>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <h4 className="font-medium text-neutral-300">Available Backups:</h4>
+                  {backupList.length > 0 ? backupList.map(backup => (
+                    <div key={backup.filename} className="p-3 rounded border bg-slate-900/20 border-slate-600">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{backup.filename}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(backup.timestamp).toLocaleString()} • {(backup.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <div className="flex space-x-1 ml-2">
+                          <Button
+                            onClick={() => handleDownloadBackup(backup.filename)}
+                            className="bg-blue-600 hover:bg-blue-700 text-xs py-1 px-2"
+                          >
+                            Download
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteBackup(backup.filename)}
+                            className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-gray-400 text-sm text-center py-4">No auto-backups available</p>
+                  )}
+                </div>
               </div>
             </Card>
 

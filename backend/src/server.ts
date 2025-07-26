@@ -34,6 +34,7 @@ import {
 import { GameService } from './services/GameService.js';
 import { AuthService } from './services/AuthService.js';
 import { SocketHandler } from './services/SocketHandler.js';
+import { AutoBackupService } from './services/AutoBackupService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,20 +83,26 @@ app.get('/health', (req: Request, res: Response) => {
 // Initialize services
 const gameService = new GameService();
 const authService = new AuthService();
-const socketHandler = new SocketHandler(io, gameService, authService);
+const autoBackupService = new AutoBackupService(gameService.database, 30, 48); // 30 min intervals, keep 48 backups
+const socketHandler = new SocketHandler(io, gameService, authService, autoBackupService);
 
 // Initialize game state
 await gameService.initialize();
 
+// Start auto-backup service
+autoBackupService.start();
+
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down gracefully...');
+  autoBackupService.stop();
   await gameService.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down gracefully...');
+  autoBackupService.stop();
   await gameService.disconnect();
   process.exit(0);
 });

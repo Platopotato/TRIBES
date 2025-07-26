@@ -30,6 +30,10 @@ export class GameService {
     await this.databaseService.disconnect();
   }
 
+  get database(): DatabaseService {
+    return this.databaseService;
+  }
+
   // Public methods for accessing game state
   async getGameState(): Promise<GameState | null> {
     return await this.databaseService.getGameState();

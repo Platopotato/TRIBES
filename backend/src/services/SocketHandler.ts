@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { GameService } from './GameService.js';
 import { AuthService } from './AuthService.js';
+import { AutoBackupService } from './AutoBackupService.js';
 import {
   GameState,
   User,
@@ -18,12 +19,14 @@ export class SocketHandler {
   private io: SocketIOServer;
   private gameService: GameService;
   private authService: AuthService;
+  private autoBackupService: AutoBackupService;
 
-  constructor(io: SocketIOServer, gameService: GameService, authService: AuthService) {
+  constructor(io: SocketIOServer, gameService: GameService, authService: AuthService, autoBackupService: AutoBackupService) {
     this.io = io;
     this.gameService = gameService;
     this.authService = authService;
-    
+    this.autoBackupService = autoBackupService;
+
     // Set up circular dependency
     this.authService.setGameService(gameService);
   }
@@ -640,6 +643,49 @@ export class SocketHandler {
       } catch (error) {
         console.error(`❌ Error creating enhanced backup:`, error);
         socket.emit('backup_error', 'Failed to create enhanced backup');
+      }
+    });
+
+    // Auto-backup management handlers
+    socket.on('admin:getBackupStatus', () => {
+      console.log(`📊 Admin requesting backup status`);
+      const status = this.autoBackupService.getStatus();
+      const backupList = this.autoBackupService.getBackupList();
+      socket.emit('backup_status', { status, backupList });
+    });
+
+    socket.on('admin:downloadBackup', (filename: string) => {
+      console.log(`📥 Admin downloading backup: ${filename}`);
+      const backupData = this.autoBackupService.getBackupData(filename);
+      if (backupData) {
+        socket.emit('backup_download_ready', { filename, data: backupData });
+      } else {
+        socket.emit('backup_error', `Backup file not found: ${filename}`);
+      }
+    });
+
+    socket.on('admin:deleteBackup', (filename: string) => {
+      console.log(`🗑️ Admin deleting backup: ${filename}`);
+      const success = this.autoBackupService.deleteBackup(filename);
+      if (success) {
+        const status = this.autoBackupService.getStatus();
+        const backupList = this.autoBackupService.getBackupList();
+        socket.emit('backup_status', { status, backupList });
+      } else {
+        socket.emit('backup_error', `Failed to delete backup: ${filename}`);
+      }
+    });
+
+    socket.on('admin:createManualBackup', async () => {
+      console.log(`💾 Admin creating manual backup`);
+      const filename = await this.autoBackupService.createBackup();
+      if (filename) {
+        const status = this.autoBackupService.getStatus();
+        const backupList = this.autoBackupService.getBackupList();
+        socket.emit('backup_status', { status, backupList });
+        socket.emit('manual_backup_created', filename);
+      } else {
+        socket.emit('backup_error', 'Failed to create manual backup');
       }
     });
 

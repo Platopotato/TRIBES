@@ -149,6 +149,37 @@ export const initClient = (
 
         console.log('📥 Enhanced backup downloaded with passwords and announcements');
     });
+
+    socket.on('backup_download_ready', ({ filename, data }: { filename: string, data: FullBackupState }) => {
+        // Download the auto-backup
+        const stateString = JSON.stringify(data, null, 2);
+        const blob = new Blob([stateString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log(`📥 Auto-backup downloaded: ${filename}`);
+    });
+
+    socket.on('backup_error', (message: string) => {
+        alert(`Backup Error: ${message}`);
+    });
+
+    socket.on('manual_backup_created', (filename: string) => {
+        alert(`Manual backup created successfully: ${filename}`);
+    });
+
+    socket.on('backup_status', ({ status, backupList }: { status: any, backupList: any[] }) => {
+        const callback = (window as any).backupStatusCallback;
+        if (callback) {
+            callback(status, backupList);
+        }
+    });
 };
 
 // Auth emitters with timeout handling
@@ -228,6 +259,17 @@ export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const startNewGame = () => socket.emit('start_new_game');
 export const loadBackup = createEmitter<FullBackupState>('load_backup');
 export const requestEnhancedBackup = () => socket.emit('admin:requestEnhancedBackup');
+
+// Auto-backup management emitters
+export const getBackupStatus = () => socket.emit('admin:getBackupStatus');
+export const downloadBackup = createEmitter<string>('admin:downloadBackup');
+export const deleteBackup = createEmitter<string>('admin:deleteBackup');
+export const createManualBackup = () => socket.emit('admin:createManualBackup');
+
+// Backup status callback management
+export const setBackupStatusCallback = (callback: ((status: any, backupList: any[]) => void) | null) => {
+    (window as any).backupStatusCallback = callback;
+};
 export const updateMap = createEmitter<{newMapData: HexData[], newStartingLocations: string[]}>('update_map');
 
 // Chief/Asset emitters

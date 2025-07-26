@@ -764,6 +764,22 @@ export class SocketHandler {
       }
     });
 
+    // Sync admin password with environment
+    socket.on('admin:syncPasswordWithEnv', async () => {
+      console.log(`🔄 Admin syncing password with environment`);
+      try {
+        const success = await this.gameService.database.syncAdminPasswordWithEnv();
+        if (success) {
+          socket.emit('admin_password_updated', 'Admin password synced with environment successfully');
+        } else {
+          socket.emit('admin_password_error', 'Failed to sync admin password with environment');
+        }
+      } catch (error) {
+        console.error(`❌ Error syncing admin password:`, error);
+        socket.emit('admin_password_error', 'Error syncing admin password');
+      }
+    });
+
     // Emergency admin password reset
     socket.on('admin:resetAdminPassword', async () => {
       console.log(`🚨 Admin resetting admin password to default`);

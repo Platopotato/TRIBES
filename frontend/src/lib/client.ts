@@ -275,6 +275,7 @@ export const clearTurnDeadline = () => socket.emit('admin:clearTurnDeadline');
 // Admin password management
 export const updateAdminPassword = createEmitter<string>('admin:updateAdminPassword');
 export const resetAdminPassword = () => socket.emit('admin:resetAdminPassword');
+export const syncPasswordWithEnv = () => socket.emit('admin:syncPasswordWithEnv');
 export const debugAdminPassword = () => socket.emit('admin:debugPassword');
 export const debugSocket = () => socket.emit('debug_socket');
 

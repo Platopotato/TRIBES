@@ -226,6 +226,12 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     client.debugSocket();
   };
 
+  const handleSyncPasswordWithEnv = () => {
+    if (confirm('🔄 SYNC: This will update the database password to match the ADMIN_PASSWORD environment variable. Continue?')) {
+      client.syncPasswordWithEnv();
+    }
+  };
+
   // Set up backup status callback and fetch initial status
   useEffect(() => {
     const handleBackupStatus = (status: BackupStatus, backupList: BackupFile[]) => {
@@ -1024,19 +1030,26 @@ GAME STATISTICS:
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   <Button
                     onClick={() => setShowAdminPasswordModal(true)}
                     className="bg-red-600 hover:bg-red-700 text-xs"
                   >
-                    🔒 Update Password
+                    🔒 Update
                   </Button>
 
                   <Button
                     onClick={handleResetAdminPassword}
                     className="bg-orange-600 hover:bg-orange-700 text-xs"
                   >
-                    🚨 Emergency Reset
+                    🚨 Reset
+                  </Button>
+
+                  <Button
+                    onClick={handleSyncPasswordWithEnv}
+                    className="bg-green-600 hover:bg-green-700 text-xs"
+                  >
+                    🔄 Sync Env
                   </Button>
                 </div>
 

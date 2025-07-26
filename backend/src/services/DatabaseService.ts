@@ -58,6 +58,9 @@ export class DatabaseService {
       }
     }
     */
+
+    // Sync admin password with environment variable
+    await this.syncAdminPasswordWithEnv();
   }
 
   async disconnect(): Promise<void> {
@@ -339,6 +342,42 @@ export class DatabaseService {
   // Public method for debugging
   public hashPassword(password: string): string {
     return this.mockHash(password);
+  }
+
+  async syncAdminPasswordWithEnv(): Promise<boolean> {
+    try {
+      const envPassword = this.getAdminPassword();
+      console.log(`🔄 Syncing admin password with environment (using: ${envPassword})`);
+
+      // Get current admin user
+      const adminUser = await this.findUserByUsername('Admin');
+      if (!adminUser) {
+        console.log('❌ No admin user found to sync');
+        return false;
+      }
+
+      const expectedHash = this.mockHash(envPassword);
+      if (adminUser.passwordHash === expectedHash) {
+        console.log('✅ Admin password already synced with environment');
+        return true;
+      }
+
+      console.log(`🔄 Admin password hash mismatch, updating database to match environment`);
+      console.log(`🔍 Current hash: ${adminUser.passwordHash}`);
+      console.log(`🔍 Expected hash: ${expectedHash}`);
+
+      const success = await this.updateAdminPassword(envPassword);
+      if (success) {
+        console.log('✅ Admin password synced with environment successfully');
+      } else {
+        console.log('❌ Failed to sync admin password with environment');
+      }
+
+      return success;
+    } catch (error) {
+      console.error('❌ Error syncing admin password with environment:', error);
+      return false;
+    }
   }
 
   async findUserByUsername(username: string): Promise<User | null> {

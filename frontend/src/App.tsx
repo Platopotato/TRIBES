@@ -28,6 +28,7 @@ import ForgotPassword from './components/ForgotPassword';
 import Leaderboard from './components/Leaderboard';
 import TransitionScreen from './components/TransitionScreen';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import Ticker from './components/Ticker';
 import * as Auth from './lib/auth';
 import * as client from './lib/client';
 
@@ -398,6 +399,14 @@ const App: React.FC = () => {
         onClose={() => setShowChangePasswordModal(false)}
         onChangePassword={handleChangePassword}
       />
+
+      {/* Ticker - only show when not on login/register screens */}
+      {gameState && view !== 'login' && view !== 'register' && view !== 'forgot_password' && (
+        <Ticker
+          messages={gameState.ticker?.messages || []}
+          isEnabled={gameState.ticker?.isEnabled || false}
+        />
+      )}
     </div>
   );
 };

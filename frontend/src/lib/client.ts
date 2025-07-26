@@ -189,6 +189,12 @@ export const resetPassword = createEmitter<{ username: string, newPassword: stri
 export const adminResetPassword = createEmitter<{ userId: string, newPassword: string }>('admin:resetPassword');
 export const changePassword = createEmitter<{ currentPassword: string, newPassword: string }>('change_password');
 
+// Ticker emitters
+export const addTickerMessage = createEmitter<any>('admin:addTickerMessage');
+export const toggleTickerMessage = createEmitter<string>('admin:toggleTickerMessage');
+export const deleteTickerMessage = createEmitter<string>('admin:deleteTickerMessage');
+export const toggleTicker = () => socket.emit('admin:toggleTicker');
+
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');

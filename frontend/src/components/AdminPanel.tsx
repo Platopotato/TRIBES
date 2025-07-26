@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useRef } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -50,6 +50,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [summaryTurnsBack, setSummaryTurnsBack] = useState(1); // How many turns back to include
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [showTickerModal, setShowTickerModal] = useState(false);
+  const [newTickerMessage, setNewTickerMessage] = useState('');
+  const [newTickerPriority, setNewTickerPriority] = useState<TickerPriority>('normal');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) return null;
@@ -85,6 +88,35 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleCancelPasswordReset = () => {
     setResetPasswordUserId(null);
     setNewPassword('');
+  };
+
+  const handleAddTickerMessage = () => {
+    if (newTickerMessage.trim()) {
+      const tickerMessage: TickerMessage = {
+        id: `ticker-${Date.now()}`,
+        message: newTickerMessage.trim(),
+        priority: newTickerPriority,
+        createdAt: Date.now(),
+        isActive: true
+      };
+
+      client.addTickerMessage(tickerMessage);
+      setNewTickerMessage('');
+      setNewTickerPriority('normal');
+      setShowTickerModal(false);
+    }
+  };
+
+  const handleToggleTickerMessage = (messageId: string) => {
+    client.toggleTickerMessage(messageId);
+  };
+
+  const handleDeleteTickerMessage = (messageId: string) => {
+    client.deleteTickerMessage(messageId);
+  };
+
+  const handleToggleTicker = () => {
+    client.toggleTicker();
   };
 
   const handleSaveBackup = () => {
@@ -514,6 +546,81 @@ GAME STATISTICS:
           </div>
 
           <div className="space-y-8">
+            <Card title="News Ticker Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Ticker Status:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      gameState.ticker?.isEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                      {gameState.ticker?.isEnabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleToggleTicker}
+                    className={`text-xs ${
+                      gameState.ticker?.isEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {gameState.ticker?.isEnabled ? 'Disable' : 'Enable'} Ticker
+                  </Button>
+                </div>
+
+                <Button
+                  onClick={() => setShowTickerModal(true)}
+                  className="w-full bg-amber-600 hover:bg-amber-700"
+                >
+                  Add News Message
+                </Button>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {gameState.ticker?.messages?.map(message => (
+                    <div key={message.id} className={`p-3 rounded border ${
+                      message.priority === 'urgent' ? 'bg-red-900/20 border-red-600' :
+                      message.priority === 'important' ? 'bg-amber-900/20 border-amber-600' :
+                      'bg-slate-900/20 border-slate-600'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-xs font-bold uppercase tracking-wide">
+                              {message.priority}
+                            </span>
+                            <span className={`w-2 h-2 rounded-full ${
+                              message.isActive ? 'bg-green-400' : 'bg-gray-400'
+                            }`}></span>
+                          </div>
+                          <p className="text-sm">{message.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(message.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex space-x-1 ml-2">
+                          <Button
+                            onClick={() => handleToggleTickerMessage(message.id)}
+                            className={`text-xs py-1 px-2 ${
+                              message.isActive ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'
+                            }`}
+                          >
+                            {message.isActive ? 'Hide' : 'Show'}
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteTickerMessage(message.id)}
+                            className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )) || (
+                    <p className="text-gray-400 text-sm text-center py-4">No ticker messages</p>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <Card title="World Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
                 <div className="space-y-4">
                     <p className="text-neutral-400 leading-relaxed">Edit the game world directly or start a new game on the current map.</p>
@@ -846,6 +953,61 @@ GAME STATISTICS:
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   Reset Password
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ticker Message Modal */}
+      {showTickerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-amber-400 mb-4">Add News Ticker Message</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Priority Level
+                </label>
+                <select
+                  value={newTickerPriority}
+                  onChange={(e) => setNewTickerPriority(e.target.value as TickerPriority)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="normal">📢 Normal</option>
+                  <option value="important">⚠️ Important</option>
+                  <option value="urgent">🚨 Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={newTickerMessage}
+                  onChange={(e) => setNewTickerMessage(e.target.value)}
+                  placeholder="Enter ticker message..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowTickerModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddTickerMessage}
+                  disabled={!newTickerMessage.trim()}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  Add Message
                 </Button>
               </div>
             </div>

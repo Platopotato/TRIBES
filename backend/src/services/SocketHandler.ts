@@ -8,7 +8,8 @@ import {
   GameAction,
   DiplomaticStatus,
   ALL_CHIEFS,
-  getAsset
+  getAsset,
+  TickerMessage
 } from '../../../shared/dist/index.js';
 
 export class SocketHandler {
@@ -441,6 +442,77 @@ export class SocketHandler {
         } catch (emitError) {
           console.error('❌ Error emitting state after backup failure:', emitError);
         }
+      }
+    });
+
+    // Ticker management handlers
+    socket.on('admin:addTickerMessage', async (message: TickerMessage) => {
+      console.log(`📰 Admin adding ticker message: ${message.message}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.ticker) {
+            gameState.ticker = { messages: [], isEnabled: true };
+          }
+          gameState.ticker.messages.push(message);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Ticker message added successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error adding ticker message:`, error);
+      }
+    });
+
+    socket.on('admin:toggleTickerMessage', async (messageId: string) => {
+      console.log(`📰 Admin toggling ticker message: ${messageId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState && gameState.ticker) {
+          const message = gameState.ticker.messages.find(m => m.id === messageId);
+          if (message) {
+            message.isActive = !message.isActive;
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+            console.log(`✅ Ticker message toggled: ${message.isActive ? 'active' : 'inactive'}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error toggling ticker message:`, error);
+      }
+    });
+
+    socket.on('admin:deleteTickerMessage', async (messageId: string) => {
+      console.log(`📰 Admin deleting ticker message: ${messageId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState && gameState.ticker) {
+          gameState.ticker.messages = gameState.ticker.messages.filter(m => m.id !== messageId);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Ticker message deleted successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error deleting ticker message:`, error);
+      }
+    });
+
+    socket.on('admin:toggleTicker', async () => {
+      console.log(`📰 Admin toggling ticker status`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.ticker) {
+            gameState.ticker = { messages: [], isEnabled: true };
+          } else {
+            gameState.ticker.isEnabled = !gameState.ticker.isEnabled;
+          }
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Ticker ${gameState.ticker.isEnabled ? 'enabled' : 'disabled'}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error toggling ticker:`, error);
       }
     });
 

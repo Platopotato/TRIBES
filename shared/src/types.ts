@@ -312,6 +312,7 @@ export interface GameState {
     journeys: Journey[];
     diplomaticProposals: DiplomaticProposal[];
     history?: TurnHistoryRecord[];
+    ticker?: TickerState;
     // These are now primarily for use within the map editor for generating new base maps
     mapSeed?: number; 
     mapSettings?: MapSettings;
@@ -320,4 +321,19 @@ export interface GameState {
 export interface FullBackupState {
     gameState: GameState;
     users: User[];
+}
+
+export type TickerPriority = 'normal' | 'important' | 'urgent';
+
+export interface TickerMessage {
+    id: string;
+    message: string;
+    priority: TickerPriority;
+    createdAt: number; // timestamp
+    isActive: boolean;
+}
+
+export interface TickerState {
+    messages: TickerMessage[];
+    isEnabled: boolean;
 }

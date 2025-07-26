@@ -610,6 +610,94 @@ export class SocketHandler {
       }
     });
 
+    // Newsletter management handlers
+    socket.on('admin:saveNewsletter', async (newsletterData: any) => {
+      console.log(`📰 Admin saving newsletter for turn ${newsletterData.turn}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          if (!gameState.newsletter) {
+            gameState.newsletter = { newsletters: [] };
+          }
+
+          // Generate ID and set published date
+          const newsletter = {
+            id: `newsletter-${Date.now()}`,
+            ...newsletterData,
+            publishedAt: new Date()
+          };
+
+          // Update or add newsletter
+          const existingIndex = gameState.newsletter.newsletters.findIndex(n => n.turn === newsletter.turn);
+          if (existingIndex >= 0) {
+            gameState.newsletter.newsletters[existingIndex] = newsletter;
+          } else {
+            gameState.newsletter.newsletters.push(newsletter);
+          }
+
+          // Set as current newsletter if it's for the current turn
+          if (newsletter.turn === gameState.turn) {
+            gameState.newsletter.currentNewsletter = newsletter;
+          }
+
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Newsletter saved for turn ${newsletter.turn}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error saving newsletter:`, error);
+      }
+    });
+
+    socket.on('admin:publishNewsletter', async (newsletterId: string) => {
+      console.log(`📰 Admin publishing newsletter ${newsletterId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState?.newsletter) {
+          const newsletter = gameState.newsletter.newsletters.find(n => n.id === newsletterId);
+          if (newsletter) {
+            newsletter.isPublished = true;
+            newsletter.publishedAt = new Date();
+
+            // Update current newsletter if it's for current turn
+            if (newsletter.turn === gameState.turn) {
+              gameState.newsletter.currentNewsletter = newsletter;
+            }
+
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+            console.log(`✅ Newsletter published: ${newsletter.title}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error publishing newsletter:`, error);
+      }
+    });
+
+    socket.on('admin:unpublishNewsletter', async (newsletterId: string) => {
+      console.log(`📰 Admin unpublishing newsletter ${newsletterId}`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState?.newsletter) {
+          const newsletter = gameState.newsletter.newsletters.find(n => n.id === newsletterId);
+          if (newsletter) {
+            newsletter.isPublished = false;
+
+            // Clear current newsletter if it's the one being unpublished
+            if (gameState.newsletter.currentNewsletter?.id === newsletterId) {
+              gameState.newsletter.currentNewsletter = undefined;
+            }
+
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+            console.log(`✅ Newsletter unpublished: ${newsletter.title}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error unpublishing newsletter:`, error);
+      }
+    });
+
     // Login announcement management handlers
     socket.on('admin:addLoginAnnouncement', async (announcement: LoginAnnouncement) => {
       console.log(`📢 Admin adding login announcement: ${announcement.title}`);

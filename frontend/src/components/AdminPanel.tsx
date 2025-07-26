@@ -1,9 +1,10 @@
 /** @jsxImportSource react */
 import React, { useState, useRef, useEffect } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement, BackupStatus, BackupFile, TurnDeadline } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, TickerMessage, TickerPriority, LoginAnnouncement, BackupStatus, BackupFile, TurnDeadline, Newsletter } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
+import NewsletterEditor from './NewsletterEditor';
 import * as Auth from '../lib/auth';
 import * as client from '../lib/client';
 
@@ -242,6 +243,18 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     if (confirm('🔄 SYNC: This will update the database password to match the ADMIN_PASSWORD environment variable. Continue?')) {
       client.syncPasswordWithEnv();
     }
+  };
+
+  const handleSaveNewsletter = (newsletter: Omit<Newsletter, 'id' | 'publishedAt'>) => {
+    client.saveNewsletter(newsletter);
+  };
+
+  const handlePublishNewsletter = (newsletterId: string) => {
+    client.publishNewsletter(newsletterId);
+  };
+
+  const handleUnpublishNewsletter = (newsletterId: string) => {
+    client.unpublishNewsletter(newsletterId);
   };
 
   // Set up backup status callback and fetch initial status
@@ -833,6 +846,22 @@ GAME STATISTICS:
                     <p className="text-gray-400 text-sm text-center py-4">No login announcements</p>
                   )}
                 </div>
+              </div>
+            </Card>
+
+            <Card title="Newsletter Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <p className="text-neutral-400 leading-relaxed">
+                  Create and publish newsletters for each turn. Players will see these instead of PDF downloads.
+                </p>
+
+                <NewsletterEditor
+                  currentTurn={gameState.turn}
+                  currentNewsletter={gameState.newsletter?.currentNewsletter}
+                  onSave={handleSaveNewsletter}
+                  onPublish={handlePublishNewsletter}
+                  onUnpublish={handleUnpublishNewsletter}
+                />
               </div>
             </Card>
 

@@ -301,6 +301,11 @@ export const deleteTickerMessage = createEmitter<string>('admin:deleteTickerMess
 export const toggleTicker = () => socket.emit('admin:toggleTicker');
 export const updateTickerSpeed = createEmitter<number>('admin:updateTickerSpeed');
 
+// Newsletter functions
+export const saveNewsletter = createEmitter<any>('admin:saveNewsletter');
+export const publishNewsletter = createEmitter<string>('admin:publishNewsletter');
+export const unpublishNewsletter = createEmitter<string>('admin:unpublishNewsletter');
+
 // Login announcement emitters
 export const addLoginAnnouncement = createEmitter<any>('admin:addLoginAnnouncement');
 export const toggleLoginAnnouncement = createEmitter<string>('admin:toggleLoginAnnouncement');

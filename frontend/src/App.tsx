@@ -28,6 +28,7 @@ import ForgotPassword from './components/ForgotPassword';
 import Leaderboard from './components/Leaderboard';
 import TransitionScreen from './components/TransitionScreen';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import NewsletterModal from './components/NewsletterModal';
 import Ticker from './components/Ticker';
 import * as Auth from './lib/auth';
 import * as client from './lib/client';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
   const [registeredUsername, setRegisteredUsername] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showNewsletterModal, setShowNewsletterModal] = useState(false);
   
   useEffect(() => {
     const user = Auth.getCurrentUser();
@@ -170,10 +172,7 @@ const App: React.FC = () => {
   };
 
   const handleOpenNewspaper = () => {
-    if (gameState) {
-      const newspaperUrl = `https://www.platopotato.com/NFT/Newspaper/Turn${gameState.turn}.pdf`;
-      window.open(newspaperUrl, '_blank');
-    }
+    setShowNewsletterModal(true);
   };
 
   const handleTribeCreate = async (tribeData: TribeCreationData) => {
@@ -401,6 +400,13 @@ const App: React.FC = () => {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
         onChangePassword={handleChangePassword}
+      />
+
+      <NewsletterModal
+        isOpen={showNewsletterModal}
+        onClose={() => setShowNewsletterModal(false)}
+        newsletters={gameState?.newsletter?.newsletters || []}
+        currentTurn={gameState?.turn || 1}
       />
 
       {/* Ticker - only show when not on login/register screens */}

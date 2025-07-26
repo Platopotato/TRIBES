@@ -315,8 +315,9 @@ export interface GameState {
     ticker?: TickerState;
     loginAnnouncements?: LoginAnnouncementState;
     turnDeadline?: TurnDeadline;
+    newsletter?: NewsletterState;
     // These are now primarily for use within the map editor for generating new base maps
-    mapSeed?: number; 
+    mapSeed?: number;
     mapSettings?: MapSettings;
 }
 
@@ -361,6 +362,20 @@ export interface TickerState {
     messages: TickerMessage[];
     isEnabled: boolean;
     scrollSpeed?: number; // Animation duration in seconds (default: 30)
+}
+
+export interface Newsletter {
+    id: string;
+    turn: number;
+    title: string;
+    content: string; // Rich text content (HTML)
+    publishedAt: Date;
+    isPublished: boolean;
+}
+
+export interface NewsletterState {
+    newsletters: Newsletter[];
+    currentNewsletter?: Newsletter; // Current turn's newsletter
 }
 
 export interface LoginAnnouncement {

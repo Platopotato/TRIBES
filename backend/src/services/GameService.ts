@@ -32,7 +32,6 @@ export class GameService {
 
   get database(): DatabaseService {
     return this.databaseService;
-  }
 
   // Public methods for accessing game state
   async getGameState(): Promise<GameState | null> {
@@ -103,7 +102,7 @@ export class GameService {
 
     const newTribe: Tribe = {
       ...tribeData,
-      id: 	ribe-,
+      id: `tribe-${Date.now()}`,
       location: availableStart,
       globalResources: { food: 100, scrap: 20, morale: 50 },
       garrisons: { [availableStart]: { troops: 20, weapons: 10, chiefs: [] } },

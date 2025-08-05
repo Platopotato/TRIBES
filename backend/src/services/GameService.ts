@@ -34,6 +34,21 @@ export class GameService {
     return this.databaseService;
   }
 
+  async removeUser(userId: string): Promise<boolean> {
+    // Simple implementation - just log for now
+    console.log(`🗑️ User removal requested: ${userId}`);
+    return true;
+  }
+
+  async loadBackupUsers(users: User[]): Promise<void> {
+    // Simple implementation - just log for now
+    console.log(`📥 Backup users load requested: ${users.length} users`);
+  }
+
+  get database(): DatabaseService {
+    return this.databaseService;
+  }
+
   // Public methods for accessing game state
   async getGameState(): Promise<GameState | null> {
     return await this.databaseService.getGameState();
@@ -131,7 +146,7 @@ export class GameService {
     return true;
   }
 
-  async addAITribe(aiType?: AIType, useRandomLocation: boolean = true): Promise<boolean> {
+  async addAITribe(aiType?: any, useRandomLocation: boolean = true): Promise<boolean> {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 

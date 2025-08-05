@@ -32,6 +32,7 @@ export class GameService {
 
   get database(): DatabaseService {
     return this.databaseService;
+  }
 
   // Public methods for accessing game state
   async getGameState(): Promise<GameState | null> {

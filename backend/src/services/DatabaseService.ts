@@ -550,17 +550,75 @@ export class DatabaseService {
 
   private async updateGameStateInDb(gameState: GameState): Promise<void> {
     // This is a complex operation that would need to update multiple tables
-    // For now, we'll implement a simplified version
-    // In a real implementation, you'd want to use transactions
+    // For backup loading, we need to completely replace the data
 
     if (!this.prisma) return;
 
-    // Update the main game state
-    await this.prisma.gameState.updateMany({
-      data: {
-        turn: gameState.turn,
-        startingLocations: gameState.startingLocations
-      }
+    console.log(' Updating game state in database...');
+    console.log( Game state has ${gameState.tribes.length} tribes);
+
+    try {
+      // Use a transaction to ensure data consistency
+      await this.prisma.$transaction(async (tx) => {
+        // Get the current game state ID
+        const currentGameState = await tx.gameState.findFirst();
+        if (!currentGameState) {
+          throw new Error('No game state found to update');
+        }
+
+        // Delete existing tribes
+        console.log(' Clearing existing tribes...');
+        await tx.tribe.deleteMany({
+          where: { gameStateId: currentGameState.id }
+        });
+
+        // Update the main game state
+        console.log(' Updating main game state...');
+        await tx.gameState.update({
+          where: { id: currentGameState.id },
+          data: {
+            turn: gameState.turn,
+            startingLocations: gameState.startingLocations
+          }
+        });
+
+        // Create new tribes
+        console.log( Creating ${gameState.tribes.length} tribes...);
+        for (const tribe of gameState.tribes) {
+          await tx.tribe.create({
+            data: {
+              id: tribe.id,
+              playerId: tribe.playerId,
+              isAI: tribe.isAI || false,
+              aiType: tribe.aiType || null,
+              playerName: tribe.playerName,
+              tribeName: tribe.tribeName,
+              icon: tribe.icon,
+              color: tribe.color,
+              stats: tribe.stats as any,
+              location: tribe.location,
+              globalResources: tribe.globalResources as any,
+              turnSubmitted: tribe.turnSubmitted,
+              actions: tribe.actions as any,
+              lastTurnResults: tribe.lastTurnResults as any,
+              exploredHexes: tribe.exploredHexes as any,
+              rationLevel: tribe.rationLevel,
+              completedTechs: tribe.completedTechs as any,
+              assets: tribe.assets as any,
+              currentResearch: tribe.currentResearch as any,
+              journeyResponses: tribe.journeyResponses as any,
+              gameStateId: currentGameState.id
+            }
+          });
+        }
+
+        console.log(' Game state update completed successfully');
+      });
+    } catch (error) {
+      console.error(' Error updating game state in database:', error);
+      throw error;
+    }
+  }
     });
 
     // Note: Updating tribes, garrisons, etc. would require more complex logic

@@ -7,7 +7,6 @@ import {
   User,
   Tribe,
   generateMapData,
-  parseHexCoords,
   SECURITY_QUESTIONS
 } from '../../../shared/dist/index.js';
 
@@ -26,29 +25,33 @@ export class DatabaseService {
   }
 
   async initialize(): Promise<void> {
-    // Temporarily disable database and use file storage for testing
-    console.log('🗂️ Using file-based storage for testing (database disabled)');
-    this.useDatabase = false;
-    this.prisma = null;
-
-    // Ensure data directory exists for file storage
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, { recursive: true });
-    }
-
-    // TODO: Re-enable database once schema issues are fixed
-    /*
     try {
       // Try to connect to database
+      console.log('🔄 Attempting to connect to database...');
+      console.log('🔍 DATABASE_URL exists:', !!process.env.DATABASE_URL);
+      console.log('🔍 DATABASE_URL starts with:', process.env.DATABASE_URL?.substring(0, 20) + '...');
+
       this.prisma = new PrismaClient();
       await this.prisma.$connect();
       this.useDatabase = true;
-      console.log('Connected to PostgreSQL database');
+      console.log('✅ Connected to PostgreSQL database');
+
+      // Test a simple query
+      console.log('🔄 Testing database connection with simple query...');
+      const testResult = await this.prisma.$queryRaw`SELECT 1 as test`;
+      console.log('✅ Database query test successful:', testResult);
 
       // Ensure we have a game state
+      console.log('🔄 Ensuring game state exists...');
       await this.ensureGameState();
+      console.log('✅ Game state initialization complete');
     } catch (error) {
-      console.warn('Failed to connect to database, falling back to file storage:', error);
+      console.error('❌ Database initialization failed with error:');
+      console.error('Error type:', (error as any)?.constructor?.name);
+      console.error('Error message:', (error as any)?.message);
+      console.error('Full error:', error);
+      console.warn('🗂️ Falling back to file storage');
+
       this.useDatabase = false;
       this.prisma = null;
 
@@ -57,7 +60,6 @@ export class DatabaseService {
         fs.mkdirSync(this.dataDir, { recursive: true });
       }
     }
-    */
 
     // Sync admin password with environment variable
     await this.syncAdminPasswordWithEnv();
@@ -94,7 +96,7 @@ export class DatabaseService {
     const mapSeed = Date.now();
     const mapSettings = this.getDefaultMapSettings();
     const { map, startingLocations } = generateMapData(40, mapSeed, mapSettings);
-    
+
     return {
       mapData: map,
       tribes: [],
@@ -124,23 +126,37 @@ export class DatabaseService {
 
   private async ensureGameState(): Promise<void> {
     if (this.useDatabase && this.prisma) {
-      // Check if we have any game state
-      const gameStateCount = await this.prisma.gameState.count();
-      if (gameStateCount === 0) {
-        // Create default game state
-        const defaultState = this.getDefaultGameState();
-        await this.createGameState(defaultState);
-        
-        // Create default admin user
-        const adminPassword = this.getAdminPassword();
-        await this.createUser({
-          id: 'user-admin',
-          username: 'Admin',
-          passwordHash: this.mockHash(adminPassword),
-          role: 'admin',
-          securityQuestion: SECURITY_QUESTIONS[0],
-          securityAnswerHash: this.mockHash(adminPassword)
-        });
+      try {
+        console.log('🔄 Checking for existing game state...');
+        // Check if we have any game state
+        const gameStateCount = await this.prisma.gameState.count();
+        console.log(`📊 Found ${gameStateCount} game state(s) in database`);
+
+        if (gameStateCount === 0) {
+          console.log('🔄 No game state found, creating default state...');
+          // Create default game state
+          const defaultState = this.getDefaultGameState();
+          await this.createGameState(defaultState);
+          console.log('✅ Default game state created');
+
+          // Create default admin user
+          console.log('🔄 Creating default admin user...');
+          const adminPassword = this.getAdminPassword();
+          await this.createUser({
+            id: 'user-admin',
+            username: 'Admin',
+            passwordHash: this.mockHash(adminPassword),
+            role: 'admin',
+            securityQuestion: SECURITY_QUESTIONS[0],
+            securityAnswerHash: this.mockHash(adminPassword)
+          });
+          console.log('✅ Default admin user created');
+        } else {
+          console.log('✅ Existing game state found, skipping initialization');
+        }
+      } catch (error) {
+        console.error('❌ Error in ensureGameState:', error);
+        throw error; // Re-throw to trigger fallback
       }
     }
   }
@@ -385,9 +401,9 @@ export class DatabaseService {
       const user = await this.prisma.user.findUnique({
         where: { username }
       });
-      
+
       if (!user) return null;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -533,13 +549,21 @@ export class DatabaseService {
   }
 
   private async updateGameStateInDb(gameState: GameState): Promise<void> {
+    // This is a complex operation that would need to update multiple tables
+    // For now, we'll implement a simplified version
+    // In a real implementation, you'd want to use transactions
+
     if (!this.prisma) return;
 
-    console.log('💾 Skipping database update for now - keeping tribes in memory only');
-    console.log('💾 Game state has', gameState.tribes.length, 'tribes');
+    // Update the main game state
+    await this.prisma.gameState.updateMany({
+      data: {
+        turn: gameState.turn,
+        startingLocations: gameState.startingLocations
+      }
+    });
 
-    // TODO: Fix database schema issues and re-enable database persistence
-    // For now, just keep tribes in memory to test the frontend
-    return;
+    // Note: Updating tribes, garrisons, etc. would require more complex logic
+    // to handle creates, updates, and deletes properly
   }
 }

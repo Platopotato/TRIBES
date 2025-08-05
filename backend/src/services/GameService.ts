@@ -27,6 +27,10 @@ export class GameService {
   }
 
   async disconnect(): Promise<void> {
+
+  get database(): DatabaseService {
+    return this.databaseService;
+  }
     await this.databaseService.disconnect();
   }
 

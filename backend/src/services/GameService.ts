@@ -39,11 +39,6 @@ export class GameService {
     return await this.databaseService.getGameState();
   }
 
-  // Public methods for accessing game state
-  async getGameState(): Promise<GameState | null> {
-    return await this.databaseService.getGameState();
-  }
-
   async getUsers(): Promise<User[]> {
     const users = await this.databaseService.getUsers();
     return users.map(({ passwordHash, securityAnswerHash, ...rest }) => rest as User);
@@ -108,7 +103,7 @@ export class GameService {
 
     const newTribe: Tribe = {
       ...tribeData,
-      id: `tribe-${Date.now()}`,
+      id: 	ribe-,
       location: availableStart,
       globalResources: { food: 100, scrap: 20, morale: 50 },
       garrisons: { [availableStart]: { troops: 20, weapons: 10, chiefs: [] } },

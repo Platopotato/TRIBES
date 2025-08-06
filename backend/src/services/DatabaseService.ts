@@ -313,16 +313,22 @@ export class DatabaseService {
       });
 
       for (const user of users.filter(u => u.username !== 'Admin')) {
-        await this.prisma.user.create({
-          data: {
-            id: user.id,
-            username: user.username,
-            passwordHash: user.passwordHash,
-            role: user.role,
-            securityQuestion: user.securityQuestion,
-            securityAnswerHash: user.securityAnswerHash || user.passwordHash // Fallback to passwordHash if missing
-          }
-        });
+        try {
+          await this.prisma.user.create({
+            data: {
+              id: user.id,
+              username: user.username,
+              passwordHash: user.passwordHash,
+              role: user.role,
+              securityQuestion: user.securityQuestion || "What was your first pet's name?",
+              securityAnswerHash: user.securityAnswerHash || user.passwordHash || "default_hash"
+            }
+          });
+          console.log(`✅ Created user: ${user.username} (${user.id})`);
+        } catch (error) {
+          console.error(`❌ Failed to create user ${user.username}:`, error);
+          throw error; // Re-throw to stop the backup loading process
+        }
       }
     } else {
       // For file storage: replace all users with backup users

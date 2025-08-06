@@ -595,6 +595,10 @@ export class DatabaseService {
 
     console.log('🔄 Updating game state in database...');
     console.log(`📊 Game state has ${gameState.tribes.length} tribes`);
+    console.log(`📊 Game state has ${gameState.mapData?.length || 0} map hexes`);
+    console.log(`📊 Game state turn: ${gameState.turn}`);
+    console.log(`📊 Database mode: ${this.useDatabase ? 'PostgreSQL' : 'File Storage'}`);
+    console.log(`📊 Prisma client: ${this.prisma ? 'Available' : 'Not Available'}`);
 
     try {
       // Use a transaction to ensure data consistency

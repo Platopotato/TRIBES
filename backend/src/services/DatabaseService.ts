@@ -723,6 +723,7 @@ export class DatabaseService {
                 assets: tribe.assets as any,
                 currentResearch: tribe.currentResearch as any,
                 journeyResponses: tribe.journeyResponses as any,
+                diplomacy: tribe.diplomacy as any,
                 gameStateId: currentGameState.id
               }
             });

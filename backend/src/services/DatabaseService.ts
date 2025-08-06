@@ -514,6 +514,11 @@ export class DatabaseService {
       diplomacy[relation.fromTribeId] = { status: relation.status };
     });
 
+    // Debug logging
+    if (Object.keys(diplomacy).length > 0) {
+      console.log(`🔍 Built diplomacy for ${dbTribe.tribeName}:`, Object.keys(diplomacy).length, 'relations');
+    }
+
     return diplomacy;
   }
 
@@ -885,6 +890,7 @@ export class DatabaseService {
 
           if (tribe.diplomacy) {
             console.log(`🤝 Processing diplomatic relations for ${tribe.tribeName}...`);
+            console.log(`🔍 Diplomacy data:`, Object.keys(tribe.diplomacy));
 
             for (const [targetTribeId, relationship] of Object.entries(tribe.diplomacy)) {
               try {

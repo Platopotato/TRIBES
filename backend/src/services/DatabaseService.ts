@@ -620,7 +620,3 @@ export class DatabaseService {
     }
   }
 }
-            } ) ;  
-         }   c a t c h   ( e r r o r )   {  
-             c o n s o l e . e r r o r ( '   E r r o r   u p d a t i n g   g a m e   s t a t e   i n   d a t a b a s e : ' ,   e r r o r ) ;  
- 

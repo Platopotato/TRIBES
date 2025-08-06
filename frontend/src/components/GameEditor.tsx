@@ -132,6 +132,19 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     }
   };
 
+  const handleForceRefreshPlayer = (tribe: Tribe) => {
+    if (confirm(`Force refresh ${tribe.tribeName}? This will completely reset their turn state and clear any stuck frontend state.`)) {
+      const updatedTribe: Tribe = {
+        ...tribe,
+        turnSubmitted: false,
+        actions: [],
+        lastTurnResults: [] // Clear results to force planning phase
+      };
+      onUpdateTribe(updatedTribe);
+      alert(`Force refresh completed for ${tribe.tribeName}. ${tribe.playerName} should refresh their browser - they should now be able to add actions normally.`);
+    }
+  };
+
   const handleEjectPlayer = () => {
     if (!playerToEject) return;
     onRemovePlayer(playerToEject.userId);
@@ -207,17 +220,26 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
               <div className="text-xs text-slate-400 mb-2">
                 Player: {tribe.playerName}
               </div>
-              <Button
-                onClick={() => handleResetTurnSubmission(tribe)}
-                variant="secondary"
-                className={`w-full text-xs py-1 text-white ${
-                  tribe.turnSubmitted
-                    ? 'bg-orange-600 hover:bg-orange-700'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {tribe.turnSubmitted ? '🔄 Reset Turn' : '🔄 Allow Resubmit'}
-              </Button>
+              <div className="space-y-1">
+                <Button
+                  onClick={() => handleResetTurnSubmission(tribe)}
+                  variant="secondary"
+                  className={`w-full text-xs py-1 text-white ${
+                    tribe.turnSubmitted
+                      ? 'bg-orange-600 hover:bg-orange-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {tribe.turnSubmitted ? '🔄 Reset Turn' : '🔄 Allow Resubmit'}
+                </Button>
+                <Button
+                  onClick={() => handleForceRefreshPlayer(tribe)}
+                  variant="secondary"
+                  className="w-full text-xs py-1 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  🔄 Force Refresh
+                </Button>
+              </div>
             </div>
           ))}
         </div>

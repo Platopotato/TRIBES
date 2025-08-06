@@ -320,7 +320,7 @@ export class DatabaseService {
             passwordHash: user.passwordHash,
             role: user.role,
             securityQuestion: user.securityQuestion,
-            securityAnswerHash: user.securityAnswerHash
+            securityAnswerHash: user.securityAnswerHash || user.passwordHash // Fallback to passwordHash if missing
           }
         });
       }

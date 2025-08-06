@@ -463,12 +463,7 @@ export class SocketHandler {
           throw new Error('Invalid backup data structure');
         }
 
-        // Load game state first (includes ticker and login announcements)
-        console.log(`🎮 Loading game state...`);
-        await this.gameService.updateGameState(backupData.gameState);
-        console.log(`✅ Game state loaded: ${backupData.gameState.tribes.length} tribes, turn ${backupData.gameState.turn}`);
-
-        // Load users (preserve admin)
+        // Load users first (preserve admin)
         console.log(`👥 Loading users...`);
         const adminUser = await this.gameService.findUserByUsername('Admin');
         if (!adminUser) {
@@ -496,6 +491,11 @@ export class SocketHandler {
         console.log(`👥 Loading ${finalUsers.length} users (${usersToLoad.length} from backup + ${adminUser ? 1 : 0} admin)`);
         await this.gameService.loadBackupUsers(finalUsers);
         console.log(`✅ Users loaded successfully`);
+
+        // Load game state after users are loaded (includes ticker and login announcements)
+        console.log(`🎮 Loading game state...`);
+        await this.gameService.updateGameState(backupData.gameState);
+        console.log(`✅ Game state loaded: ${backupData.gameState.tribes.length} tribes, turn ${backupData.gameState.turn}`);
 
         // Emit updates
         await emitGameState();

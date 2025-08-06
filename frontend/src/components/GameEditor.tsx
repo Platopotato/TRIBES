@@ -124,7 +124,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     if (confirm(message)) {
       const updatedTribe: Tribe = {
         ...tribe,
-        turnSubmitted: false
+        turnSubmitted: false,
+        actions: [] // Clear any stuck actions
       };
       onUpdateTribe(updatedTribe);
       alert(`Turn submission ${action}ed for ${tribe.tribeName}. ${tribe.playerName} should refresh their browser and try submitting again.`);

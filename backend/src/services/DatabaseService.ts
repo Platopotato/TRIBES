@@ -731,38 +731,74 @@ export class DatabaseService {
 
         console.log(`✅ Created ${createdTribes} tribes, skipped ${skippedTribes} tribes`);
 
-        // Restore chief requests
+        // Restore chief requests (only for existing tribes)
         if (gameState.chiefRequests && gameState.chiefRequests.length > 0) {
           console.log(`📋 Creating ${gameState.chiefRequests.length} chief requests...`);
+          let createdRequests = 0;
+          let skippedRequests = 0;
+
           for (const request of gameState.chiefRequests) {
-            await tx.chiefRequest.create({
-              data: {
-                id: request.id,
-                tribeId: request.tribeId,
-                chiefName: request.chiefName,
-                radixAddressSnippet: request.radixAddressSnippet,
-                status: request.status || 'pending',
-                gameStateId: currentGameState.id
+            try {
+              // Check if tribe exists
+              const tribeExists = await tx.tribe.findUnique({ where: { id: request.tribeId } });
+              if (!tribeExists) {
+                console.log(`⚠️ Skipping chief request for non-existent tribe: ${request.tribeId}`);
+                skippedRequests++;
+                continue;
               }
-            });
+
+              await tx.chiefRequest.create({
+                data: {
+                  id: request.id,
+                  tribeId: request.tribeId,
+                  chiefName: request.chiefName,
+                  radixAddressSnippet: request.radixAddressSnippet,
+                  status: request.status || 'pending',
+                  gameStateId: currentGameState.id
+                }
+              });
+              createdRequests++;
+            } catch (error) {
+              console.log(`❌ Error creating chief request ${request.id}:`, error);
+              skippedRequests++;
+            }
           }
+          console.log(`✅ Created ${createdRequests} chief requests, skipped ${skippedRequests}`);
         }
 
-        // Restore asset requests
+        // Restore asset requests (only for existing tribes)
         if (gameState.assetRequests && gameState.assetRequests.length > 0) {
           console.log(`🎨 Creating ${gameState.assetRequests.length} asset requests...`);
+          let createdRequests = 0;
+          let skippedRequests = 0;
+
           for (const request of gameState.assetRequests) {
-            await tx.assetRequest.create({
-              data: {
-                id: request.id,
-                tribeId: request.tribeId,
-                assetName: request.assetName,
-                radixAddressSnippet: request.radixAddressSnippet,
-                status: request.status || 'pending',
-                gameStateId: currentGameState.id
+            try {
+              // Check if tribe exists
+              const tribeExists = await tx.tribe.findUnique({ where: { id: request.tribeId } });
+              if (!tribeExists) {
+                console.log(`⚠️ Skipping asset request for non-existent tribe: ${request.tribeId}`);
+                skippedRequests++;
+                continue;
               }
-            });
+
+              await tx.assetRequest.create({
+                data: {
+                  id: request.id,
+                  tribeId: request.tribeId,
+                  assetName: request.assetName,
+                  radixAddressSnippet: request.radixAddressSnippet,
+                  status: request.status || 'pending',
+                  gameStateId: currentGameState.id
+                }
+              });
+              createdRequests++;
+            } catch (error) {
+              console.log(`❌ Error creating asset request ${request.id}:`, error);
+              skippedRequests++;
+            }
           }
+          console.log(`✅ Created ${createdRequests} asset requests, skipped ${skippedRequests}`);
         }
 
         // Restore journeys

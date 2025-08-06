@@ -616,11 +616,11 @@ export class DatabaseService {
       });
     } catch (error) {
       console.error(' Error updating game state in database:', error);
-      throw error;
-      });
-    } catch (error) {
-      console.error('❌ Error updating game state in database:', error);
-      throw error;
-    }
-  }
-}
+            } ) ;  
+         }   c a t c h   ( e r r o r )   {  
+             c o n s o l e . e r r o r ( '   E r r o r   u p d a t i n g   g a m e   s t a t e   i n   d a t a b a s e : ' ,   e r r o r ) ;  
+             t h r o w   e r r o r ;  
+         }  
+     }  
+ }  
+ 

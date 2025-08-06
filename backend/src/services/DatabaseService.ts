@@ -723,7 +723,6 @@ export class DatabaseService {
                 assets: tribe.assets as any,
                 currentResearch: tribe.currentResearch as any,
                 journeyResponses: tribe.journeyResponses as any,
-                diplomacy: tribe.diplomacy as any,
                 gameStateId: currentGameState.id
               }
             });
@@ -855,6 +854,58 @@ export class DatabaseService {
         }
 
         console.log(`🏰 Total garrisons created: ${totalGarrisons}`);
+
+        // Create diplomatic relations for all tribes
+        console.log(`🤝 Creating diplomatic relations...`);
+        let totalDiplomaticRelations = 0;
+
+        for (const tribe of gameState.tribes) {
+          // Skip tribes that weren't created (missing users)
+          if (!existingUserIds.has(tribe.playerId)) {
+            continue;
+          }
+
+          if (tribe.diplomacy) {
+            console.log(`🤝 Processing diplomatic relations for ${tribe.tribeName}...`);
+
+            for (const [targetTribeId, relationship] of Object.entries(tribe.diplomacy)) {
+              try {
+                // Check if target tribe exists
+                const targetTribe = await tx.tribe.findUnique({ where: { id: targetTribeId } });
+                if (!targetTribe) {
+                  console.log(`⚠️ Skipping diplomatic relation - target tribe not found: ${targetTribeId}`);
+                  continue;
+                }
+
+                // Check if relation already exists (to avoid duplicates)
+                const existingRelation = await tx.diplomaticRelation.findFirst({
+                  where: {
+                    OR: [
+                      { fromTribeId: tribe.id, toTribeId: targetTribeId },
+                      { fromTribeId: targetTribeId, toTribeId: tribe.id }
+                    ]
+                  }
+                });
+
+                if (!existingRelation) {
+                  await tx.diplomaticRelation.create({
+                    data: {
+                      fromTribeId: tribe.id,
+                      toTribeId: targetTribeId,
+                      status: (relationship as any).status || 'Neutral'
+                    }
+                  });
+                  console.log(`✅ Created diplomatic relation: ${tribe.tribeName} → ${targetTribe.tribeName}: ${(relationship as any).status}`);
+                  totalDiplomaticRelations++;
+                }
+              } catch (error) {
+                console.log(`❌ Error creating diplomatic relation for ${tribe.tribeName}:`, error);
+              }
+            }
+          }
+        }
+
+        console.log(`🤝 Total diplomatic relations created: ${totalDiplomaticRelations}`);
 
         // Restore chief requests (only for existing tribes)
         if (gameState.chiefRequests && gameState.chiefRequests.length > 0) {

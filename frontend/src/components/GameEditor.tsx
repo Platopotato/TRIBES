@@ -115,6 +115,17 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     alert('Tribe updated successfully!');
   };
 
+  const handleResetTurnSubmission = (tribe: Tribe) => {
+    if (confirm(`Reset turn submission for ${tribe.tribeName}? This will allow ${tribe.playerName} to submit their turn again.`)) {
+      const updatedTribe: Tribe = {
+        ...tribe,
+        turnSubmitted: false
+      };
+      onUpdateTribe(updatedTribe);
+      alert(`Turn submission reset for ${tribe.tribeName}. ${tribe.playerName} can now resubmit their turn.`);
+    }
+  };
+
   const handleEjectPlayer = () => {
     if (!playerToEject) return;
     onRemovePlayer(playerToEject.userId);
@@ -187,9 +198,18 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                   {tribe.turnSubmitted ? '✅ SUBMITTED' : '⏳ PENDING'}
                 </div>
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-400 mb-2">
                 Player: {tribe.playerName}
               </div>
+              {tribe.turnSubmitted && (
+                <Button
+                  onClick={() => handleResetTurnSubmission(tribe)}
+                  variant="secondary"
+                  className="w-full text-xs py-1 bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  🔄 Reset Turn
+                </Button>
+              )}
             </div>
           ))}
         </div>

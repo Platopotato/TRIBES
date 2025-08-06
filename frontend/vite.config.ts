@@ -23,6 +23,10 @@ export default defineConfig({
     // Mobile performance optimizations
     rollupOptions: {
       output: {
+        // Add timestamp to filenames for cache busting
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // Separate vendor chunks for better caching
           vendor: ['react', 'react-dom'],

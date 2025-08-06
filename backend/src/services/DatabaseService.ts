@@ -647,6 +647,10 @@ export class DatabaseService {
         // Create new map data (hexes) using batch inserts for performance
         console.log(`🗺️ Creating ${gameState.mapData.length} map hexes using batch inserts...`);
 
+        // Debug: Show sample coordinates from map data
+        const sampleMapCoords = gameState.mapData.slice(0, 5).map(hex => `q=${hex.q}, r=${hex.r}`);
+        console.log(`🔍 Sample map coordinates from backup:`, sampleMapCoords);
+
         // Prepare hex data for batch insert
         const hexData = gameState.mapData.map(hex => ({
           q: hex.q,

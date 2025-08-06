@@ -116,13 +116,18 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   };
 
   const handleResetTurnSubmission = (tribe: Tribe) => {
-    if (confirm(`Reset turn submission for ${tribe.tribeName}? This will allow ${tribe.playerName} to submit their turn again.`)) {
+    const action = tribe.turnSubmitted ? 'reset' : 'refresh';
+    const message = tribe.turnSubmitted
+      ? `Reset turn submission for ${tribe.tribeName}? This will allow ${tribe.playerName} to submit their turn again.`
+      : `Refresh turn state for ${tribe.tribeName}? This will clear any stuck frontend state and allow ${tribe.playerName} to try submitting again.`;
+
+    if (confirm(message)) {
       const updatedTribe: Tribe = {
         ...tribe,
         turnSubmitted: false
       };
       onUpdateTribe(updatedTribe);
-      alert(`Turn submission reset for ${tribe.tribeName}. ${tribe.playerName} can now resubmit their turn.`);
+      alert(`Turn submission ${action}ed for ${tribe.tribeName}. ${tribe.playerName} should refresh their browser and try submitting again.`);
     }
   };
 
@@ -201,15 +206,17 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
               <div className="text-xs text-slate-400 mb-2">
                 Player: {tribe.playerName}
               </div>
-              {tribe.turnSubmitted && (
-                <Button
-                  onClick={() => handleResetTurnSubmission(tribe)}
-                  variant="secondary"
-                  className="w-full text-xs py-1 bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  🔄 Reset Turn
-                </Button>
-              )}
+              <Button
+                onClick={() => handleResetTurnSubmission(tribe)}
+                variant="secondary"
+                className={`w-full text-xs py-1 text-white ${
+                  tribe.turnSubmitted
+                    ? 'bg-orange-600 hover:bg-orange-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {tribe.turnSubmitted ? '🔄 Reset Turn' : '🔄 Allow Resubmit'}
+              </Button>
             </div>
           ))}
         </div>

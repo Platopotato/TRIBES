@@ -725,31 +725,54 @@ export class DatabaseService {
 
             // Create garrisons for this tribe
             if (tribe.garrisons) {
+              console.log(`🏰 Creating garrisons for ${tribe.tribeName}...`);
+              let garrisonCount = 0;
+
               for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
                 try {
+                  // Parse hex coordinates (format: "051.044")
+                  const coordParts = hexCoord.split('.');
+                  if (coordParts.length !== 2) {
+                    console.log(`❌ Invalid hex coordinate format: ${hexCoord}`);
+                    continue;
+                  }
+
+                  const q = parseInt(coordParts[0], 10);
+                  const r = parseInt(coordParts[1], 10);
+
+                  console.log(`🔍 Looking for hex at q=${q}, r=${r} (${hexCoord})`);
+
                   // Find the hex ID for this coordinate
-                  const [q, r] = hexCoord.split('.').map(Number);
                   const hex = await tx.hex.findFirst({
                     where: { q, r, gameStateId: currentGameState.id }
                   });
 
                   if (hex) {
+                    const garrison = garrisonData as any;
                     await tx.garrison.create({
                       data: {
                         hexQ: q,
                         hexR: r,
-                        troops: (garrisonData as any).troops || 0,
-                        weapons: (garrisonData as any).weapons || 0,
-                        chiefs: (garrisonData as any).chiefs || [],
+                        troops: garrison.troops || 0,
+                        weapons: garrison.weapons || 0,
+                        chiefs: garrison.chiefs || [],
                         tribeId: tribe.id,
                         hexId: hex.id
                       }
                     });
+                    console.log(`✅ Created garrison for ${tribe.tribeName} at ${hexCoord}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
+                    garrisonCount++;
+                  } else {
+                    console.log(`❌ Hex not found for coordinates q=${q}, r=${r} (${hexCoord})`);
                   }
                 } catch (garrisonError) {
                   console.log(`❌ Error creating garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
                 }
               }
+
+              console.log(`🏰 Created ${garrisonCount} garrisons for ${tribe.tribeName}`);
+            } else {
+              console.log(`⚠️ No garrison data found for ${tribe.tribeName}`);
             }
 
             createdTribes++;

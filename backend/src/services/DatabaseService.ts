@@ -625,7 +625,7 @@ export class DatabaseService {
         await tx.diplomaticProposal.deleteMany({ where: { gameStateId: currentGameState.id } });
         await tx.turnHistory.deleteMany({ where: { gameStateId: currentGameState.id } });
 
-        // Update the main game state with all fields
+        // Update the main game state (only fields that exist in schema)
         console.log(' Updating main game state...');
         await tx.gameState.update({
           where: { id: currentGameState.id },
@@ -633,13 +633,10 @@ export class DatabaseService {
             turn: gameState.turn,
             mapSeed: gameState.mapSeed ? BigInt(gameState.mapSeed) : null,
             mapSettings: gameState.mapSettings as any,
-            startingLocations: gameState.startingLocations,
-            // Add ticker and login announcements if they exist
-            ...(gameState.ticker && { ticker: gameState.ticker as any }),
-            ...(gameState.loginAnnouncements && { loginAnnouncements: gameState.loginAnnouncements as any }),
-            ...(gameState.turnDeadline && { turnDeadline: gameState.turnDeadline as any })
+            startingLocations: gameState.startingLocations
           }
         });
+        console.log('✅ Main game state updated successfully');
 
         // Create new map data (hexes)
         console.log(`🗺️ Creating ${gameState.mapData.length} map hexes...`);

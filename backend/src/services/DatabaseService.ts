@@ -581,10 +581,26 @@ export class DatabaseService {
             startingLocations: gameState.startingLocations
           }
         });
-
-        // Create new tribes
+        // Create new tribes (only for users that exist)
         console.log(`👥 Creating ${gameState.tribes.length} tribes...`);
+        
+        // Get all existing user IDs to validate foreign key constraints
+        const existingUsers = await tx.user.findMany({ select: { id: true } });
+        const existingUserIds = new Set(existingUsers.map(u => u.id));
+        
+        let createdTribes = 0;
+        let skippedTribes = 0;
+        
         for (const tribe of gameState.tribes) {
+          // Check if the playerId exists in the database
+          if (!existingUserIds.has(tribe.playerId)) {
+            console.log(`⚠️ Skipping tribe ${tribe.tribeName} - user ${tribe.playerId} not found`);
+            skippedTribes++;
+            continue;
+          }
+          
+          try {
+       
           await tx.tribe.create({
             data: {
               id: tribe.id,
@@ -620,3 +636,4 @@ export class DatabaseService {
     }
   }
 }
+

@@ -195,8 +195,9 @@ export class DatabaseService {
       // Update database
       await this.updateGameStateInDb(gameState);
     } else {
-      // File-based fallback
-      this.saveGameStateToFile(gameState);
+      // File-based fallback - validate and clean game state first
+      const cleanedGameState = await this.validateAndCleanGameState(gameState);
+      this.saveGameStateToFile(cleanedGameState);
     }
   }
 
@@ -548,6 +549,32 @@ export class DatabaseService {
     };
   }
 
+  private async validateAndCleanGameState(gameState: GameState): Promise<GameState> {
+    // Get existing users to validate tribe player IDs
+    const users = this.getUsersFromFile();
+    const existingUserIds = new Set(users.map(u => u.id));
+
+    // Filter out tribes with missing player IDs
+    const originalTribesCount = gameState.tribes.length;
+    const validTribes = gameState.tribes.filter(tribe => {
+      if (tribe.playerId && !existingUserIds.has(tribe.playerId)) {
+        console.log(`⚠️ Removing tribe ${tribe.tribeName} - user ${tribe.playerId} not found in file storage`);
+        return false;
+      }
+      return true;
+    });
+
+    const removedTribesCount = originalTribesCount - validTribes.length;
+    if (removedTribesCount > 0) {
+      console.log(`🧹 Cleaned game state: removed ${removedTribesCount} tribes with missing user references`);
+    }
+
+    return {
+      ...gameState,
+      tribes: validTribes
+    };
+  }
+
   private async updateGameStateInDb(gameState: GameState): Promise<void> {
     // This is a complex operation that would need to update multiple tables
     // For backup loading, we need to completely replace the data
@@ -600,35 +627,40 @@ export class DatabaseService {
           }
           
           try {
-       
-          await tx.tribe.create({
-            data: {
-              id: tribe.id,
-              playerId: tribe.playerId,
-              isAI: tribe.isAI || false,
-              aiType: tribe.aiType || null,
-              playerName: tribe.playerName,
-              tribeName: tribe.tribeName,
-              icon: tribe.icon,
-              color: tribe.color,
-              stats: tribe.stats as any,
-              location: tribe.location,
-              globalResources: tribe.globalResources as any,
-              turnSubmitted: tribe.turnSubmitted,
-              actions: tribe.actions as any,
-              lastTurnResults: tribe.lastTurnResults as any,
-              exploredHexes: tribe.exploredHexes as any,
-              rationLevel: tribe.rationLevel,
-              completedTechs: tribe.completedTechs as any,
-              assets: tribe.assets as any,
-              currentResearch: tribe.currentResearch as any,
-              journeyResponses: tribe.journeyResponses as any,
-              gameStateId: currentGameState.id
-            }
-          });
+            await tx.tribe.create({
+              data: {
+                id: tribe.id,
+                playerId: tribe.playerId,
+                isAI: tribe.isAI || false,
+                aiType: tribe.aiType || null,
+                playerName: tribe.playerName,
+                tribeName: tribe.tribeName,
+                icon: tribe.icon,
+                color: tribe.color,
+                stats: tribe.stats as any,
+                location: tribe.location,
+                globalResources: tribe.globalResources as any,
+                turnSubmitted: tribe.turnSubmitted,
+                actions: tribe.actions as any,
+                lastTurnResults: tribe.lastTurnResults as any,
+                exploredHexes: tribe.exploredHexes as any,
+                rationLevel: tribe.rationLevel,
+                completedTechs: tribe.completedTechs as any,
+                assets: tribe.assets as any,
+                currentResearch: tribe.currentResearch as any,
+                journeyResponses: tribe.journeyResponses as any,
+                gameStateId: currentGameState.id
+              }
+            });
+            createdTribes++;
+          } catch (error) {
+            console.log(`❌ Error creating tribe ${tribe.tribeName}:`, error);
+            skippedTribes++;
+          }
         }
 
-        console.log(' Game state update completed successfully');
+        console.log(`✅ Created ${createdTribes} tribes, skipped ${skippedTribes} tribes`);
+        console.log('🎯 Game state update completed successfully');
       });
     } catch (error) {
       console.error(' Error updating game state in database:', error);

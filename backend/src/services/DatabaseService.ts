@@ -771,45 +771,56 @@ export class DatabaseService {
                 const q = parseInt(coordParts[0], 10);
                 const r = parseInt(coordParts[1], 10);
 
-                console.log(`🔍 Looking for hex at q=${q}, r=${r} (${hexCoord})`);
+                console.log(`🎯 WINNER STRATEGY: Looking for hex at q=${q}, r=${r} (${hexCoord})`);
 
-                // Try multiple coordinate lookup strategies
+                // WINNER: Try multiple coordinate lookup strategies with clear logging
                 let hex = null;
+                let strategyUsed = "";
 
                 // Strategy 1: Direct lookup
+                console.log(`🔍 Strategy 1: Direct lookup q=${q}, r=${r}`);
                 hex = await tx.hex.findFirst({
                   where: { q, r, gameStateId: currentGameState.id }
                 });
+                if (hex) {
+                  strategyUsed = "Direct lookup";
+                  console.log(`✅ WINNER! Strategy 1 worked: Direct lookup`);
+                }
 
                 if (!hex) {
-                  // Strategy 2: Try coordinate string lookup (some systems store as "051.044")
-                  const coordString = hexCoord;
-                  const allHexes = await tx.hex.findMany({
-                    where: { gameStateId: currentGameState.id },
-                    select: { id: true, q: true, r: true }
+                  // Strategy 2: Try coordinate transformation (backup coords to map coords)
+                  // Backup uses 30-80 range, map uses -40 to +40 range
+                  // Transform: backup_q - 70 = map_q (e.g., 51 - 70 = -19)
+                  const transformedQ = q - 70;
+                  const transformedR = r - 40;
+                  console.log(`🔍 Strategy 2: Coordinate transformation q=${q}→${transformedQ}, r=${r}→${transformedR}`);
+                  hex = await tx.hex.findFirst({
+                    where: { q: transformedQ, r: transformedR, gameStateId: currentGameState.id }
                   });
-
-                  // Look for hex that matches the coordinate string format
-                  for (const h of allHexes) {
-                    const hexCoordStr = `${h.q.toString().padStart(3, '0')}.${h.r.toString().padStart(3, '0')}`;
-                    if (hexCoordStr === coordString) {
-                      hex = h;
-                      console.log(`✅ Found hex using coordinate string match: ${hexCoordStr}`);
-                      break;
-                    }
+                  if (hex) {
+                    strategyUsed = "Coordinate transformation";
+                    console.log(`✅ WINNER! Strategy 2 worked: Coordinate transformation`);
                   }
                 }
 
                 if (!hex) {
-                  // Strategy 3: Try offset coordinates (maybe there's a coordinate transformation)
-                  const offsetQ = q - 40; // Try subtracting 40 (since DB starts at -40)
-                  const offsetR = r;
+                  // Strategy 3: Try different transformation
+                  const altQ = q - 91; // Try different offset
+                  const altR = r - 44;
+                  console.log(`🔍 Strategy 3: Alternative transformation q=${q}→${altQ}, r=${r}→${altR}`);
                   hex = await tx.hex.findFirst({
-                    where: { q: offsetQ, r: offsetR, gameStateId: currentGameState.id }
+                    where: { q: altQ, r: altR, gameStateId: currentGameState.id }
                   });
                   if (hex) {
-                    console.log(`✅ Found hex using offset coordinates: q=${offsetQ}, r=${offsetR}`);
+                    strategyUsed = "Alternative transformation";
+                    console.log(`✅ WINNER! Strategy 3 worked: Alternative transformation`);
                   }
+                }
+
+                if (hex) {
+                  console.log(`🎉 SUCCESS: Found hex using ${strategyUsed} for ${hexCoord}`);
+                } else {
+                  console.log(`❌ FAILED: All strategies failed for ${hexCoord}`);
                 }
 
                 if (hex) {

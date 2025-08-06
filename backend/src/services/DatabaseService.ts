@@ -721,6 +721,7 @@ export class DatabaseService {
                 tribeId: request.tribeId,
                 chiefName: request.chiefName,
                 radixAddressSnippet: request.radixAddressSnippet,
+                status: request.status || 'pending',
                 gameStateId: currentGameState.id
               }
             });
@@ -737,6 +738,7 @@ export class DatabaseService {
                 tribeId: request.tribeId,
                 assetName: request.assetName,
                 radixAddressSnippet: request.radixAddressSnippet,
+                status: request.status || 'pending',
                 gameStateId: currentGameState.id
               }
             });
@@ -752,8 +754,17 @@ export class DatabaseService {
                 id: journey.id,
                 ownerTribeId: journey.ownerTribeId,
                 type: journey.type,
-                status: journey.status,
-                data: journey.data as any,
+                origin: journey.origin || journey.startLocation || '',
+                destination: journey.destination || journey.targetLocation || '',
+                path: journey.path || [],
+                currentLocation: journey.currentLocation || journey.origin || '',
+                force: journey.force || {},
+                payload: journey.payload || {},
+                arrivalTurn: journey.arrivalTurn || 0,
+                responseDeadline: journey.responseDeadline || null,
+                scavengeType: journey.scavengeType || null,
+                tradeOffer: journey.tradeOffer || null,
+                status: journey.status || 'en_route',
                 gameStateId: currentGameState.id
               }
             });
@@ -770,6 +781,9 @@ export class DatabaseService {
                 fromTribeId: proposal.fromTribeId,
                 toTribeId: proposal.toTribeId,
                 statusChangeTo: proposal.statusChangeTo,
+                expiresOnTurn: proposal.expiresOnTurn || gameState.turn + 1,
+                fromTribeName: proposal.fromTribeName || 'Unknown',
+                reparations: proposal.reparations || null,
                 gameStateId: currentGameState.id
               }
             });
@@ -783,7 +797,7 @@ export class DatabaseService {
             await tx.turnHistory.create({
               data: {
                 turn: historyRecord.turn,
-                data: historyRecord as any,
+                tribeRecords: historyRecord.tribeRecords || historyRecord as any,
                 gameStateId: currentGameState.id
               }
             });

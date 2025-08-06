@@ -622,3 +622,5 @@ export class DatabaseService {
       console.error('❌ Error updating game state in database:', error);
       throw error;
     }
+  }
+}

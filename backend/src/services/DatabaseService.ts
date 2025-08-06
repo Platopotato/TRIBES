@@ -169,7 +169,9 @@ export class DatabaseService {
           hexes: true,
           tribes: {
             include: {
-              garrisons: true
+              garrisons: true,
+              diplomacyFrom: true,
+              diplomacyTo: true
             }
           },
           chiefRequests: true,
@@ -499,6 +501,22 @@ export class DatabaseService {
   }
 
   // Helper methods for database conversion
+  private buildDiplomacyObject(dbTribe: any): Record<string, { status: string }> {
+    const diplomacy: Record<string, { status: string }> = {};
+
+    // Add relations where this tribe is the "from" tribe
+    dbTribe.diplomacyFrom?.forEach((relation: any) => {
+      diplomacy[relation.toTribeId] = { status: relation.status };
+    });
+
+    // Add relations where this tribe is the "to" tribe
+    dbTribe.diplomacyTo?.forEach((relation: any) => {
+      diplomacy[relation.fromTribeId] = { status: relation.status };
+    });
+
+    return diplomacy;
+  }
+
   private convertDbGameStateToGameState(dbGameState: any): GameState {
     // This is a simplified conversion - in a real implementation,
     // you'd need to properly convert all the nested structures
@@ -544,7 +562,7 @@ export class DatabaseService {
           };
           return acc;
         }, {}),
-        diplomacy: {} // This would need to be populated from DiplomaticRelation table
+        diplomacy: this.buildDiplomacyObject(dbTribe)
       })),
       turn: dbGameState.turn,
       startingLocations: dbGameState.startingLocations,

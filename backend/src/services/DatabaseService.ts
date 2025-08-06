@@ -217,6 +217,7 @@ export class DatabaseService {
           mapSeed: gameState.mapSeed ? BigInt(gameState.mapSeed) : null,
           mapSettings: gameState.mapSettings as any,
           startingLocations: gameState.startingLocations as any,
+          loginAnnouncements: gameState.loginAnnouncements as any,
           hexes: {
             create: gameState.mapData.map(hex => ({
               q: hex.q,
@@ -580,7 +581,8 @@ export class DatabaseService {
         tribeRecords: th.tribeRecords
       })),
       mapSeed: dbGameState.mapSeed ? Number(dbGameState.mapSeed) : undefined,
-      mapSettings: dbGameState.mapSettings
+      mapSettings: dbGameState.mapSettings,
+      loginAnnouncements: dbGameState.loginAnnouncements
     };
   }
 
@@ -659,7 +661,8 @@ export class DatabaseService {
             where: { id: currentGameState.id },
             data: {
               turn: gameState.turn,
-              startingLocations: gameState.startingLocations
+              startingLocations: gameState.startingLocations,
+              loginAnnouncements: gameState.loginAnnouncements as any
             }
           });
           console.log('✅ Main game state updated successfully');

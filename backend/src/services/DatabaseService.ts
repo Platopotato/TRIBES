@@ -773,20 +773,43 @@ export class DatabaseService {
 
                 console.log(`🔍 Looking for hex at q=${q}, r=${r} (${hexCoord})`);
 
-                // Find the hex ID for this coordinate - try multiple approaches
-                let hex = await tx.hex.findFirst({
+                // Try multiple coordinate lookup strategies
+                let hex = null;
+
+                // Strategy 1: Direct lookup
+                hex = await tx.hex.findFirst({
                   where: { q, r, gameStateId: currentGameState.id }
                 });
 
-                // If not found, try without leading zeros (e.g., q=51 instead of q=051)
-                if (!hex && hexCoord.includes('.')) {
-                  const [qStr, rStr] = hexCoord.split('.');
-                  const qNoZero = parseInt(qStr, 10);
-                  const rNoZero = parseInt(rStr, 10);
-                  console.log(`🔍 Trying without leading zeros: q=${qNoZero}, r=${rNoZero}`);
-                  hex = await tx.hex.findFirst({
-                    where: { q: qNoZero, r: rNoZero, gameStateId: currentGameState.id }
+                if (!hex) {
+                  // Strategy 2: Try coordinate string lookup (some systems store as "051.044")
+                  const coordString = hexCoord;
+                  const allHexes = await tx.hex.findMany({
+                    where: { gameStateId: currentGameState.id },
+                    select: { id: true, q: true, r: true }
                   });
+
+                  // Look for hex that matches the coordinate string format
+                  for (const h of allHexes) {
+                    const hexCoordStr = `${h.q.toString().padStart(3, '0')}.${h.r.toString().padStart(3, '0')}`;
+                    if (hexCoordStr === coordString) {
+                      hex = h;
+                      console.log(`✅ Found hex using coordinate string match: ${hexCoordStr}`);
+                      break;
+                    }
+                  }
+                }
+
+                if (!hex) {
+                  // Strategy 3: Try offset coordinates (maybe there's a coordinate transformation)
+                  const offsetQ = q - 40; // Try subtracting 40 (since DB starts at -40)
+                  const offsetR = r;
+                  hex = await tx.hex.findFirst({
+                    where: { q: offsetQ, r: offsetR, gameStateId: currentGameState.id }
+                  });
+                  if (hex) {
+                    console.log(`✅ Found hex using offset coordinates: q=${offsetQ}, r=${offsetR}`);
+                  }
                 }
 
                 if (hex) {

@@ -383,22 +383,28 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             const selectedChiefs = (draftAction?.actionData?.chiefsToMove as string[]) || [];
             return (
                 <div className="space-y-2 p-2 bg-slate-800/50 rounded-md max-h-40 overflow-y-auto">
-                    {availableChiefs.map((chief: Chief, index: number) => (
-                        <label key={`${chief.name}-${index}-${selectedChiefs.length}`} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
-                            <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-amber-500 focus:ring-amber-500"
-                                checked={selectedChiefs.includes(chief.name)}
-                                onChange={e => {
-                                    const newSelection = e.target.checked
-                                        ? [...selectedChiefs, chief.name]
-                                        : selectedChiefs.filter(name => name !== chief.name);
-                                    handleFieldChange('chiefsToMove', newSelection);
-                                }}
-                            />
-                            <span className="text-slate-300 font-semibold">{chief.name}</span>
-                        </label>
-                    ))}
+                    {availableChiefs.map((chief: Chief, index: number) => {
+                        const isSelected = selectedChiefs.includes(chief.name);
+                        return (
+                            <label key={`chief-${chief.name}-${selectedChiefs.join(',')}`} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
+                                <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-amber-500 focus:ring-amber-500"
+                                    checked={isSelected}
+                                    value={chief.name}
+                                    onChange={e => {
+                                        const newSelection = e.target.checked
+                                            ? [...selectedChiefs, chief.name]
+                                            : selectedChiefs.filter(name => name !== chief.name);
+                                        handleFieldChange('chiefsToMove', newSelection);
+                                    }}
+                                />
+                                <span className={`font-semibold ${isSelected ? 'text-amber-300' : 'text-slate-300'}`}>
+                                    {chief.name} {isSelected ? '✓' : ''}
+                                </span>
+                            </label>
+                        );
+                    })}
                 </div>
             )
         case 'info':

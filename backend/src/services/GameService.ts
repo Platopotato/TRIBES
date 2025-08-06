@@ -48,8 +48,8 @@ export class GameService {
     return await this.databaseService.getUsers();
   }
 
-  async updateGameState(newState: GameState): Promise<void> {
-    await this.databaseService.updateGameState(newState);
+  async updateGameState(newState: GameState, skipValidation: boolean = false): Promise<void> {
+    await this.databaseService.updateGameState(newState, skipValidation);
   }
 
   async addUser(user: User): Promise<void> {

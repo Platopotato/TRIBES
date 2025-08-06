@@ -493,8 +493,9 @@ export class SocketHandler {
         console.log(`✅ Users loaded successfully`);
 
         // Load game state after users are loaded (includes ticker and login announcements)
+        // Skip validation during backup loading since users are already loaded
         console.log(`🎮 Loading game state...`);
-        await this.gameService.updateGameState(backupData.gameState);
+        await this.gameService.updateGameState(backupData.gameState, true);
         console.log(`✅ Game state loaded: ${backupData.gameState.tribes.length} tribes, turn ${backupData.gameState.turn}`);
 
         // Emit updates

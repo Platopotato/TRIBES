@@ -190,14 +190,20 @@ export class DatabaseService {
     }
   }
 
-  async updateGameState(gameState: GameState): Promise<void> {
+  async updateGameState(gameState: GameState, skipValidation: boolean = false): Promise<void> {
     if (this.useDatabase && this.prisma) {
       // Update database
       await this.updateGameStateInDb(gameState);
     } else {
-      // File-based fallback - validate and clean game state first
-      const cleanedGameState = await this.validateAndCleanGameState(gameState);
-      this.saveGameStateToFile(cleanedGameState);
+      // File-based fallback
+      if (skipValidation) {
+        // During backup loading, skip validation since users are loaded separately
+        this.saveGameStateToFile(gameState);
+      } else {
+        // Normal operation - validate and clean game state first
+        const cleanedGameState = await this.validateAndCleanGameState(gameState);
+        this.saveGameStateToFile(cleanedGameState);
+      }
     }
   }
 

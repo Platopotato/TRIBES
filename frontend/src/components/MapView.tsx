@@ -201,7 +201,8 @@ const MapView: React.FC<MapViewProps> = (props) => {
           },
           newView: { x: newX, y: newY, zoom },
           containerAvailable: !!mapContainerRef.current,
-          svgAvailable: !!svgRef.current
+          svgAvailable: !!svgRef.current,
+          containerRect: mapContainerRef.current?.getBoundingClientRect()
         });
 
         setView({ x: newX, y: newY, zoom: zoom });
@@ -216,9 +217,9 @@ const MapView: React.FC<MapViewProps> = (props) => {
       const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
 
       if (!isMobileDevice) {
-        // Center immediately without delay to prevent jumping
+        // Use regular home centering instead of destination-specific centering
         console.log('🎯 Centering on home base for destination selection (desktop only)...');
-        handleCenterOnHomeForDestinationSelection();
+        handleCenterOnHome();
       } else {
         console.log('📱 Mobile device detected - skipping auto-centering for destination selection');
       }

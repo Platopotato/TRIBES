@@ -601,7 +601,7 @@ export class DatabaseService {
     console.log(`📊 Prisma client: ${this.prisma ? 'Available' : 'Not Available'}`);
 
     try {
-      // Use a transaction to ensure data consistency
+      // Use a transaction with extended timeout for large backup loading
       await this.prisma.$transaction(async (tx) => {
         // Get the current game state ID
         const currentGameState = await tx.gameState.findFirst();
@@ -644,32 +644,40 @@ export class DatabaseService {
           console.log('⚠️ GameState update failed, continuing with map data...', error);
         }
 
-        // Create new map data (hexes) with error handling
-        console.log(`🗺️ Creating ${gameState.mapData.length} map hexes...`);
-        let createdHexes = 0;
-        let skippedHexes = 0;
+        // Create new map data (hexes) using batch inserts for performance
+        console.log(`🗺️ Creating ${gameState.mapData.length} map hexes using batch inserts...`);
 
-        for (const hex of gameState.mapData) {
+        // Prepare hex data for batch insert
+        const hexData = gameState.mapData.map(hex => ({
+          q: hex.q,
+          r: hex.r,
+          terrain: hex.terrain,
+          poiType: hex.poi?.type || null,
+          poiId: hex.poi?.id || null,
+          poiDifficulty: hex.poi?.difficulty || null,
+          poiRarity: hex.poi?.rarity || null,
+          gameStateId: currentGameState.id
+        }));
+
+        // Insert hexes in batches of 500 to avoid timeout
+        const batchSize = 500;
+        let totalCreated = 0;
+
+        for (let i = 0; i < hexData.length; i += batchSize) {
+          const batch = hexData.slice(i, i + batchSize);
           try {
-            await tx.hex.create({
-              data: {
-                q: hex.q,
-                r: hex.r,
-                terrain: hex.terrain,
-                poiType: hex.poi?.type || null,
-                poiId: hex.poi?.id || null,
-                poiDifficulty: hex.poi?.difficulty || null,
-                poiRarity: hex.poi?.rarity || null,
-                gameStateId: currentGameState.id
-              }
+            await tx.hex.createMany({
+              data: batch,
+              skipDuplicates: true
             });
-            createdHexes++;
+            totalCreated += batch.length;
+            console.log(`✅ Created batch ${Math.floor(i/batchSize) + 1}: ${batch.length} hexes (${totalCreated}/${hexData.length} total)`);
           } catch (error) {
-            console.log(`❌ Error creating hex ${hex.q},${hex.r}:`, error);
-            skippedHexes++;
+            console.log(`❌ Error creating hex batch ${Math.floor(i/batchSize) + 1}:`, error);
           }
         }
-        console.log(`✅ Map data created: ${createdHexes} hexes, skipped ${skippedHexes} hexes`);
+
+        console.log(`✅ Map data creation completed: ${totalCreated} hexes created`);
         // Create new tribes (only for users that exist)
         console.log(`👥 Creating ${gameState.tribes.length} tribes...`);
         
@@ -817,6 +825,8 @@ export class DatabaseService {
         }
 
         console.log('🎯 Complete game state restoration completed successfully');
+      }, {
+        timeout: 60000 // 60 second timeout for backup loading
       });
     } catch (error) {
       console.error(' Error updating game state in database:', error);

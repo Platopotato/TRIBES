@@ -32,7 +32,6 @@ model GameState {
   mapSeed              BigInt?
   mapSettings          Json?
   startingLocations    Json   // Array of hex coordinate strings
-  loginAnnouncements   Json?  // LoginAnnouncementState object
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   

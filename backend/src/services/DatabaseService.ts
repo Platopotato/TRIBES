@@ -722,6 +722,36 @@ export class DatabaseService {
                 gameStateId: currentGameState.id
               }
             });
+
+            // Create garrisons for this tribe
+            if (tribe.garrisons) {
+              for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
+                try {
+                  // Find the hex ID for this coordinate
+                  const [q, r] = hexCoord.split('.').map(Number);
+                  const hex = await tx.hex.findFirst({
+                    where: { q, r, gameStateId: currentGameState.id }
+                  });
+
+                  if (hex) {
+                    await tx.garrison.create({
+                      data: {
+                        hexQ: q,
+                        hexR: r,
+                        troops: (garrisonData as any).troops || 0,
+                        weapons: (garrisonData as any).weapons || 0,
+                        chiefs: (garrisonData as any).chiefs || [],
+                        tribeId: tribe.id,
+                        hexId: hex.id
+                      }
+                    });
+                  }
+                } catch (garrisonError) {
+                  console.log(`❌ Error creating garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
+                }
+              }
+            }
+
             createdTribes++;
           } catch (error) {
             console.log(`❌ Error creating tribe ${tribe.tribeName}:`, error);

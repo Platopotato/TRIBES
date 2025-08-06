@@ -567,7 +567,7 @@ export class DatabaseService {
           };
           return acc;
         }, {}),
-        diplomacy: this.buildDiplomacyObject(dbTribe)
+        diplomacy: this.buildDiplomacyObject(tribe)
       })),
       turn: dbGameState.turn,
       startingLocations: dbGameState.startingLocations,

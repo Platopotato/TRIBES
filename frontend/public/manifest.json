@@ -1,0 +1,16 @@
+{
+  "name": "Radix Tribes",
+  "short_name": "Tribes",
+  "description": "A strategic mobile game set in a post-apocalyptic wasteland",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["games", "strategy"],
+  "icons": [],
+  "shortcuts": [],
+  "screenshots": []
+}

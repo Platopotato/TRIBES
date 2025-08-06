@@ -3,11 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Radix Tribes</title>
+    <!-- Enhanced mobile viewport with user-scalable=no for game experience -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- Aggressive cache busting -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Radix Tribes" />
+
+    <!-- Prevent text size adjustment on mobile -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title>Radix Tribes v2.1 - Mobile Debug</title>
+    <!-- Build timestamp for cache busting -->
+    <meta name="build-time" content="2025-01-29-VERSION-142-ADDED-MAP-KEY-TOGGLE-BUTTON" />
+    <link rel="manifest" href="/manifest.json" />
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Prevent zoom on input focus (iOS Safari) -->
+    <style>
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+      /* Prevent pull-to-refresh */
+      body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Disable text selection for game elements */
+      .game-ui {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+    </style>
   </head>
-  <body class="bg-neutral-800 text-slate-200 font-sans antialiased">
+  <body class="bg-neutral-800 text-slate-200 font-sans antialiased game-ui">
     <div id="root"></div>
     <script type="module" src="/src/main-app.tsx"></script>
   </body>

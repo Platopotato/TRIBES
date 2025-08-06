@@ -20,6 +20,7 @@ type TribeCreationData = {
 interface TribeCreationProps {
   onTribeCreate: (tribe: TribeCreationData) => void;
   user: User;
+  onLogout: () => void;
 }
 
 const ColorSelector: React.FC<{ selectedColor: string; onSelect: (color: string) => void; }> = ({ selectedColor, onSelect }) => (
@@ -39,7 +40,7 @@ const ColorSelector: React.FC<{ selectedColor: string; onSelect: (color: string)
     </div>
 );
 
-const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user }) => {
+const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, onLogout }) => {
   const [playerName, setPlayerName] = useState(user.username);
   const [tribeName, setTribeName] = useState('');
   
@@ -79,6 +80,16 @@ const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user }) =>
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-900">
+      {/* Logout Button */}
+      <div className="w-full max-w-2xl mb-4 flex justify-end">
+        <button
+          onClick={onLogout}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
+        >
+          ← Logout & Register New Account
+        </button>
+      </div>
+
       <Card title="Found a New Tribe" className="max-w-2xl w-full">
         <form onSubmit={handleSubmit} className="space-y-6">
           <p className="text-slate-400 text-center">The old world is gone, {user.username}. Lead your survivors to a new dawn.</p>

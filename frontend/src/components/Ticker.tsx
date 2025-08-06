@@ -59,8 +59,13 @@ const Ticker: React.FC<TickerProps> = ({ ticker }) => {
     }
   };
 
+  // Check if mobile device
+  const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-40 border-t-2 ${getPriorityStyles(currentMessage.priority)}`}>
+    <div className={`fixed left-0 right-0 z-40 border-t-2 ${getPriorityStyles(currentMessage.priority)} ${
+      isMobileDevice ? 'bottom-16' : 'bottom-0'
+    }`}>
       <div className="flex items-center px-4 py-2">
         <div className="flex items-center space-x-2 mr-4">
           <span className="text-lg">{getPriorityIcon(currentMessage.priority)}</span>

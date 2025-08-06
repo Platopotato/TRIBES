@@ -8,7 +8,7 @@ import { Tribe, Garrison, ActionType, Chief } from '../../types';
 export interface ActionField {
   name: string;
   label: string;
-  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select';
+  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select';
   options?: string[]; // for select type
   defaultValue?: string | number;
   placeholder?: string;
@@ -33,8 +33,8 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
     fields: [
       { name: 'start_location', label: 'Move From', type: 'garrison_select' },
       { name: 'finish_location', label: 'Destination', type: 'targetLocation' },
-      { name: 'troops', label: 'Troops', type: 'number', defaultValue: 1, max: 'troops' },
-      { name: 'weapons', label: 'Weapons', type: 'number', defaultValue: 0, max: 'weapons' },
+      { name: 'troops', label: 'Troops', type: 'troops_weapons_select', defaultValue: 1, max: 'troops' },
+      { name: 'weapons', label: 'Weapons', type: 'troops_weapons_select', defaultValue: 0, max: 'weapons' },
       { name: 'chiefsToMove', label: 'Chiefs', type: 'chief_select' },
       { name: 'info', label: 'Info', type: 'info', info: 'Attrition: 2% per hex + terrain mods.' }
     ],

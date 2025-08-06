@@ -20,5 +20,26 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // Mobile performance optimizations
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          vendor: ['react', 'react-dom'],
+          socketio: ['socket.io-client'],
+          shared: ['@radix-tribes/shared']
+        }
+      }
+    },
+    // Optimize for mobile networks
+    chunkSizeWarningLimit: 1000,
+    minify: 'esbuild' // Use esbuild instead of terser for faster builds
   },
+  // PWA and mobile optimizations
+  define: {
+    // Enable PWA features
+    __PWA_ENABLED__: true,
+    // Mobile-specific feature flags
+    __MOBILE_OPTIMIZED__: true
+  }
 })

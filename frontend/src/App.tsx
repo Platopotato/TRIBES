@@ -1,7 +1,7 @@
 
 
 /** @jsxImportSource react */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import {
   Tribe,
   User,
@@ -16,20 +16,24 @@ import {
   getHexesInRange,
   parseHexCoords
 } from '@radix-tribes/shared';
-import TribeCreation from './components/TribeCreation';
-import Dashboard from './components/Dashboard';
-import Login from './components/Login';
-import Register from './components/Register';
-import RegistrationSuccess from './components/RegistrationSuccess';
-import AdminPanel from './components/AdminPanel';
-import MapEditor from './components/MapEditor';
-import GameEditor from './components/GameEditor';
-import ForgotPassword from './components/ForgotPassword';
-import Leaderboard from './components/Leaderboard';
+
+// Lazy load components for better performance
+const TribeCreation = lazy(() => import('./components/TribeCreation'));
+const Dashboard = lazy(() => import('./components/Dashboard')); // Smart Dashboard (mobile/desktop)
+const Login = lazy(() => import('./components/Login'));
+const Register = lazy(() => import('./components/Register'));
+const RegistrationSuccess = lazy(() => import('./components/RegistrationSuccess'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const MapEditor = lazy(() => import('./components/MapEditor'));
+const GameEditor = lazy(() => import('./components/GameEditor'));
+const ForgotPassword = lazy(() => import('./components/ForgotPassword'));
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const ChangePasswordModal = lazy(() => import('./components/ChangePasswordModal'));
+const NewsletterModal = lazy(() => import('./components/NewsletterModal'));
+
+
+// Keep TransitionScreen as regular import since it's used for loading states
 import TransitionScreen from './components/TransitionScreen';
-import ChangePasswordModal from './components/ChangePasswordModal';
-import NewsletterModal from './components/NewsletterModal';
-import Ticker from './components/Ticker';
 import * as Auth from './lib/auth';
 import * as client from './lib/client';
 
@@ -45,15 +49,50 @@ type TribeCreationData = {
 
 const App: React.FC = () => {
   console.log('🚀 APP COMPONENT LOADED!');
+
+  // Detect if we should use mobile or desktop mode
+  const isMobileMode = import.meta.env.VITE_MOBILE_MODE === 'true';
+  const isDesktopMode = import.meta.env.VITE_DESKTOP_MODE === 'true';
+  const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
+  // Auto-detect mode if not explicitly set
+  const shouldUseMobileUI = isMobileMode || (!isDesktopMode && isMobileDevice);
+
+  console.log('📱 UI Mode:', { isMobileMode, isDesktopMode, isMobileDevice, shouldUseMobileUI });
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [view, setView] = useState<View>('login');
+
+  // Debug state changes
+  useEffect(() => {
+    addDebugMessage(`🔄 USER: ${currentUser?.username || 'null'}`);
+  }, [currentUser]);
+
+  useEffect(() => {
+    addDebugMessage(`🔄 GAMESTATE: ${gameState?.tribes?.length || 0} tribes`);
+  }, [gameState]);
+
+  useEffect(() => {
+    addDebugMessage(`🔄 VIEW: ${view}`);
+  }, [view]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loginError, setLoginError] = useState<string>('');
   const [registeredUsername, setRegisteredUsername] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showNewsletterModal, setShowNewsletterModal] = useState(false);
+
+  // Debug state for mobile
+  const [debugMessages, setDebugMessages] = useState<string[]>([]);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  const addDebugMessage = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const fullMessage = `${timestamp}: ${message}`;
+    setDebugMessages(prev => [...prev.slice(-9), fullMessage]); // Keep last 10 messages
+    console.log(fullMessage); // Still log to console too
+  }, []);
   
   useEffect(() => {
     const user = Auth.getCurrentUser();
@@ -100,43 +139,94 @@ const App: React.FC = () => {
   }, []);
   
   const playerTribe = useMemo(() => {
-    if (!currentUser || !gameState) return undefined;
-    console.log('🔍 Looking for tribe with playerId:', currentUser.id);
-    console.log('🏘️ Available tribes:', gameState.tribes.map(t => ({ name: t.tribeName, playerId: t.playerId })));
-    const tribe = gameState.tribes.find(t => t.playerId === currentUser.id);
-    console.log('🎯 Found player tribe:', tribe ? tribe.tribeName : 'None');
+    if (!currentUser || !gameState) {
+      addDebugMessage(`🔍 TRIBE: Missing data - user:${!!currentUser} state:${!!gameState}`);
+      return undefined;
+    }
+
+    addDebugMessage(`🔍 TRIBE: Looking for ${currentUser.username} (ID: ${currentUser.id})`);
+
+    // Debug: Show all tribe playerIds
+    const tribeInfo = gameState.tribes.map(t => `${t.tribeName}:${t.playerId}`).join(', ');
+    addDebugMessage(`🏘️ TRIBES: ${tribeInfo}`);
+
+    // First try to find by user ID
+    let tribe = gameState.tribes.find(t => t.playerId === currentUser.id);
+
+    // If not found by ID, try to find by username (fallback for ID mismatches)
+    if (!tribe) {
+      addDebugMessage(`🔍 TRIBE: ID lookup failed, trying username fallback...`);
+      tribe = gameState.tribes.find(t => t.playerName === currentUser.username);
+      if (tribe) {
+        addDebugMessage(`✅ TRIBE: Found by username! ${tribe.tribeName} (playerName: ${tribe.playerName}, playerID: ${tribe.playerId})`);
+        addDebugMessage(`🔧 TRIBE: ID mismatch detected - tribe has ${tribe.playerId}, user has ${currentUser.id}`);
+      } else {
+        addDebugMessage(`❌ TRIBE: Username fallback failed - no tribe with playerName: ${currentUser.username}`);
+      }
+    }
+
+    addDebugMessage(`🎯 TRIBE: ${tribe ? tribe.tribeName : 'NONE FOUND'}`);
+
+    if (!tribe && currentUser.role !== 'admin') {
+      addDebugMessage(`⚠️ TRIBE: No tribe for non-admin! Will redirect!`);
+    }
+
     return tribe;
   }, [currentUser, gameState]);
 
   useEffect(() => {
-    if (isLoading || !currentUser || !gameState) return;
+    if (isLoading) {
+      console.log('🔄 EFFECT 1: Skipping - isLoading:', isLoading);
+      return;
+    }
+
+    // Handle logout case - if no user, go to login (but allow register, forgot_password views)
+    if (!currentUser && view !== 'register' && view !== 'forgot_password' && view !== 'registration_success') {
+      console.log('🔄 EFFECT 1: No user, setting view to login (current view was:', view, ')');
+      setView('login');
+      return;
+    }
+
+    // Handle case where user exists but no game state yet
+    if (currentUser && !gameState) {
+      console.log('🔄 EFFECT 1: User exists but no game state yet, waiting...');
+      return;
+    }
 
     if (view === 'create_tribe' && playerTribe) {
+        console.log('🔄 EFFECT 1: User has tribe, redirecting from create_tribe to game');
         setView('game');
     }
   }, [gameState, playerTribe, currentUser, view, isLoading]);
 
   // Handle view changes when user is loaded from session storage
   useEffect(() => {
-    if (!currentUser || isLoading) return;
+    if (!currentUser || isLoading) {
+      console.log('🔄 EFFECT 2: Skipping - currentUser:', !!currentUser, 'isLoading:', isLoading);
+      return;
+    }
 
-    console.log('🔄 User loaded, updating view for:', currentUser);
+    console.log('🔄 EFFECT 2: User loaded, updating view for:', currentUser.username, 'current view:', view);
 
     // If we're still on login view but have a user, redirect appropriately
     if (view === 'login') {
       if (gameState) {
         const userTribe = gameState.tribes.find(t => t.playerId === currentUser.id);
         if (userTribe) {
-          console.log('👥 User has tribe, redirecting to game');
+          console.log('👥 EFFECT 2: User has tribe, redirecting to game');
           setView('game');
         } else if (currentUser.role !== 'admin') {
-          console.log('🏗️ User needs to create tribe');
+          console.log('🏗️ EFFECT 2: User needs to create tribe');
           setView('create_tribe');
         } else {
-          console.log('👑 Admin user, redirecting to game');
+          console.log('👑 EFFECT 2: Admin user, redirecting to game');
           setView('game');
         }
+      } else {
+        console.log('🔄 EFFECT 2: No gameState yet, waiting...');
       }
+    } else {
+      console.log('🔄 EFFECT 2: Not on login view, current view:', view);
     }
   }, [currentUser, gameState, view, isLoading]);
 
@@ -162,9 +252,10 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Clear auth storage first
     Auth.logout();
-    setCurrentUser(null);
-    setView('login');
+    // Force page reload with cache busting to ensure clean logout
+    window.location.href = window.location.origin + '?logout=' + Date.now();
   };
 
   const handleChangePassword = (currentPassword: string, newPassword: string) => {
@@ -212,7 +303,9 @@ const App: React.FC = () => {
   };
   
   const handleFinalizePlayerTurn = (tribeId: string, plannedActions: GameAction[], journeyResponses: Tribe['journeyResponses']) => {
+    console.log('🚀 SUBMITTING TURN:', { tribeId, actionsCount: plannedActions.length, actions: plannedActions });
     client.submitTurn({ tribeId, plannedActions, journeyResponses });
+    console.log('📤 Turn submission sent to server');
   };
 
   const handleUpdateTribe = (updatedTribe: Tribe) => {
@@ -274,33 +367,59 @@ const App: React.FC = () => {
     }
 
     console.log('🎯 Rendering view:', view);
-    switch (view) {
-      case 'login':
-        return <Login
-          onLoginSuccess={handleLoginSuccess}
-          onSwitchToRegister={() => setView('register')}
-          onNavigateToForgotPassword={() => setView('forgot_password')}
-          loginError={loginError}
-          onClearError={() => setLoginError('')}
-          announcements={gameState?.loginAnnouncements?.announcements || []}
-          announcementsEnabled={gameState?.loginAnnouncements?.isEnabled || false}
-        />;
-      
-      case 'register':
-        return <Register onRegisterSuccess={handleRegisterSuccess} onSwitchToLogin={() => setView('login')} />;
 
-      case 'registration_success':
-        return <RegistrationSuccess
-          username={registeredUsername}
-          onCreateTribe={() => setView('create_tribe')}
-        />;
+    return (
+      <Suspense fallback={<TransitionScreen message="Loading..." />}>
+        {/* Mobile Logout Button - Only show when logged in */}
+        {currentUser && view !== 'login' && view !== 'register' && view !== 'forgot_password' && (
+          <div className="fixed top-0 right-0 z-[100]">
+            <button
+              onClick={() => {
+                // Clear auth storage first
+                Auth.logout();
+                // Force page reload with cache busting to ensure clean logout
+                window.location.href = window.location.origin + '?logout=' + Date.now();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-sm font-bold transition-colors"
+              style={{ touchAction: 'manipulation' }}
+            >
+              🚪 Logout
+            </button>
+          </div>
+        )}
+
+        {(() => {
+          switch (view) {
+            case 'login':
+              return <Login
+                onLoginSuccess={handleLoginSuccess}
+                onSwitchToRegister={() => setView('register')}
+                onNavigateToForgotPassword={() => setView('forgot_password')}
+                loginError={loginError}
+                onClearError={() => setLoginError('')}
+                announcements={gameState?.loginAnnouncements?.announcements || []}
+                announcementsEnabled={gameState?.loginAnnouncements?.isEnabled || false}
+              />;
+
+            case 'register':
+              return <Register onRegisterSuccess={handleRegisterSuccess} onSwitchToLogin={() => setView('login')} />;
+
+            case 'registration_success':
+              return <RegistrationSuccess
+                username={registeredUsername}
+                onCreateTribe={() => setView('create_tribe')}
+              />;
 
       case 'forgot_password':
         return <ForgotPassword onSuccess={() => setView('login')} onCancel={() => setView('login')} />;
 
       case 'create_tribe':
         if (!currentUser) { setView('login'); return null; }
-        return <TribeCreation onTribeCreate={handleTribeCreate} user={currentUser} />;
+        return <TribeCreation onTribeCreate={handleTribeCreate} user={currentUser} onLogout={() => {
+          Auth.logout();
+          setCurrentUser(null);
+          setView('login');
+        }} />;
       
       case 'transition':
         return <TransitionScreen message={'Synchronizing World...'} />;
@@ -310,6 +429,7 @@ const App: React.FC = () => {
         return <AdminPanel
             gameState={gameState}
             users={users}
+            currentUser={currentUser}
             onBack={() => setView('game')}
             onNavigateToEditor={() => setView('map_editor')}
             onNavigateToGameEditor={() => setView('game_editor')}
@@ -355,11 +475,21 @@ const App: React.FC = () => {
 
       case 'game':
       default:
-        if (!currentUser) { setView('login'); return null; }
-        if (!playerTribe && currentUser.role !== 'admin') { setView('create_tribe'); return null; }
+        if (!currentUser) {
+          addDebugMessage('🚨 REDIRECT: No currentUser → login');
+          setView('login');
+          return null;
+        }
+        if (!playerTribe && currentUser.role !== 'admin') {
+          addDebugMessage(`🚨 REDIRECT: No tribe for ${currentUser.username} → create_tribe`);
+          setView('create_tribe');
+          return null;
+        }
 
         return (
           <Dashboard
+            // Pass the UI mode to Dashboard so it can render appropriately
+            uiMode={shouldUseMobileUI ? 'mobile' : 'desktop'}
             currentUser={currentUser}
             playerTribe={playerTribe}
             allTribes={gameState.tribes}
@@ -385,9 +515,13 @@ const App: React.FC = () => {
             onAcceptProposal={handleAcceptProposal}
             onRejectProposal={handleRejectProposal}
             turnDeadline={gameState.turnDeadline}
+            ticker={gameState.ticker}
           />
         );
-    }
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (
@@ -396,25 +530,22 @@ const App: React.FC = () => {
         {renderView()}
       </div>
 
-      <ChangePasswordModal
-        isOpen={showChangePasswordModal}
-        onClose={() => setShowChangePasswordModal(false)}
-        onChangePassword={handleChangePassword}
-      />
-
-      <NewsletterModal
-        isOpen={showNewsletterModal}
-        onClose={() => setShowNewsletterModal(false)}
-        newsletters={gameState?.newsletter?.newsletters || []}
-        currentTurn={gameState?.turn || 1}
-      />
-
-      {/* Ticker - only show when not on login/register screens */}
-      {gameState && view !== 'login' && view !== 'register' && view !== 'forgot_password' && gameState.ticker && (
-        <Ticker
-          ticker={gameState.ticker}
+      <Suspense fallback={null}>
+        <ChangePasswordModal
+          isOpen={showChangePasswordModal}
+          onClose={() => setShowChangePasswordModal(false)}
+          onChangePassword={handleChangePassword}
         />
-      )}
+
+        <NewsletterModal
+          isOpen={showNewsletterModal}
+          onClose={() => setShowNewsletterModal(false)}
+          newsletters={gameState?.newsletter?.newsletters || []}
+          currentTurn={gameState?.turn || 1}
+        />
+
+
+      </Suspense>
     </div>
   );
 };

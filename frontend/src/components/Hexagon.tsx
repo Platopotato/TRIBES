@@ -17,12 +17,13 @@ interface HexagonProps {
   onMouseOver: () => void;
   onMouseEnter: (event: React.MouseEvent) => void;
   onMouseLeave: () => void;
+  onTouchEnd?: (event: React.TouchEvent) => void;
   isPoliticalMode?: boolean;
   politicalData?: { color: string; tribeName: string };
 }
 
 export const Hexagon: React.FC<HexagonProps> = (props) => {
-  const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, isPoliticalMode, politicalData } = props;
+  const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
 
   const { q, r, terrain, poi } = hexData;
   const width = Math.sqrt(3) * size;
@@ -159,6 +160,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
       onMouseOver={onMouseOver}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onTouchEnd={onTouchEnd}
       className={groupClasses}
     >
       {isPoliticalMode && politicalData && <title>{`${politicalData.tribeName}'s Territory`}</title>}

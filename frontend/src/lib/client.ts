@@ -24,14 +24,29 @@ export const initClient = (
     onLoginFail?: (error: string) => void,
     onRegisterSuccess?: (username: string) => void
 ) => {
-    const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const serverUrl = import.meta.env.VITE_API_URL || 'https://radix-tribes-backend.onrender.com';
     console.log('Initializing Socket.IO client with server URL:', serverUrl);
+
+    // Mobile-optimized Socket.IO configuration
+    const isMobile = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+    console.log('📱 Mobile client detected:', isMobile);
+
     socket = io(serverUrl, {
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 20000,
+        // Mobile-optimized reconnection settings
+        reconnectionAttempts: isMobile ? 10 : 5, // More attempts for mobile
+        reconnectionDelay: isMobile ? 2000 : 1000, // Longer delay for mobile networks
+        reconnectionDelayMax: isMobile ? 10000 : 5000,
+        timeout: isMobile ? 30000 : 20000, // Longer timeout for mobile
         forceNew: true,
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        // Mobile-specific optimizations
+        upgrade: true,
+        rememberUpgrade: true,
+        // Longer ping timeout for mobile networks
+        ...(isMobile && {
+            pingTimeout: 60000,
+            pingInterval: 25000
+        })
     });
 
     // Initialize currentUser from sessionStorage if available
@@ -48,6 +63,14 @@ export const initClient = (
 
     socket.on('connect', () => {
         console.log(`✅ Socket.IO Connected to server! Socket ID: ${socket.id}`);
+
+        // Mobile-specific connection success handling
+        if (isMobile) {
+            console.log('📱 Mobile client successfully connected');
+            // Clear any offline indicators
+            document.body.classList.remove('offline');
+        }
+
         socket.emit('get_initial_state');
 
         // Restore authentication if we have a current user
@@ -62,10 +85,56 @@ export const initClient = (
 
     socket.on('connect_error', (error) => {
         console.error('❌ Socket.IO connection error:', error);
+
+        // Mobile-specific error handling
+        if (isMobile) {
+            console.log('📱 Mobile connection error, will retry...');
+            // Could show a user-friendly offline indicator
+            document.body.classList.add('offline');
+        }
     });
 
     socket.on('disconnect', (reason) => {
         console.log(`🔌 Disconnected from server: ${reason}. Socket ID was: ${socket.id}`);
+
+        // Mobile-specific disconnect handling
+        if (isMobile) {
+            console.log('📱 Mobile client disconnected:', reason);
+            document.body.classList.add('offline');
+
+            // Handle mobile-specific disconnect reasons
+            if (reason === 'transport close' || reason === 'ping timeout') {
+                console.log('📱 Network issue detected, will attempt reconnection');
+                // Could queue actions for later sync
+                queueOfflineActions();
+            }
+        }
+    });
+
+    // Mobile-specific reconnection handling
+    socket.on('reconnect', (attemptNumber) => {
+        console.log(`🔄 Reconnected after ${attemptNumber} attempts`);
+        if (isMobile) {
+            console.log('📱 Mobile client reconnected successfully');
+            document.body.classList.remove('offline');
+            // Sync any queued offline actions
+            syncOfflineActions();
+        }
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`🔄 Reconnection attempt ${attemptNumber}`);
+        if (isMobile) {
+            console.log(`📱 Mobile reconnection attempt ${attemptNumber}`);
+        }
+    });
+
+    socket.on('reconnect_failed', () => {
+        console.error('❌ Failed to reconnect');
+        if (isMobile) {
+            console.log('📱 Mobile reconnection failed - entering offline mode');
+            // Could show offline mode UI
+        }
     });
     
     socket.on('initial_state', (data: { gameState: GameState, users: User[] }) => {
@@ -99,6 +168,40 @@ export const initClient = (
                 (window as any)._registeringUsername = null;
             }, 100);
         }
+    });
+
+    // Handle authentication restoration (production backend format)
+    socket.on('auth_restored', (response: any) => {
+        console.log('✅ Authentication restored:', response);
+
+        // Handle both formats: User object directly or {success: boolean, user?: User}
+        if (response && typeof response === 'object') {
+            if (response.id && response.username) {
+                // Direct user object format
+                const user = response as User;
+                sessionStorage.setItem('radix_user', JSON.stringify(user));
+                currentUser = user;
+                onLoginSuccess(user);
+            } else if (response.success && response.user) {
+                // Wrapped format with success flag
+                const user = response.user as User;
+                sessionStorage.setItem('radix_user', JSON.stringify(user));
+                currentUser = user;
+                onLoginSuccess(user);
+            } else if (response.success === false) {
+                console.log('❌ Authentication restoration failed');
+                currentUser = null;
+                sessionStorage.removeItem('radix_user');
+            }
+        }
+    });
+
+    socket.on('auth_restore_failed', (error: string) => {
+        console.log('❌ Authentication restoration failed:', error);
+        // Clear invalid session data
+        sessionStorage.removeItem('radix_user');
+        currentUser = null;
+        // Could redirect to login or show error message
     });
 
     socket.on('login_fail', (error: string) => {
@@ -215,16 +318,7 @@ export const initClient = (
         alert(`Socket Debug:\nSocket ID: ${info.socketId}\nUser ID: ${info.userId}\nUsername: ${info.username}\nAuthenticated: ${info.authenticated}`);
     });
 
-    socket.on('auth_restored', ({ success }: { success: boolean }) => {
-        if (success) {
-            console.log('✅ Authentication restored successfully');
-        } else {
-            console.log('❌ Failed to restore authentication');
-            // Clear stored user if restoration failed
-            currentUser = null;
-            sessionStorage.removeItem('radix_user');
-        }
-    });
+
 
     socket.on('manual_backup_created', (filename: string) => {
         alert(`Manual backup created successfully: ${filename}`);
@@ -362,6 +456,68 @@ export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: strin
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
+
+// Mobile offline action queuing
+const queueOfflineActions = () => {
+    if (typeof window !== 'undefined') {
+        console.log('📱 Entering offline mode - queuing actions');
+        // Could implement IndexedDB storage for offline actions
+        localStorage.setItem('offlineMode', 'true');
+    }
+};
+
+const syncOfflineActions = () => {
+    if (typeof window !== 'undefined') {
+        console.log('📱 Syncing offline actions');
+        localStorage.removeItem('offlineMode');
+
+        // Get pending actions from localStorage
+        const pendingActions = localStorage.getItem('pendingGameActions');
+        if (pendingActions) {
+            try {
+                const actions = JSON.parse(pendingActions);
+                console.log('📱 Found', actions.length, 'pending actions to sync');
+
+                // Trigger background sync if available
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        // Check if sync is supported before using it
+                        if ('sync' in registration) {
+                            return (registration as any).sync.register('game-actions-sync');
+                        } else {
+                            console.log('📱 Background sync not supported, will sync on reconnect');
+                        }
+                    }).catch(error => {
+                        console.error('📱 Background sync registration failed:', error);
+                    });
+                }
+            } catch (error) {
+                console.error('📱 Failed to parse pending actions:', error);
+            }
+        }
+    }
+};
+
+// Check if currently offline
+export const isOffline = () => {
+    return localStorage.getItem('offlineMode') === 'true';
+};
+
+// Queue action for offline sync
+export const queueAction = (action: any) => {
+    if (isOffline()) {
+        const pending = JSON.parse(localStorage.getItem('pendingGameActions') || '[]');
+        pending.push({
+            ...action,
+            timestamp: Date.now(),
+            id: `offline_${Date.now()}_${Math.random()}`
+        });
+        localStorage.setItem('pendingGameActions', JSON.stringify(pending));
+        console.log('📱 Action queued for offline sync:', action);
+        return true;
+    }
+    return false;
+};
 
 // Logout function
 export const logout = () => {

@@ -40,11 +40,23 @@ const NewsletterModal: React.FC<NewsletterModalProps> = ({
       .replace(/^---$/gm, '<hr class="border-slate-600 my-4">');
   };
 
+  // Check if mobile device
+  const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-600">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-600">
+    <div className="fixed z-50"
+         style={{
+           top: isMobileDevice ? '0' : '0',
+           left: '0',
+           right: '0',
+           bottom: '0',
+           backgroundColor: 'rgba(0,0,0,0.5)',
+           pointerEvents: 'auto'
+         }}>
+      <div className="w-full h-full flex items-center justify-center p-2 md:p-4" onClick={onClose}>
+        <div className="bg-slate-800 rounded-lg w-full max-w-4xl h-full md:max-h-[90vh] flex flex-col border border-slate-600" onClick={e => e.stopPropagation()}>
+        {/* Header - Desktop only */}
+        <div className="items-center justify-between p-6 border-b border-slate-600 hidden md:flex">
           <div className="flex items-center space-x-4">
             <h2 className="text-2xl font-bold text-blue-400">📰 The Radix Tribes Chronicle</h2>
             {publishedNewsletters.length > 1 && (
@@ -64,10 +76,36 @@ const NewsletterModal: React.FC<NewsletterModalProps> = ({
               </select>
             )}
           </div>
-          
+
           <Button onClick={onClose} variant="secondary" className="text-lg">
             ✕
           </Button>
+        </div>
+
+        {/* Mobile Header */}
+        <div className="flex flex-col p-3 border-b border-slate-600 md:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-blue-400">📰 Chronicle</h2>
+            <Button onClick={onClose} variant="secondary" className="text-sm p-2">
+              ✕
+            </Button>
+          </div>
+          {publishedNewsletters.length > 1 && (
+            <select
+              value={displayNewsletter?.id || ''}
+              onChange={(e) => {
+                const newsletter = publishedNewsletters.find(n => n.id === e.target.value);
+                setSelectedNewsletter(newsletter || null);
+              }}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+            >
+              {publishedNewsletters.map(newsletter => (
+                <option key={newsletter.id} value={newsletter.id}>
+                  Turn {newsletter.turn} - {newsletter.title}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Content */}
@@ -120,6 +158,7 @@ const NewsletterModal: React.FC<NewsletterModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

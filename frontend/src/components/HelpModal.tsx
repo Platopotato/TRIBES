@@ -5,6 +5,8 @@ import Button from './ui/Button';
 
 interface HelpModalProps {
   onClose: () => void;
+  isOpen?: boolean;
+  isDesktopWindow?: boolean;
 }
 
 type HelpTab = 'rules' | 'ui';
@@ -136,13 +138,63 @@ const UIGuideContent: React.FC = () => (
 );
 
 
-const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
+const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktopWindow = false }) => {
   const [activeTab, setActiveTab] = useState<HelpTab>('rules');
 
+  if (!isOpen) return null;
+
+  // Check if mobile device
+  const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
+  // Desktop window mode - render content only
+  if (isDesktopWindow) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Tab buttons */}
+        <div className="flex space-x-1 p-3 border-b border-slate-600">
+          <TabButton label="Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
+          <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-3 overflow-y-auto text-sm">
+          {activeTab === 'rules' ? <GameRulesContent /> : <UIGuideContent />}
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile/fullscreen modal mode
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <header className="flex-shrink-0 flex justify-between items-center border-b border-neutral-700 px-6 pt-4">
+    <div className="fixed z-20"
+         style={{
+           top: isMobileDevice ? '8rem' : '0',
+           left: '0',
+           right: '0',
+           bottom: '0',
+           backgroundColor: isMobileDevice ? 'transparent' : 'rgba(0,0,0,0.6)',
+           backdropFilter: isMobileDevice ? 'none' : 'blur(4px)',
+           pointerEvents: isMobileDevice ? 'none' : 'auto'
+         }}>
+      <div className="w-full h-full flex items-center justify-center p-4"
+           onClick={isMobileDevice ? undefined : onClose}
+           style={{ pointerEvents: 'auto' }}>
+        <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Mobile Header */}
+            <header className="flex-shrink-0 flex justify-between items-center border-b border-neutral-700 p-3 md:hidden">
+              <div className="flex space-x-1">
+                <TabButton label="Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
+                <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+
+            {/* Desktop Header */}
+            <header className="flex-shrink-0 justify-between items-center border-b border-neutral-700 px-6 pt-4 hidden md:flex">
                  <div className="flex space-x-1">
                     <TabButton label="Game Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
                     <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
@@ -157,6 +209,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 {activeTab === 'rules' ? <GameRulesContent /> : <UIGuideContent />}
             </main>
         </div>
+      </div>
     </div>
   );
 };

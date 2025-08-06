@@ -13,6 +13,8 @@ interface CodexModalProps {
   allTribes: Tribe[];
   allChiefRequests: ChiefRequest[];
   allAssetRequests: AssetRequest[];
+  isOpen?: boolean;
+  isDesktopWindow?: boolean;
 }
 
 type CodexCategory = 'terrain' | 'poi' | 'chiefs' | 'assets' | 'tech';
@@ -20,18 +22,20 @@ type CodexCategory = 'terrain' | 'poi' | 'chiefs' | 'assets' | 'tech';
 const CategoryButton: React.FC<{ label: string; isActive: boolean; onClick: () => void; icon: string }> = ({ label, isActive, onClick, icon }) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex flex-col items-center justify-center p-2 rounded-t-lg transition-colors duration-200 focus:outline-none ${
+    className={`flex-1 flex flex-col items-center justify-center p-2 md:p-3 rounded-t-lg transition-colors duration-200 focus:outline-none min-w-0 mobile-touch-target touch-feedback haptic-light ${
       isActive ? 'bg-neutral-800 text-amber-400 border-b-2 border-amber-400' : 'bg-neutral-900 text-slate-400 hover:bg-neutral-800'
     }`}
   >
-    <span className="text-2xl">{icon}</span>
-    <span className="text-xs font-bold">{label}</span>
+    <span className="text-lg md:text-2xl">{icon}</span>
+    <span className="text-xs font-bold whitespace-nowrap">{label}</span>
   </button>
 );
 
-const CodexModal: React.FC<CodexModalProps> = ({ onClose, allTribes, allChiefRequests, allAssetRequests }) => {
+const CodexModal: React.FC<CodexModalProps> = ({ onClose, allTribes, allChiefRequests, allAssetRequests, isOpen = true, isDesktopWindow = false }) => {
   const [activeCategory, setActiveCategory] = useState<CodexCategory>('terrain');
   const [selectedItem, setSelectedItem] = useState<string | null>(Object.keys(TERRAIN_DESCRIPTIONS)[0]);
+
+  if (!isOpen) return null;
 
   const chiefStatusMap = useMemo(() => {
     const statusMap = new Map<string, { status: string; owner?: string }>();
@@ -155,7 +159,13 @@ const CodexModal: React.FC<CodexModalProps> = ({ onClose, allTribes, allChiefReq
     }
     
     return listItems.map(item => (
-        <button key={item.id} onClick={() => setSelectedItem(item.id)} className={`w-full text-left p-2 rounded-md transition-colors duration-150 ${selectedItem === item.id ? 'bg-amber-800/50 text-white' : 'hover:bg-slate-700/50 text-slate-300'}`}>
+        <button
+          key={item.id}
+          onClick={() => setSelectedItem(item.id)}
+          className={`w-full text-left p-3 md:p-2 rounded-md transition-colors duration-150 mobile-touch-target touch-feedback haptic-light ${
+            selectedItem === item.id ? 'bg-amber-800/50 text-white' : 'hover:bg-slate-700/50 text-slate-300'
+          }`}
+        >
             {item.content}
         </button>
     ));
@@ -310,35 +320,121 @@ const CodexModal: React.FC<CodexModalProps> = ({ onClose, allTribes, allChiefReq
     return <Card className="h-full bg-neutral-800/50" key={selectedItem}>{content}</Card>;
   }
 
+  // Check if mobile device
+  const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
+  // Desktop window mode - render content only
+  if (isDesktopWindow) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Category buttons */}
+        <div className="flex flex-wrap gap-1 p-2 border-b border-slate-600">
+          <CategoryButton label="Terrain" isActive={activeCategory === 'terrain'} onClick={() => setActiveCategory('terrain')} icon="🏔️" />
+          <CategoryButton label="POIs" isActive={activeCategory === 'poi'} onClick={() => setActiveCategory('poi')} icon="🏛️" />
+          <CategoryButton label="Chiefs" isActive={activeCategory === 'chiefs'} onClick={() => setActiveCategory('chiefs')} icon="👑" />
+          <CategoryButton label="Assets" isActive={activeCategory === 'assets'} onClick={() => setActiveCategory('assets')} icon="🚗" />
+          <CategoryButton label="Tech" isActive={activeCategory === 'tech'} onClick={() => setActiveCategory('tech')} icon="🔬" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* List */}
+          <div className="w-1/3 border-r border-slate-600 overflow-y-auto p-2">
+            {renderSidebarList()}
+          </div>
+
+          {/* Details */}
+          <div className="flex-1 p-3 overflow-y-auto text-sm">
+            {renderDetails()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile/fullscreen modal mode
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 p-4" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <header className="flex-shrink-0 flex justify-between items-center px-4 border-b-2 border-slate-700">
-          <h2 className="text-2xl font-bold text-amber-500">Wasteland Codex</h2>
-          <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="fixed z-20"
+         style={{
+           top: isMobileDevice ? '8rem' : '0',
+           left: '0',
+           right: '0',
+           bottom: '0',
+           backgroundColor: isMobileDevice ? 'transparent' : 'rgba(0,0,0,0.7)',
+           backdropFilter: isMobileDevice ? 'none' : 'blur(4px)',
+           pointerEvents: isMobileDevice ? 'none' : 'auto'
+         }}>
+      <div className="w-full h-full flex items-center justify-center p-2 md:p-4"
+           onClick={isMobileDevice ? undefined : onClose}
+           style={{ pointerEvents: 'auto' }}>
+        <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg w-full max-w-6xl h-full md:h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <header className="flex-shrink-0 justify-between items-center px-3 md:px-4 py-2 border-b-2 border-slate-700 hidden md:flex">
+          <h2 className="text-lg md:text-2xl font-bold text-amber-500">📖 Wasteland Codex</h2>
+          <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </Button>
         </header>
-        <div className="flex flex-grow overflow-hidden">
-          <aside className="w-72 flex-shrink-0 bg-neutral-900/80 flex flex-col border-r border-slate-700">
-            <div className="p-2 flex-shrink-0">
+
+        {/* Mobile Layout: Stacked */}
+        {isMobileDevice ? (
+          <div className="flex flex-col flex-grow overflow-hidden">
+            {/* Mobile Header with Close */}
+            <div className="flex-shrink-0 flex justify-between items-center p-3 border-b border-slate-700 bg-neutral-900">
+              <h2 className="text-lg font-bold text-amber-500">📖 Wasteland Codex</h2>
+              <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Mobile Category Tabs */}
+            <div className="flex-shrink-0 p-2 border-b border-slate-700">
+              <div className="flex bg-neutral-900 rounded-lg overflow-x-auto">
+                <CategoryButton label="Terrain" icon="🏞️" isActive={activeCategory === 'terrain'} onClick={() => handleSelectCategory('terrain')} />
+                <CategoryButton label="POIs" icon="📍" isActive={activeCategory === 'poi'} onClick={() => handleSelectCategory('poi')} />
+                <CategoryButton label="Chiefs" icon="👤" isActive={activeCategory === 'chiefs'} onClick={() => handleSelectCategory('chiefs')} />
+                <CategoryButton label="Assets" icon="⚙️" isActive={activeCategory === 'assets'} onClick={() => handleSelectCategory('assets')} />
+                <CategoryButton label="Tech" icon="🔬" isActive={activeCategory === 'tech'} onClick={() => handleSelectCategory('tech')} />
+              </div>
+            </div>
+
+            {/* Mobile Item List */}
+            <div className="flex-shrink-0 max-h-32 overflow-y-auto p-2 border-b border-slate-700 bg-neutral-900/50">
+              <div className="grid grid-cols-1 gap-1">
+                {renderSidebarList()}
+              </div>
+            </div>
+
+            {/* Mobile Content */}
+            <main className="flex-grow p-3 bg-slate-800/30 overflow-y-auto">
+              {renderDetails()}
+            </main>
+          </div>
+        ) : (
+          /* Desktop Layout: Side by Side */
+          <div className="flex flex-grow overflow-hidden">
+            <aside className="w-72 flex-shrink-0 bg-neutral-900/80 flex flex-col border-r border-slate-700">
+              <div className="p-2 flex-shrink-0">
                 <div className="flex bg-neutral-900 rounded-lg">
-                    <CategoryButton label="Terrain" icon="🏞️" isActive={activeCategory === 'terrain'} onClick={() => handleSelectCategory('terrain')} />
-                    <CategoryButton label="POIs" icon="📍" isActive={activeCategory === 'poi'} onClick={() => handleSelectCategory('poi')} />
-                    <CategoryButton label="Chiefs" icon="👤" isActive={activeCategory === 'chiefs'} onClick={() => handleSelectCategory('chiefs')} />
-                    <CategoryButton label="Assets" icon="⚙️" isActive={activeCategory === 'assets'} onClick={() => handleSelectCategory('assets')} />
-                    <CategoryButton label="Tech" icon="🔬" isActive={activeCategory === 'tech'} onClick={() => handleSelectCategory('tech')} />
+                  <CategoryButton label="Terrain" icon="🏞️" isActive={activeCategory === 'terrain'} onClick={() => handleSelectCategory('terrain')} />
+                  <CategoryButton label="POIs" icon="📍" isActive={activeCategory === 'poi'} onClick={() => handleSelectCategory('poi')} />
+                  <CategoryButton label="Chiefs" icon="👤" isActive={activeCategory === 'chiefs'} onClick={() => handleSelectCategory('chiefs')} />
+                  <CategoryButton label="Assets" icon="⚙️" isActive={activeCategory === 'assets'} onClick={() => handleSelectCategory('assets')} />
+                  <CategoryButton label="Tech" icon="🔬" isActive={activeCategory === 'tech'} onClick={() => handleSelectCategory('tech')} />
                 </div>
-            </div>
-            <div className="flex-grow overflow-y-auto p-2 space-y-1">
-              {renderSidebarList()}
-            </div>
-          </aside>
-          <main className="flex-grow p-4 bg-slate-800/30 overflow-y-auto">
-            {renderDetails()}
-          </main>
+              </div>
+              <div className="flex-grow overflow-y-auto p-2 space-y-1">
+                {renderSidebarList()}
+              </div>
+            </aside>
+            <main className="flex-grow p-4 bg-slate-800/30 overflow-y-auto">
+              {renderDetails()}
+            </main>
+          </div>
+        )}
         </div>
       </div>
     </div>

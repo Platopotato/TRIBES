@@ -39,7 +39,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
     const territoryData = useMemo(() => {
         const data = new Map<string, { color: string; tribeName: string }>();
         rankedTribes.forEach((tribe) => {
-            Object.keys(tribe.garrisons).forEach(location => {
+            // Show explored territory instead of just garrisons for a proper territory map
+            (tribe.exploredHexes || []).forEach(location => {
                 data.set(location, { color: tribe.color, tribeName: tribe.tribeName });
             });
         });
@@ -53,58 +54,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
           <h1 className="text-3xl font-bold text-amber-400">Wasteland Leaderboard</h1>
           <Button onClick={onBack}>Back to Game</Button>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2">
-                <Card>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="border-b-2 border-slate-700">
-                                <tr>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Rank</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Tribe</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Player</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Score</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Troops</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Garrisons</th>
-                                    {playerTribe && <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-center">Diplomacy</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rankedTribes.map((tribe, index) => {
-                                    const isPlayerRow = playerTribe && tribe.id === playerTribe.id;
-                                    const relation = playerTribe ? playerTribe.diplomacy[tribe.id] : undefined;
-                                    
-                                    return (
-                                        <tr key={tribe.id} className={`border-b border-slate-800 ${isPlayerRow ? 'bg-amber-900/20' : 'hover:bg-slate-800/50'}`}>
-                                            <td className="p-3 text-lg font-bold text-slate-300">#{index + 1}</td>
-                                            <td className="p-3">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: tribe.color }}>
-                                                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-white">
-                                                            {TRIBE_ICONS[tribe.icon]}
-                                                        </svg>
-                                                    </div>
-                                                    <span className="font-semibold text-white">{tribe.tribeName}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-3 text-slate-400">{tribe.playerName}</td>
-                                            <td className="p-3 text-lg font-bold text-amber-400 text-right">{tribe.score}</td>
-                                            <td className="p-3 text-white font-mono text-right">{tribe.totalTroops}</td>
-                                            <td className="p-3 text-white font-mono text-center">{Object.keys(tribe.garrisons).length}</td>
-                                            {playerTribe && (
-                                                <td className="p-3 text-center">
-                                                    {tribe.id === playerTribe.id ? <span className="text-xs italic text-slate-500">You</span> : getStatusPill(relation)}
-                                                </td>
-                                            )}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
-            <div className="xl:col-span-1 h-96 xl:h-auto">
+        <div className="space-y-6">
+            {/* Territory Map - Top Section */}
+            <Card title="🗺️ Territorial Control">
+              <div className="h-[800px]">
                 <MapView
                     mapData={gameState.mapData}
                     territoryData={territoryData}
@@ -115,13 +68,66 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                     selectionMode={false}
                     onHexSelect={() => {}}
                 />
-            </div>
-            <div className="xl:col-span-3">
+              </div>
+            </Card>
+
+            {/* Tribal Rankings - Middle Section */}
+            <Card title="🏆 Tribal Rankings">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="border-b-2 border-slate-700">
+                            <tr>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Rank</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Tribe</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Player</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Score</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Troops</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Garrisons</th>
+                                {playerTribe && <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-center">Diplomacy</th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rankedTribes.map((tribe, index) => {
+                                const isPlayerRow = playerTribe && tribe.id === playerTribe.id;
+                                const relation = playerTribe ? playerTribe.diplomacy[tribe.id] : undefined;
+
+                                return (
+                                    <tr key={tribe.id} className={`border-b border-slate-800 ${isPlayerRow ? 'bg-amber-900/20' : 'hover:bg-slate-800/50'}`}>
+                                        <td className="p-3 text-lg font-bold text-slate-300">#{index + 1}</td>
+                                        <td className="p-3">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: tribe.color }}>
+                                                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-white">
+                                                        {TRIBE_ICONS[tribe.icon]}
+                                                    </svg>
+                                                </div>
+                                                <span className="font-semibold text-white">{tribe.tribeName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-slate-400">{tribe.playerName}</td>
+                                        <td className="p-3 text-lg font-bold text-amber-400 text-right">{tribe.score}</td>
+                                        <td className="p-3 text-white font-mono text-right">{tribe.totalTroops}</td>
+                                        <td className="p-3 text-white font-mono text-center">{Object.keys(tribe.garrisons).length}</td>
+                                        {playerTribe && (
+                                            <td className="p-3 text-center">
+                                                {tribe.id === playerTribe.id ? <span className="text-xs italic text-slate-500">You</span> : getStatusPill(relation)}
+                                            </td>
+                                        )}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+
+            {/* Growth Chart - Bottom Section */}
+            <Card title="📈 Tribal Growth Trends">
                 <TribeGrowthChart
                     history={gameState.history || []}
                     tribes={rankedTribes}
                 />
-            </div>
+            </Card>
         </div>
       </div>
     </div>

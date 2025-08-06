@@ -11,6 +11,7 @@ import * as client from '../lib/client';
 interface AdminPanelProps {
   gameState: GameState;
   users: User[];
+  currentUser: User;
   onBack: () => void;
   onNavigateToEditor: () => void;
   onNavigateToGameEditor: () => void;
@@ -26,7 +27,8 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = (props) => {
-  const { gameState, users, onBack, onNavigateToEditor, onNavigateToGameEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
+  console.log('🛠️ AdminPanel rendering with props:', { gameState: !!props.gameState, users: props.users?.length, currentUser: !!props.currentUser });
+  const { gameState, users, currentUser, onBack, onNavigateToEditor, onNavigateToGameEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
   const [selectedAIType, setSelectedAIType] = useState<AIType>(AIType.Wanderer);
 
   // Safety checks
@@ -43,7 +45,6 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const { tribes: allTribes, chiefRequests, assetRequests } = gameState;
   const allUsers = users;
-  const currentUser = Auth.getCurrentUser();
 
   const [userToRemove, setUserToRemove] = useState<User | null>(null);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
@@ -69,7 +70,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!currentUser) return null;
+
 
   const handleConfirmRemove = () => {
     if (userToRemove) {
@@ -499,6 +500,8 @@ GAME STATISTICS:
   const pendingAssetRequests = (assetRequests || []).filter(r => r.status === 'pending');
   const aiTribesCount = allTribes.filter(t => t.isAI).length;
 
+  console.log('🛠️ AdminPanel about to render main content');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -641,6 +644,11 @@ GAME STATISTICS:
             </Card>
 
             <Card title="Registered Users" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <p className="text-neutral-400 leading-relaxed">
+                  Manage all registered users. Removing a player will permanently delete their account and associated tribe.
+                  <span className="text-amber-400 font-semibold"> Perfect for cleaning up test accounts!</span>
+                </p>
                 <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
                   <table className="w-full text-left">
                     <thead>
@@ -682,6 +690,7 @@ GAME STATISTICS:
                     </tbody>
                   </table>
                 </div>
+              </div>
             </Card>
           </div>
 

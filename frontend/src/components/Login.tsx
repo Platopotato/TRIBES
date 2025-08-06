@@ -31,6 +31,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-900">
+
+
       <div className="mb-8 max-w-sm w-full">
         <img
           src="https://www.platopotato.com/NFT/Tribes/assets/Tribeslogo.png"
@@ -81,6 +83,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
             </button>
           </div>
         </form>
+
+        {/* Version Number */}
+        <div className="text-center text-xs text-slate-500 mt-4">
+          Version: 142-ADDED-MAP-KEY-TOGGLE-BUTTON
+        </div>
       </Card>
     </div>
   );

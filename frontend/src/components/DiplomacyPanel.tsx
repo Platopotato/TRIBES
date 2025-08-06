@@ -68,7 +68,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   };
   
   const renderTribeList = (tribesToList: Tribe[]) => (
-    <ul className="space-y-2">
+    <div className="space-y-3">
       {tribesToList.map(tribe => {
         const relation = playerTribe.diplomacy[tribe.id] || { status: DiplomaticStatus.Neutral };
         const isProposalPending = outgoingProposals.some(p => p.toTribeId === tribe.id);
@@ -76,50 +76,53 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         const truceTurnsLeft = isTruceActive ? relation.truceUntilTurn! - turn : 0;
 
         return (
-          <li key={tribe.id} className="flex items-center justify-between p-2 bg-slate-900/50 rounded-md">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-slate-300">
-                  {TRIBE_ICONS[tribe.icon]}
-                </svg>
-              </div>
-              <div>
+          <div key={tribe.id} className="p-3 bg-slate-900/50 rounded-lg">
+            {/* Tribe Info */}
+            <div className="flex items-center space-x-3 mb-2">
+              <span className="text-lg">{TRIBE_ICONS[tribe.icon] ? '🏛️' : '🏛️'}</span>
+              <div className="flex-1">
                 <p className="font-semibold text-slate-200">{tribe.tribeName}</p>
                 <div className="text-xs">{getStatusPill(relation)}</div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2">
               {isTruceActive && (
-                <span className="text-xs italic text-green-400 self-center pr-2" title={`Truce active from a recent peace treaty.`}>
+                <span className="text-xs italic text-green-400 px-2 py-1 bg-green-900/30 rounded" title={`Truce active from a recent peace treaty.`}>
                   Truce: {truceTurnsLeft} turn(s)
                 </span>
               )}
               {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
-                <Button onClick={() => onProposeAlliance(tribe.id)} className="text-xs px-2 py-1 bg-green-800 hover:bg-green-700">
-                  Propose Alliance
+                <Button onClick={() => onProposeAlliance(tribe.id)} className="text-xs px-3 py-1 bg-green-800 hover:bg-green-700">
+                  🤝 Alliance
                 </Button>
               )}
                {relation.status === DiplomaticStatus.War && !isProposalPending && (
-                <Button onClick={() => setPeaceTarget(tribe)} className="text-xs px-2 py-1 bg-yellow-600 hover:bg-yellow-700">
-                  Sue for Peace
+                <Button onClick={() => setPeaceTarget(tribe)} className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700">
+                  🕊️ Peace
                 </Button>
               )}
-              {isProposalPending && <span className="text-xs italic text-yellow-400 self-center pr-2">Pending</span>}
+              {isProposalPending && (
+                <span className="text-xs italic text-yellow-400 px-2 py-1 bg-yellow-900/30 rounded">
+                  ⏳ Pending
+                </span>
+              )}
               {relation.status !== DiplomaticStatus.War && (
-                 <Button 
-                    onClick={() => setWarTarget(tribe)} 
-                    className="text-xs px-2 py-1 bg-red-900 hover:bg-red-800"
+                 <Button
+                    onClick={() => setWarTarget(tribe)}
+                    className="text-xs px-3 py-1 bg-red-900 hover:bg-red-800"
                     disabled={isTruceActive}
                     title={isTruceActive ? `Cannot declare war due to truce.` : `Declare war on ${tribe.tribeName}`}
                   >
-                    Declare War
+                    ⚔️ War
                 </Button>
               )}
             </div>
-          </li>
+          </div>
         )
       })}
-    </ul>
+    </div>
   );
 
   return (

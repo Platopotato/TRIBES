@@ -141,9 +141,10 @@ const MapView: React.FC<MapViewProps> = (props) => {
 
         const zoom = 3.0;
 
-        // Original logic for home page map
+        // Original logic for home page map with 5-hex upward adjustment
+        const hexOffsetY = HEX_SIZE * 5; // Move up by 5 hexes
         const newX = (mapWidth / 2 - targetX) * zoom;
-        const newY = (mapHeight / 2 - targetY) * zoom;
+        const newY = (mapHeight / 2 - targetY) * zoom + hexOffsetY;
 
         console.log('🏠 Home page centering:', {
           homeBase: { q, r },

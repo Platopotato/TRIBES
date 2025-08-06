@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GameState, User, Tribe, GlobalResources, Garrison, Chief, ALL_CHIEFS, getAsset, ALL_ASSETS } from '@radix-tribes/shared';
+import { GameState, User, Tribe, GlobalResources, Garrison, Chief, ALL_CHIEFS, getAsset, ALL_ASSETS, ResearchProject, ALL_TECHS } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -16,6 +16,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
   const [editingResources, setEditingResources] = useState<GlobalResources | null>(null);
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
+  const [editingResearch, setEditingResearch] = useState<ResearchProject | null>(null);
+  const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [playerToEject, setPlayerToEject] = useState<{ userId: string; username: string } | null>(null);
 
   const playerTribes = useMemo(() => {
@@ -26,6 +28,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setSelectedTribe(tribe);
     setEditingResources({ ...tribe.globalResources });
     setEditingGarrisons({ ...tribe.garrisons });
+    setEditingResearch(tribe.currentResearch ? { ...tribe.currentResearch } : null);
+    setEditingCompletedTechs([...tribe.completedTechs]);
   };
 
   const handleResourceChange = (resource: keyof GlobalResources, value: number) => {
@@ -101,7 +105,9 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     const updatedTribe: Tribe = {
       ...selectedTribe,
       globalResources: editingResources,
-      garrisons: editingGarrisons
+      garrisons: editingGarrisons,
+      currentResearch: editingResearch,
+      completedTechs: editingCompletedTechs
     };
 
     onUpdateTribe(updatedTribe);
@@ -116,6 +122,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setSelectedTribe(null);
     setEditingResources(null);
     setEditingGarrisons(null);
+    setEditingResearch(null);
+    setEditingCompletedTechs([]);
     alert(`Player ${playerToEject.username} has been ejected from the game.`);
   };
 
@@ -292,6 +300,120 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                   </div>
                 </div>
               ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Research Editing */}
+        {selectedTribe && (
+          <Card title="🔬 Research Management" className="mb-6">
+            <div className="space-y-4">
+              {/* Current Research */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Current Research Project</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-400">Technology</label>
+                    <select
+                      value={editingResearch?.techId || ''}
+                      onChange={(e) => {
+                        if (e.target.value === '') {
+                          setEditingResearch(null);
+                        } else {
+                          const tech = ALL_TECHS.find(t => t.id === e.target.value);
+                          if (tech) {
+                            setEditingResearch({
+                              techId: e.target.value,
+                              progress: editingResearch?.progress || 0,
+                              assignedTroops: editingResearch?.assignedTroops || 0,
+                              location: editingResearch?.location || selectedTribe.location
+                            });
+                          }
+                        }
+                      }}
+                      className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
+                    >
+                      <option value="">No active research</option>
+                      {ALL_TECHS.map(tech => (
+                        <option key={tech.id} value={tech.id}>{tech.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {editingResearch && (
+                    <>
+                      <div>
+                        <label className="text-xs text-slate-400">Progress</label>
+                        <input
+                          type="number"
+                          value={editingResearch.progress}
+                          onChange={(e) => setEditingResearch({
+                            ...editingResearch,
+                            progress: parseInt(e.target.value) || 0
+                          })}
+                          className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
+                          min="0"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-slate-400">Assigned Troops</label>
+                        <input
+                          type="number"
+                          value={editingResearch.assignedTroops}
+                          onChange={(e) => setEditingResearch({
+                            ...editingResearch,
+                            assignedTroops: parseInt(e.target.value) || 0
+                          })}
+                          className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
+                          min="0"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Completed Technologies */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Completed Technologies</label>
+                <div className="space-y-2">
+                  {editingCompletedTechs.map(techId => {
+                    const tech = ALL_TECHS.find(t => t.id === techId);
+                    return (
+                      <div key={techId} className="flex items-center justify-between p-2 bg-slate-700 rounded">
+                        <span className="text-sm text-slate-200">
+                          {tech ? `${tech.icon} ${tech.name}` : techId}
+                        </span>
+                        <Button
+                          onClick={() => setEditingCompletedTechs(editingCompletedTechs.filter(id => id !== techId))}
+                          variant="secondary"
+                          className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    );
+                  })}
+
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value && !editingCompletedTechs.includes(e.target.value)) {
+                        setEditingCompletedTechs([...editingCompletedTechs, e.target.value]);
+                      }
+                    }}
+                    className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
+                    value=""
+                  >
+                    <option value="">Add completed technology...</option>
+                    {ALL_TECHS
+                      .filter(tech => !editingCompletedTechs.includes(tech.id))
+                      .map(tech => (
+                        <option key={tech.id} value={tech.id}>{tech.icon} {tech.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </Card>
         )}

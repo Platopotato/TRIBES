@@ -554,8 +554,8 @@ export class DatabaseService {
 
     if (!this.prisma) return;
 
-    console.log(' Updating game state in database...');
-    console.log( Game state has ${gameState.tribes.length} tribes);
+    console.log('🔄 Updating game state in database...');
+    console.log(`📊 Game state has ${gameState.tribes.length} tribes`);
 
     try {
       // Use a transaction to ensure data consistency
@@ -583,7 +583,7 @@ export class DatabaseService {
         });
 
         // Create new tribes
-        console.log( Creating ${gameState.tribes.length} tribes...);
+        console.log(`👥 Creating ${gameState.tribes.length} tribes...`);
         for (const tribe of gameState.tribes) {
           await tx.tribe.create({
             data: {
@@ -617,11 +617,10 @@ export class DatabaseService {
     } catch (error) {
       console.error(' Error updating game state in database:', error);
       throw error;
+      });
+    } catch (error) {
+      console.error('❌ Error updating game state in database:', error);
+      throw error;
     }
-  }
-    });
-
-    // Note: Updating tribes, garrisons, etc. would require more complex logic
-    // to handle creates, updates, and deletes properly
   }
 }

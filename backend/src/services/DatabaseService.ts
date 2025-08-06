@@ -617,7 +617,15 @@ export class DatabaseService {
           where: { gameStateId: currentGameState.id }
         });
 
-        // Update the main game state
+        // Clear all existing game state data
+        console.log(' Clearing existing requests, journeys, and proposals...');
+        await tx.chiefRequest.deleteMany({ where: { gameStateId: currentGameState.id } });
+        await tx.assetRequest.deleteMany({ where: { gameStateId: currentGameState.id } });
+        await tx.journey.deleteMany({ where: { gameStateId: currentGameState.id } });
+        await tx.diplomaticProposal.deleteMany({ where: { gameStateId: currentGameState.id } });
+        await tx.turnHistory.deleteMany({ where: { gameStateId: currentGameState.id } });
+
+        // Update the main game state with all fields
         console.log(' Updating main game state...');
         await tx.gameState.update({
           where: { id: currentGameState.id },
@@ -625,7 +633,11 @@ export class DatabaseService {
             turn: gameState.turn,
             mapSeed: gameState.mapSeed ? BigInt(gameState.mapSeed) : null,
             mapSettings: gameState.mapSettings as any,
-            startingLocations: gameState.startingLocations
+            startingLocations: gameState.startingLocations,
+            // Add ticker and login announcements if they exist
+            ...(gameState.ticker && { ticker: gameState.ticker as any }),
+            ...(gameState.loginAnnouncements && { loginAnnouncements: gameState.loginAnnouncements as any }),
+            ...(gameState.turnDeadline && { turnDeadline: gameState.turnDeadline as any })
           }
         });
 
@@ -698,7 +710,87 @@ export class DatabaseService {
         }
 
         console.log(`✅ Created ${createdTribes} tribes, skipped ${skippedTribes} tribes`);
-        console.log('🎯 Game state update completed successfully');
+
+        // Restore chief requests
+        if (gameState.chiefRequests && gameState.chiefRequests.length > 0) {
+          console.log(`📋 Creating ${gameState.chiefRequests.length} chief requests...`);
+          for (const request of gameState.chiefRequests) {
+            await tx.chiefRequest.create({
+              data: {
+                id: request.id,
+                tribeId: request.tribeId,
+                chiefName: request.chiefName,
+                radixAddressSnippet: request.radixAddressSnippet,
+                gameStateId: currentGameState.id
+              }
+            });
+          }
+        }
+
+        // Restore asset requests
+        if (gameState.assetRequests && gameState.assetRequests.length > 0) {
+          console.log(`🎨 Creating ${gameState.assetRequests.length} asset requests...`);
+          for (const request of gameState.assetRequests) {
+            await tx.assetRequest.create({
+              data: {
+                id: request.id,
+                tribeId: request.tribeId,
+                assetName: request.assetName,
+                radixAddressSnippet: request.radixAddressSnippet,
+                gameStateId: currentGameState.id
+              }
+            });
+          }
+        }
+
+        // Restore journeys
+        if (gameState.journeys && gameState.journeys.length > 0) {
+          console.log(`🚶 Creating ${gameState.journeys.length} journeys...`);
+          for (const journey of gameState.journeys) {
+            await tx.journey.create({
+              data: {
+                id: journey.id,
+                ownerTribeId: journey.ownerTribeId,
+                type: journey.type,
+                status: journey.status,
+                data: journey.data as any,
+                gameStateId: currentGameState.id
+              }
+            });
+          }
+        }
+
+        // Restore diplomatic proposals
+        if (gameState.diplomaticProposals && gameState.diplomaticProposals.length > 0) {
+          console.log(`🤝 Creating ${gameState.diplomaticProposals.length} diplomatic proposals...`);
+          for (const proposal of gameState.diplomaticProposals) {
+            await tx.diplomaticProposal.create({
+              data: {
+                id: proposal.id,
+                fromTribeId: proposal.fromTribeId,
+                toTribeId: proposal.toTribeId,
+                statusChangeTo: proposal.statusChangeTo,
+                gameStateId: currentGameState.id
+              }
+            });
+          }
+        }
+
+        // Restore turn history
+        if (gameState.history && gameState.history.length > 0) {
+          console.log(`📚 Creating ${gameState.history.length} turn history records...`);
+          for (const historyRecord of gameState.history) {
+            await tx.turnHistory.create({
+              data: {
+                turn: historyRecord.turn,
+                data: historyRecord as any,
+                gameStateId: currentGameState.id
+              }
+            });
+          }
+        }
+
+        console.log('🎯 Complete game state restoration completed successfully');
       });
     } catch (error) {
       console.error(' Error updating game state in database:', error);

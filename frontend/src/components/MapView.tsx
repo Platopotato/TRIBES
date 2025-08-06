@@ -209,24 +209,24 @@ const MapView: React.FC<MapViewProps> = (props) => {
   }, [homeBaseLocation]);
 
   // Auto-center on home base when selection mode is activated (destination selection)
-  // Only for desktop - mobile destination selection should stay at default position
-  useEffect(() => {
-    if (selectionMode && homeBaseLocation) {
-      // Detect if mobile device
-      const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+  // DISABLED: Causing unwanted map jumping - let map stay at current position
+  // useEffect(() => {
+  //   if (selectionMode && homeBaseLocation) {
+  //     // Detect if mobile device
+  //     const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
 
-      if (!isMobileDevice) {
-        // Only auto-center for desktop
-        const timer = setTimeout(() => {
-          console.log('🎯 Attempting to center on home base for destination selection (desktop only)...');
-          handleCenterOnHomeForDestinationSelection();
-        }, 500);
-        return () => clearTimeout(timer);
-      } else {
-        console.log('📱 Mobile device detected - skipping auto-centering for destination selection');
-      }
-    }
-  }, [selectionMode, homeBaseLocation, handleCenterOnHomeForDestinationSelection]);
+  //     if (!isMobileDevice) {
+  //       // Only auto-center for desktop
+  //       const timer = setTimeout(() => {
+  //         console.log('🎯 Attempting to center on home base for destination selection (desktop only)...');
+  //         handleCenterOnHomeForDestinationSelection();
+  //       }, 500);
+  //       return () => clearTimeout(timer);
+  //     } else {
+  //       console.log('📱 Mobile device detected - skipping auto-centering for destination selection');
+  //     }
+  //   }
+  // }, [selectionMode, homeBaseLocation, handleCenterOnHomeForDestinationSelection]);
 
   // --- FOG OF WAR & VISIBILITY CALCULATION ---
   const { exploredSet, influenceSet, visibleTribesByLocation } = useMemo(() => {

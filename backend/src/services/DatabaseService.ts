@@ -734,6 +734,15 @@ export class DatabaseService {
 
         // Create garrisons for all tribes (separate step after tribe creation)
         console.log(`🏰 Creating garrisons for all tribes...`);
+
+        // Debug: Check what hex coordinates actually exist in the database
+        const sampleHexes = await tx.hex.findMany({
+          where: { gameStateId: currentGameState.id },
+          select: { q: true, r: true },
+          take: 10
+        });
+        console.log(`🔍 Sample hex coordinates in database:`, sampleHexes.map(h => `q=${h.q}, r=${h.r}`));
+
         let totalGarrisons = 0;
 
         for (const tribe of gameState.tribes) {
@@ -760,10 +769,21 @@ export class DatabaseService {
 
                 console.log(`🔍 Looking for hex at q=${q}, r=${r} (${hexCoord})`);
 
-                // Find the hex ID for this coordinate
-                const hex = await tx.hex.findFirst({
+                // Find the hex ID for this coordinate - try multiple approaches
+                let hex = await tx.hex.findFirst({
                   where: { q, r, gameStateId: currentGameState.id }
                 });
+
+                // If not found, try without leading zeros (e.g., q=51 instead of q=051)
+                if (!hex && hexCoord.includes('.')) {
+                  const [qStr, rStr] = hexCoord.split('.');
+                  const qNoZero = parseInt(qStr, 10);
+                  const rNoZero = parseInt(rStr, 10);
+                  console.log(`🔍 Trying without leading zeros: q=${qNoZero}, r=${rNoZero}`);
+                  hex = await tx.hex.findFirst({
+                    where: { q: qNoZero, r: rNoZero, gameStateId: currentGameState.id }
+                  });
+                }
 
                 if (hex) {
                   const garrison = garrisonData as any;

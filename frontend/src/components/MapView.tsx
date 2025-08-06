@@ -141,8 +141,8 @@ const MapView: React.FC<MapViewProps> = (props) => {
 
         const zoom = 3.0;
 
-        // Original logic for home page map with 5-hex upward adjustment
-        const hexOffsetY = HEX_SIZE * 5 * zoom; // Move up by 5 hexes (scaled by zoom)
+        // Original logic for home page map with 8-hex upward adjustment
+        const hexOffsetY = HEX_SIZE * 8 * zoom; // Move up by 8 hexes (scaled by zoom)
         const newX = (mapWidth / 2 - targetX) * zoom;
         const newY = (mapHeight / 2 - targetY) * zoom - hexOffsetY; // SUBTRACT to move UP
 

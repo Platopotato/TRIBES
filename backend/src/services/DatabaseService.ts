@@ -611,15 +611,41 @@ export class DatabaseService {
           where: { gameStateId: currentGameState.id }
         });
 
+        // Clear existing hexes
+        console.log(' Clearing existing map data...');
+        await tx.hex.deleteMany({
+          where: { gameStateId: currentGameState.id }
+        });
+
         // Update the main game state
         console.log(' Updating main game state...');
         await tx.gameState.update({
           where: { id: currentGameState.id },
           data: {
             turn: gameState.turn,
+            mapSeed: gameState.mapSeed ? BigInt(gameState.mapSeed) : null,
+            mapSettings: gameState.mapSettings as any,
             startingLocations: gameState.startingLocations
           }
         });
+
+        // Create new map data (hexes)
+        console.log(`🗺️ Creating ${gameState.mapData.length} map hexes...`);
+        for (const hex of gameState.mapData) {
+          await tx.hex.create({
+            data: {
+              q: hex.q,
+              r: hex.r,
+              terrain: hex.terrain,
+              poiType: hex.poi?.type || null,
+              poiId: hex.poi?.id || null,
+              poiDifficulty: hex.poi?.difficulty || null,
+              poiRarity: hex.poi?.rarity || null,
+              gameStateId: currentGameState.id
+            }
+          });
+        }
+        console.log('✅ Map data created successfully');
         // Create new tribes (only for users that exist)
         console.log(`👥 Creating ${gameState.tribes.length} tribes...`);
         

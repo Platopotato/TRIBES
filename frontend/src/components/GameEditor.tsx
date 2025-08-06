@@ -148,6 +148,53 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
         <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
       </div>
 
+      {/* Turn Submission Status */}
+      <Card title="📋 Turn Submission Status" className="mb-6">
+        <div className="mb-4 p-3 bg-slate-800 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-bold text-blue-400">Turn {gameState.turn} Submissions</h3>
+            <div className="text-sm text-slate-300">
+              {gameState.tribes.filter(t => t.turnSubmitted).length} / {gameState.tribes.length} submitted
+            </div>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${(gameState.tribes.filter(t => t.turnSubmitted).length / gameState.tribes.length) * 100}%`
+              }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {gameState.tribes.map(tribe => (
+            <div
+              key={tribe.id}
+              className={`p-3 rounded-lg border-2 ${
+                tribe.turnSubmitted
+                  ? 'border-green-500 bg-green-900/20'
+                  : 'border-red-500 bg-red-900/20'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="font-bold text-slate-200 text-sm">{tribe.tribeName}</h4>
+                <div className={`px-2 py-1 rounded text-xs font-bold ${
+                  tribe.turnSubmitted
+                    ? 'bg-green-600 text-white'
+                    : 'bg-red-600 text-white'
+                }`}>
+                  {tribe.turnSubmitted ? '✅ SUBMITTED' : '⏳ PENDING'}
+                </div>
+              </div>
+              <div className="text-xs text-slate-400">
+                Player: {tribe.playerName}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tribe Selection */}
         <Card title="Select Tribe to Edit" className="lg:col-span-1">
@@ -166,6 +213,9 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                     <div>
                       <p className="font-semibold text-white">{tribe.tribeName}</p>
                       <p className="text-xs text-slate-400">{tribe.playerName}</p>
+                      <div className={`text-xs font-bold ${tribe.turnSubmitted ? 'text-green-400' : 'text-red-400'}`}>
+                        {tribe.turnSubmitted ? '✅ Turn Submitted' : '⏳ Turn Pending'}
+                      </div>
                     </div>
                   </div>
                   <div className="flex space-x-2">

@@ -754,16 +754,16 @@ export class DatabaseService {
                 id: journey.id,
                 ownerTribeId: journey.ownerTribeId,
                 type: journey.type,
-                origin: journey.origin || journey.startLocation || '',
-                destination: journey.destination || journey.targetLocation || '',
-                path: journey.path || [],
+                origin: journey.origin || '',
+                destination: journey.destination || '',
+                path: journey.path as any || [],
                 currentLocation: journey.currentLocation || journey.origin || '',
-                force: journey.force || {},
-                payload: journey.payload || {},
+                force: journey.force as any || {},
+                payload: journey.payload as any || {},
                 arrivalTurn: journey.arrivalTurn || 0,
                 responseDeadline: journey.responseDeadline || null,
                 scavengeType: journey.scavengeType || null,
-                tradeOffer: journey.tradeOffer || null,
+                tradeOffer: journey.tradeOffer as any || null,
                 status: journey.status || 'en_route',
                 gameStateId: currentGameState.id
               }
@@ -783,7 +783,7 @@ export class DatabaseService {
                 statusChangeTo: proposal.statusChangeTo,
                 expiresOnTurn: proposal.expiresOnTurn || gameState.turn + 1,
                 fromTribeName: proposal.fromTribeName || 'Unknown',
-                reparations: proposal.reparations || null,
+                reparations: proposal.reparations as any,
                 gameStateId: currentGameState.id
               }
             });
@@ -797,7 +797,7 @@ export class DatabaseService {
             await tx.turnHistory.create({
               data: {
                 turn: historyRecord.turn,
-                tribeRecords: historyRecord.tribeRecords || historyRecord as any,
+                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any,
                 gameStateId: currentGameState.id
               }
             });

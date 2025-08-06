@@ -143,9 +143,10 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
   };
 
   const handleFieldChange = (name: string, value: string | number | string[]) => {
+    console.log('🔧 handleFieldChange called:', { name, value });
     setDraftAction(prev => {
       if (!prev) return null;
-      
+
       const newActionData = {
           ...prev.actionData,
           [name]: value,
@@ -161,11 +162,20 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
               setTravelTime(pathInfo?.cost ?? null);
           }
       }
-      
-      return {
+
+      const newState = {
         ...prev,
         actionData: newActionData,
       };
+
+      console.log('🔧 State update:', {
+        fieldName: name,
+        newValue: value,
+        newActionData: newActionData,
+        fullNewState: newState
+      });
+
+      return newState;
     });
   };
 
@@ -389,8 +399,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             });
             return (
                 <div className="space-y-2 p-2 bg-slate-800/50 rounded-md max-h-40 overflow-y-auto">
-                    {availableChiefs.map((chief: Chief) => (
-                        <label key={chief.name} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
+                    {availableChiefs.map((chief: Chief, index: number) => (
+                        <label key={`${chief.name}-${index}-${selectedChiefs.length}`} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
                             <input
                                 type="checkbox"
                                 className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-amber-500 focus:ring-amber-500"

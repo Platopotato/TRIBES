@@ -901,12 +901,11 @@ GAME STATISTICS:
                 </p>
 
                 {(() => {
-                  console.log('📰 AdminPanel Newsletter Debug:', {
+                  console.log('📰 AdminPanel Newsletter State:', {
                     turn: gameState.turn,
-                    newsletter: gameState.newsletter,
-                    currentNewsletter: gameState.newsletter?.currentNewsletter,
-                    newsletters: gameState.newsletter?.newsletters,
-                    newslettersCount: gameState.newsletter?.newsletters?.length || 0
+                    hasNewsletterField: !!gameState.newsletter,
+                    newslettersCount: gameState.newsletter?.newsletters?.length || 0,
+                    hasCurrentNewsletter: !!gameState.newsletter?.currentNewsletter
                   });
                   return null;
                 })()}

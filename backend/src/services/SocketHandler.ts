@@ -617,8 +617,10 @@ export class SocketHandler {
       try {
         const gameState = await this.gameService.getGameState();
         if (gameState) {
+          // Ensure newsletter field exists (migration might not be applied yet)
           if (!gameState.newsletter) {
             gameState.newsletter = { newsletters: [] };
+            console.log(`📰 Initialized newsletter field for first time`);
           }
 
           // Generate ID and set published date
@@ -641,24 +643,26 @@ export class SocketHandler {
             gameState.newsletter.currentNewsletter = newsletter;
           }
 
-          console.log(`📰 DEBUG: About to save newsletter:`, {
+          console.log(`📰 About to save newsletter:`, {
+            turn: newsletter.turn,
+            title: newsletter.title,
             newsletterCount: gameState.newsletter.newsletters.length,
-            currentNewsletter: gameState.newsletter.currentNewsletter?.id,
-            newsletter: newsletter
+            isCurrentTurn: newsletter.turn === gameState.turn
           });
 
           await this.gameService.updateGameState(gameState);
 
-          // Verify the save worked
+          // Verify the save worked by fetching fresh data
           const verifyState = await this.gameService.getGameState();
-          console.log(`📰 DEBUG: After save verification:`, {
+          console.log(`📰 Save verification:`, {
             hasNewsletter: !!verifyState?.newsletter,
             newsletterCount: verifyState?.newsletter?.newsletters?.length || 0,
-            currentNewsletter: verifyState?.newsletter?.currentNewsletter?.id
+            hasCurrentNewsletter: !!verifyState?.newsletter?.currentNewsletter,
+            currentNewsletterTurn: verifyState?.newsletter?.currentNewsletter?.turn
           });
 
           await emitGameState();
-          console.log(`✅ Newsletter saved for turn ${newsletter.turn}`);
+          console.log(`✅ Newsletter saved and emitted for turn ${newsletter.turn}`);
         }
       } catch (error) {
         console.error(`❌ Error saving newsletter:`, error);

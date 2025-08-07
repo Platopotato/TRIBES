@@ -27,12 +27,11 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   const turnNewsletter = currentNewsletter || allNewsletters.find(n => n.turn === currentTurn);
 
   // Debug logging
-  console.log('📰 NewsletterEditor Debug:', {
+  console.log('📰 NewsletterEditor State:', {
     currentTurn,
-    currentNewsletter,
+    hasCurrentNewsletter: !!currentNewsletter,
     allNewslettersCount: allNewsletters.length,
-    allNewsletters,
-    turnNewsletter,
+    hasTurnNewsletter: !!turnNewsletter,
     isEditing
   });
 

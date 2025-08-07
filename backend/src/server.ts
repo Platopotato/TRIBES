@@ -35,6 +35,7 @@ import { GameService } from './services/GameService.js';
 import { AuthService } from './services/AuthService.js';
 import { SocketHandler } from './services/SocketHandler.js';
 import { AutoBackupService } from './services/AutoBackupService.js';
+import { AnnouncementService } from './services/AnnouncementService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +79,38 @@ app.get('/', (req: Request, res: Response) => {
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Login announcement endpoints
+app.get('/api/login-announcement', async (req: Request, res: Response) => {
+  try {
+    const announcement = await AnnouncementService.getLoginAnnouncement();
+    res.json({ announcement });
+  } catch (error) {
+    console.error('❌ Error fetching login announcement:', error);
+    res.json({ announcement: null });
+  }
+});
+
+app.post('/api/login-announcement', async (req: Request, res: Response) => {
+  try {
+    const { enabled, title, message, type } = req.body;
+    const success = await AnnouncementService.updateLoginAnnouncement({
+      enabled: enabled ?? true,
+      title: title || '',
+      message: message || '',
+      type: type || 'info'
+    });
+
+    if (success) {
+      res.json({ success: true, message: 'Announcement updated successfully' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to update announcement' });
+    }
+  } catch (error) {
+    console.error('❌ Error updating login announcement:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 });
 
 // Initialize services

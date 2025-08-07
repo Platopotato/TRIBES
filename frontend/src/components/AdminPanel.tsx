@@ -60,7 +60,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showLoginAnnouncementModal, setShowLoginAnnouncementModal] = useState(false);
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementMessage, setNewAnnouncementMessage] = useState('');
-  const [newAnnouncementPriority, setNewAnnouncementPriority] = useState<TickerPriority>('normal');
+  const [newAnnouncementType, setNewAnnouncementType] = useState<'info' | 'warning' | 'success' | 'error'>('info');
+  const [announcementEnabled, setAnnouncementEnabled] = useState(true);
+  const [currentAnnouncement, setCurrentAnnouncement] = useState<any>(null);
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [backupList, setBackupList] = useState<BackupFile[]>([]);
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
@@ -144,35 +146,84 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     setShowTickerSpeedModal(false);
   };
 
-  const handleAddLoginAnnouncement = () => {
-    if (newAnnouncementTitle.trim() && newAnnouncementMessage.trim()) {
-      const announcement: LoginAnnouncement = {
-        id: `announcement-${Date.now()}`,
-        title: newAnnouncementTitle.trim(),
-        message: newAnnouncementMessage.trim(),
-        priority: newAnnouncementPriority,
-        isActive: true,
-        createdAt: Date.now()
-      };
+  // Fetch current announcement on component mount
+  useEffect(() => {
+    fetchCurrentAnnouncement();
+  }, []);
 
-      client.addLoginAnnouncement(announcement);
-      setNewAnnouncementTitle('');
-      setNewAnnouncementMessage('');
-      setNewAnnouncementPriority('normal');
-      setShowLoginAnnouncementModal(false);
+  const fetchCurrentAnnouncement = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/login-announcement`);
+      const data = await response.json();
+      if (data.announcement) {
+        setCurrentAnnouncement(data.announcement);
+        setNewAnnouncementTitle(data.announcement.title);
+        setNewAnnouncementMessage(data.announcement.message);
+        setNewAnnouncementType(data.announcement.type);
+        setAnnouncementEnabled(data.announcement.enabled);
+      }
+    } catch (error) {
+      console.error('Failed to fetch announcement:', error);
     }
   };
 
-  const handleToggleLoginAnnouncement = (announcementId: string) => {
-    client.toggleLoginAnnouncement(announcementId);
+  const handleUpdateLoginAnnouncement = async () => {
+    if (newAnnouncementTitle.trim() && newAnnouncementMessage.trim()) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const response = await fetch(`${apiUrl}/api/login-announcement`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            enabled: announcementEnabled,
+            title: newAnnouncementTitle.trim(),
+            message: newAnnouncementMessage.trim(),
+            type: newAnnouncementType
+          }),
+        });
+
+        if (response.ok) {
+          await fetchCurrentAnnouncement(); // Refresh the current announcement
+          setShowLoginAnnouncementModal(false);
+          console.log('✅ Announcement updated successfully');
+        } else {
+          console.error('❌ Failed to update announcement');
+        }
+      } catch (error) {
+        console.error('❌ Error updating announcement:', error);
+      }
+    }
   };
 
-  const handleDeleteLoginAnnouncement = (announcementId: string) => {
-    client.deleteLoginAnnouncement(announcementId);
-  };
+  const handleToggleLoginAnnouncements = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const newEnabledState = !announcementEnabled;
 
-  const handleToggleLoginAnnouncements = () => {
-    client.toggleLoginAnnouncements();
+      const response = await fetch(`${apiUrl}/api/login-announcement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: newEnabledState,
+          title: newAnnouncementTitle || 'Welcome!',
+          message: newAnnouncementMessage || 'Welcome to Radix Tribes!',
+          type: newAnnouncementType
+        }),
+      });
+
+      if (response.ok) {
+        setAnnouncementEnabled(newEnabledState);
+        await fetchCurrentAnnouncement();
+        console.log(`✅ Announcements ${newEnabledState ? 'enabled' : 'disabled'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error toggling announcements:', error);
+    }
   };
 
   const handleRefreshBackupStatus = () => {
@@ -782,24 +833,24 @@ GAME STATISTICS:
               </div>
             </Card>
 
-            <Card title="Login Announcements" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+            <Card title="Login Announcements (File-Based)" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium">Login Announcements:</span>
                     <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      gameState.loginAnnouncements?.isEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                      announcementEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
                     }`}>
-                      {gameState.loginAnnouncements?.isEnabled ? 'ENABLED' : 'DISABLED'}
+                      {announcementEnabled ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </div>
                   <Button
                     onClick={handleToggleLoginAnnouncements}
                     className={`text-xs ${
-                      gameState.loginAnnouncements?.isEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                      announcementEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
                     }`}
                   >
-                    {gameState.loginAnnouncements?.isEnabled ? 'Disable' : 'Enable'}
+                    {announcementEnabled ? 'Disable' : 'Enable'}
                   </Button>
                 </div>
 
@@ -807,54 +858,39 @@ GAME STATISTICS:
                   onClick={() => setShowLoginAnnouncementModal(true)}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  Add Login Announcement
+                  Edit Login Announcement
                 </Button>
 
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {gameState.loginAnnouncements?.announcements?.map(announcement => (
-                    <div key={announcement.id} className={`p-3 rounded border ${
-                      announcement.priority === 'urgent' ? 'bg-red-900/20 border-red-600' :
-                      announcement.priority === 'important' ? 'bg-amber-900/20 border-amber-600' :
-                      'bg-blue-900/20 border-blue-600'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-xs font-bold uppercase tracking-wide">
-                              {announcement.priority}
-                            </span>
-                            <span className={`w-2 h-2 rounded-full ${
-                              announcement.isActive ? 'bg-green-400' : 'bg-gray-400'
-                            }`}></span>
-                          </div>
-                          <h4 className="font-bold text-sm mb-1">{announcement.title}</h4>
-                          <p className="text-sm">{announcement.message}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(announcement.createdAt).toLocaleString()}
-                          </p>
+                {currentAnnouncement && (
+                  <div className={`p-3 rounded border ${
+                    currentAnnouncement.type === 'error' ? 'bg-red-900/20 border-red-600' :
+                    currentAnnouncement.type === 'warning' ? 'bg-amber-900/20 border-amber-600' :
+                    currentAnnouncement.type === 'success' ? 'bg-green-900/20 border-green-600' :
+                    'bg-blue-900/20 border-blue-600'
+                  }`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-xs font-bold uppercase tracking-wide">
+                            {currentAnnouncement.type}
+                          </span>
+                          <span className={`w-2 h-2 rounded-full ${
+                            currentAnnouncement.enabled ? 'bg-green-400' : 'bg-gray-400'
+                          }`}></span>
                         </div>
-                        <div className="flex space-x-1 ml-2">
-                          <Button
-                            onClick={() => handleToggleLoginAnnouncement(announcement.id)}
-                            className={`text-xs py-1 px-2 ${
-                              announcement.isActive ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'
-                            }`}
-                          >
-                            {announcement.isActive ? 'Hide' : 'Show'}
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteLoginAnnouncement(announcement.id)}
-                            className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                        <h4 className="font-bold text-sm mb-1">{currentAnnouncement.title}</h4>
+                        <p className="text-sm whitespace-pre-line">{currentAnnouncement.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Last updated: {new Date(currentAnnouncement.lastUpdated).toLocaleString()}
+                        </p>
                       </div>
                     </div>
-                  )) || (
-                    <p className="text-gray-400 text-sm text-center py-4">No login announcements</p>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {!currentAnnouncement && (
+                  <p className="text-gray-400 text-sm text-center py-4">No announcement configured</p>
+                )}
               </div>
             </Card>
 
@@ -1470,21 +1506,34 @@ GAME STATISTICS:
       {showLoginAnnouncementModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
-            <h3 className="text-xl font-bold text-blue-400 mb-4">Add Login Announcement</h3>
+            <h3 className="text-xl font-bold text-blue-400 mb-4">Edit Login Announcement</h3>
 
             <div className="space-y-4">
               <div>
+                <label className="flex items-center space-x-2 mb-4">
+                  <input
+                    type="checkbox"
+                    checked={announcementEnabled}
+                    onChange={(e) => setAnnouncementEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm font-medium text-neutral-300">Enable announcement</span>
+                </label>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Priority Level
+                  Type
                 </label>
                 <select
-                  value={newAnnouncementPriority}
-                  onChange={(e) => setNewAnnouncementPriority(e.target.value as TickerPriority)}
+                  value={newAnnouncementType}
+                  onChange={(e) => setNewAnnouncementType(e.target.value as 'info' | 'warning' | 'success' | 'error')}
                   className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="normal">📢 Notice</option>
-                  <option value="important">⚠️ Important</option>
-                  <option value="urgent">🚨 Urgent</option>
+                  <option value="info">📢 Info</option>
+                  <option value="success">✅ Success</option>
+                  <option value="warning">⚠️ Warning</option>
+                  <option value="error">🚨 Error</option>
                 </select>
               </div>
 
@@ -1496,20 +1545,20 @@ GAME STATISTICS:
                   type="text"
                   value={newAnnouncementTitle}
                   onChange={(e) => setNewAnnouncementTitle(e.target.value)}
-                  placeholder="e.g., Server Maintenance"
+                  placeholder="e.g., Welcome to Radix Tribes!"
                   className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Message
+                  Message (supports line breaks)
                 </label>
                 <textarea
                   value={newAnnouncementMessage}
                   onChange={(e) => setNewAnnouncementMessage(e.target.value)}
-                  placeholder="e.g., Server will be down for 30 minutes starting at 3 PM EST"
-                  rows={3}
+                  placeholder="e.g., New features and improvements are being added regularly.&#10;&#10;Check back often for updates!"
+                  rows={4}
                   className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1522,11 +1571,11 @@ GAME STATISTICS:
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleAddLoginAnnouncement}
+                  onClick={handleUpdateLoginAnnouncement}
                   disabled={!newAnnouncementTitle.trim() || !newAnnouncementMessage.trim()}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  Add Announcement
+                  Update Announcement
                 </Button>
               </div>
             </div>

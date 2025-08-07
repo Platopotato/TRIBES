@@ -41,10 +41,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
         />
       </div>
 
-      <LoginAnnouncements
-        announcements={announcements}
-        isEnabled={announcementsEnabled}
-      />
+      <LoginAnnouncements />
 
       <Card title="Login" className="max-w-sm w-full">
         <form onSubmit={handleLogin} className="space-y-4">

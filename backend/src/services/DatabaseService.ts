@@ -797,7 +797,7 @@ export class DatabaseService {
                 console.log(`🎯 WINNER STRATEGY: Looking for hex at q=${q}, r=${r} (${hexCoord})`);
 
                 // WINNER: Try multiple coordinate lookup strategies with clear logging
-                let hex = null;
+                let hex: any = null;
                 let strategyUsed = "";
 
                 // Strategy 1: Direct lookup

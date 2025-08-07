@@ -8,6 +8,7 @@ interface ResultsPanelProps {
 }
 
 const ResultsPanel: React.FC<ResultsPanelProps> = ({ results }) => {
+  // Fixed: Removed redundant "Start Planning Next Turn" button - use Add Action instead
   return (
     <Card title="Previous Turn Results">
       <div className="space-y-3">

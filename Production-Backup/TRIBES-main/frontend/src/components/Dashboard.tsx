@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       }
       if (view === 'results') {
           return (
-              <ResultsPanel results={playerTribe.lastTurnResults} onStartPlanning={() => setView('planning')} />
+              <ResultsPanel results={playerTribe.lastTurnResults} />
           );
       }
       return (

@@ -477,7 +477,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     onFinalize={() => setIsConfirmationOpen(true)}
                     phase={gamePhase}
                   />
-                  <ResultsPanel results={playerTribe.lastTurnResults} onStartPlanning={() => {}} />
+                  <ResultsPanel results={playerTribe.lastTurnResults} onStartPlanning={() => setView('planning')} />
                 </>
               )}
             </div>

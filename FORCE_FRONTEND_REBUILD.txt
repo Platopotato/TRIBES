@@ -1,0 +1,2 @@
+Frontend rebuild required - backend URL fix applied
+Timestamp: 2025-07-28 17:45:00

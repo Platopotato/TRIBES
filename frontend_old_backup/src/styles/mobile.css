@@ -1,0 +1,318 @@
+/* Mobile-specific styles for Tribes game */
+
+/* Prevent zoom on double tap */
+* {
+  touch-action: manipulation;
+}
+
+/* Improve touch targets */
+@media (max-width: 768px) {
+  /* Larger touch targets for buttons */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing for mobile */
+  .mobile-spacing {
+    padding: 0.75rem;
+  }
+
+  /* Hide scrollbars on mobile */
+  .mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .mobile-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Improve map interactions */
+  .mobile-map {
+    touch-action: pan-x pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Better modal sizing */
+  .mobile-modal {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
+  /* Compact resource display */
+  .mobile-resource-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* Touch-friendly action buttons */
+  .mobile-action-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-action-button:active {
+    transform: scale(0.95);
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+
+  /* Improve text readability */
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .mobile-text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  /* Better navigation */
+  .mobile-nav-item {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.95);
+  }
+
+  /* Improve form inputs */
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+
+  /* Better card spacing */
+  .mobile-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Optimize for portrait mode */
+  @media (orientation: portrait) and (max-width: 480px) {
+    .mobile-header {
+      padding: 0.5rem 1rem;
+      min-height: 3rem;
+    }
+
+    .mobile-nav {
+      padding: 0.25rem 0;
+      min-height: 4rem;
+    }
+
+    .mobile-content {
+      padding: 0.5rem;
+    }
+
+    /* Ultra compact for small portrait screens */
+    .mobile-card {
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .mobile-text-compact {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    /* Better button sizing for thumbs */
+    .mobile-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0.5rem;
+    }
+  }
+
+  /* Optimize for landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .mobile-header {
+      padding: 0.25rem 1rem;
+      min-height: 2.5rem;
+    }
+
+    .mobile-nav {
+      padding: 0.125rem 0;
+      min-height: 3rem;
+    }
+
+    .mobile-content {
+      padding: 0.25rem;
+    }
+  }
+}
+
+/* Dark mode optimizations for mobile */
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  /* Improve contrast for better readability */
+  .mobile-text-contrast {
+    color: #f1f5f9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Better button visibility */
+  .mobile-button-dark {
+    background-color: rgba(51, 65, 85, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+}
+
+/* Accessibility improvements */
+@media (max-width: 768px) {
+  /* Focus indicators */
+  button:focus,
+  input:focus,
+  select:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* PWA-specific styles */
+@media (display-mode: standalone) {
+  /* Add safe area padding for notched devices */
+  .mobile-safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Mobile App Specific Styles */
+@media (max-width: 768px) {
+  /* Safe area utilities */
+  .h-safe-top {
+    height: env(safe-area-inset-top);
+  }
+
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Floating Action Button */
+  .mobile-fab {
+    position: fixed;
+    bottom: 5rem;
+    right: 1rem;
+    z-index: 50;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+    transition: all 0.2s ease;
+  }
+
+  .mobile-fab:active {
+    transform: scale(0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Bottom Sheet */
+  .mobile-bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e293b;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+    max-height: 70vh;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+  }
+
+  .mobile-bottom-sheet.open {
+    transform: translateY(0);
+  }
+
+  /* Card-based layout */
+  .mobile-card {
+    background: #334155;
+    border-radius: 0.75rem;
+    border: 1px solid #475569;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* App-like navigation */
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .mobile-nav-item.active {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    transform: scale(1.05);
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.95);
+  }
+
+  /* Smooth scrolling */
+  .mobile-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better touch feedback */
+  .mobile-touch-feedback {
+    transition: all 0.1s ease;
+  }
+
+  .mobile-touch-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+
+  /* Status bar styling */
+  .mobile-status-bar {
+    height: env(safe-area-inset-top);
+    background: #1e293b;
+  }
+
+  /* App header */
+  .mobile-app-header {
+    background: #1e293b;
+    border-bottom: 1px solid #475569;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Backdrop blur effect */
+  .mobile-backdrop {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}

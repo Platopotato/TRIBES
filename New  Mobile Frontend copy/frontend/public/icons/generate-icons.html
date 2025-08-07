@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Radix Tribes Icons</title>
+</head>
+<body>
+    <h1>Radix Tribes Icon Generator</h1>
+    <p>This will generate placeholder icons for the PWA. Run this in a browser and save the generated images.</p>
+    
+    <canvas id="canvas" width="512" height="512" style="border: 1px solid #ccc;"></canvas>
+    <br><br>
+    
+    <button onclick="generateIcon(72)">Generate 72x72</button>
+    <button onclick="generateIcon(96)">Generate 96x96</button>
+    <button onclick="generateIcon(128)">Generate 128x128</button>
+    <button onclick="generateIcon(144)">Generate 144x144</button>
+    <button onclick="generateIcon(152)">Generate 152x152</button>
+    <button onclick="generateIcon(192)">Generate 192x192</button>
+    <button onclick="generateIcon(384)">Generate 384x384</button>
+    <button onclick="generateIcon(512)">Generate 512x512</button>
+    
+    <script>
+        function generateIcon(size) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Background gradient (dark theme)
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#0f172a'); // slate-900
+            gradient.addColorStop(1, '#1e293b'); // slate-800
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Border
+            ctx.strokeStyle = '#f59e0b'; // amber-500
+            ctx.lineWidth = size * 0.02;
+            ctx.strokeRect(size * 0.05, size * 0.05, size * 0.9, size * 0.9);
+            
+            // Hexagon pattern (simplified)
+            ctx.strokeStyle = '#64748b'; // slate-500
+            ctx.lineWidth = size * 0.01;
+            
+            const hexSize = size * 0.08;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            
+            // Draw hexagon grid pattern
+            for (let q = -2; q <= 2; q++) {
+                for (let r = -2; r <= 2; r++) {
+                    if (Math.abs(q + r) <= 2) {
+                        const x = centerX + hexSize * Math.sqrt(3) * (q + r/2);
+                        const y = centerY + hexSize * 3/2 * r;
+                        drawHexagon(ctx, x, y, hexSize * 0.8);
+                    }
+                }
+            }
+            
+            // Game title
+            ctx.fillStyle = '#f59e0b'; // amber-500
+            ctx.font = `bold ${size * 0.08}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('RADIX', centerX, centerY - size * 0.15);
+            
+            ctx.font = `bold ${size * 0.06}px Arial`;
+            ctx.fillText('TRIBES', centerX, centerY + size * 0.15);
+            
+            // Wasteland symbol
+            ctx.fillStyle = '#ef4444'; // red-500
+            ctx.font = `${size * 0.12}px Arial`;
+            ctx.fillText('☢', centerX, centerY);
+            
+            // Download link
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        function drawHexagon(ctx, x, y, size) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i;
+                const hx = x + size * Math.cos(angle);
+                const hy = y + size * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(hx, hy);
+                } else {
+                    ctx.lineTo(hx, hy);
+                }
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+        
+        // Auto-generate all sizes on load
+        window.onload = function() {
+            const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+            let index = 0;
+            
+            function generateNext() {
+                if (index < sizes.length) {
+                    generateIcon(sizes[index]);
+                    index++;
+                    setTimeout(generateNext, 500); // Delay between downloads
+                }
+            }
+            
+            // Uncomment to auto-generate all icons
+            // generateNext();
+        };
+    </script>
+</body>
+</html>

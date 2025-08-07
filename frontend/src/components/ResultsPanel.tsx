@@ -2,14 +2,12 @@
 import React from 'react';
 import { GameAction } from '@radix-tribes/shared';
 import Card from './ui/Card';
-import Button from './ui/Button';
 
 interface ResultsPanelProps {
   results: GameAction[];
-  onStartPlanning: () => void;
 }
 
-const ResultsPanel: React.FC<ResultsPanelProps> = ({ results, onStartPlanning }) => {
+const ResultsPanel: React.FC<ResultsPanelProps> = ({ results }) => {
   return (
     <Card title="Previous Turn Results">
       <div className="space-y-3">
@@ -27,9 +25,6 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ results, onStartPlanning })
         ) : (
             <p className="text-slate-400 text-center italic py-4">No results from last turn.</p>
         )}
-        <div className="pt-3 border-t border-slate-700">
-            <Button onClick={onStartPlanning} className="w-full">Start Planning Next Turn</Button>
-        </div>
       </div>
     </Card>
   );

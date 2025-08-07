@@ -900,6 +900,16 @@ GAME STATISTICS:
                   Create and publish newsletters for each turn. Players will see these instead of PDF downloads.
                 </p>
 
+                {(() => {
+                  console.log('📰 AdminPanel Newsletter Debug:', {
+                    turn: gameState.turn,
+                    newsletter: gameState.newsletter,
+                    currentNewsletter: gameState.newsletter?.currentNewsletter,
+                    newsletters: gameState.newsletter?.newsletters,
+                    newslettersCount: gameState.newsletter?.newsletters?.length || 0
+                  });
+                  return null;
+                })()}
                 <NewsletterEditor
                   currentTurn={gameState.turn}
                   currentNewsletter={gameState.newsletter?.currentNewsletter}

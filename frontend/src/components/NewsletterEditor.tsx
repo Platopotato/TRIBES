@@ -26,6 +26,16 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   // Find newsletter for current turn from either currentNewsletter or allNewsletters
   const turnNewsletter = currentNewsletter || allNewsletters.find(n => n.turn === currentTurn);
 
+  // Debug logging
+  console.log('📰 NewsletterEditor Debug:', {
+    currentTurn,
+    currentNewsletter,
+    allNewslettersCount: allNewsletters.length,
+    allNewsletters,
+    turnNewsletter,
+    isEditing
+  });
+
   useEffect(() => {
     if (turnNewsletter) {
       setTitle(turnNewsletter.title);

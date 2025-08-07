@@ -641,7 +641,22 @@ export class SocketHandler {
             gameState.newsletter.currentNewsletter = newsletter;
           }
 
+          console.log(`📰 DEBUG: About to save newsletter:`, {
+            newsletterCount: gameState.newsletter.newsletters.length,
+            currentNewsletter: gameState.newsletter.currentNewsletter?.id,
+            newsletter: newsletter
+          });
+
           await this.gameService.updateGameState(gameState);
+
+          // Verify the save worked
+          const verifyState = await this.gameService.getGameState();
+          console.log(`📰 DEBUG: After save verification:`, {
+            hasNewsletter: !!verifyState?.newsletter,
+            newsletterCount: verifyState?.newsletter?.newsletters?.length || 0,
+            currentNewsletter: verifyState?.newsletter?.currentNewsletter?.id
+          });
+
           await emitGameState();
           console.log(`✅ Newsletter saved for turn ${newsletter.turn}`);
         }

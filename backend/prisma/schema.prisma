@@ -32,6 +32,7 @@ model GameState {
   mapSeed              BigInt?
   mapSettings          Json?
   startingLocations    Json   // Array of hex coordinate strings
+  newsletter           Json?  // Newsletter data (NewsletterState)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   

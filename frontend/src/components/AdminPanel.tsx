@@ -903,6 +903,7 @@ GAME STATISTICS:
                 <NewsletterEditor
                   currentTurn={gameState.turn}
                   currentNewsletter={gameState.newsletter?.currentNewsletter}
+                  allNewsletters={gameState.newsletter?.newsletters || []}
                   onSave={handleSaveNewsletter}
                   onPublish={handlePublishNewsletter}
                   onUnpublish={handleUnpublishNewsletter}

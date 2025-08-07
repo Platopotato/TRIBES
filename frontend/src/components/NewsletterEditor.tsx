@@ -5,6 +5,7 @@ import Button from './ui/Button';
 interface NewsletterEditorProps {
   currentTurn: number;
   currentNewsletter?: Newsletter;
+  allNewsletters?: Newsletter[];
   onSave: (newsletter: Omit<Newsletter, 'id' | 'publishedAt'>) => void;
   onPublish: (newsletterId: string) => void;
   onUnpublish: (newsletterId: string) => void;
@@ -13,6 +14,7 @@ interface NewsletterEditorProps {
 const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   currentTurn,
   currentNewsletter,
+  allNewsletters = [],
   onSave,
   onPublish,
   onUnpublish
@@ -21,10 +23,14 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   const [content, setContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
+  // Find newsletter for current turn from either currentNewsletter or allNewsletters
+  const turnNewsletter = currentNewsletter || allNewsletters.find(n => n.turn === currentTurn);
+
   useEffect(() => {
-    if (currentNewsletter) {
-      setTitle(currentNewsletter.title);
-      setContent(currentNewsletter.content);
+    if (turnNewsletter) {
+      setTitle(turnNewsletter.title);
+      setContent(turnNewsletter.content);
+      setIsEditing(false); // Show display mode when newsletter exists
     } else {
       setTitle(`Turn ${currentTurn} Newsletter`);
       setContent(`# Turn ${currentTurn} Newsletter
@@ -57,8 +63,9 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
 
 ---
 *The Radix Tribes Chronicle - Turn ${currentTurn}*`);
+      setIsEditing(true); // Show editing mode when no newsletter exists
     }
-  }, [currentNewsletter, currentTurn]);
+  }, [turnNewsletter, currentTurn]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -73,25 +80,25 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
       isPublished: false
     });
 
-    setIsEditing(false);
+    // Don't set isEditing(false) here - let useEffect handle it when turnNewsletter updates
   };
 
   const handlePublish = () => {
-    if (!currentNewsletter) {
+    if (!turnNewsletter) {
       alert('Please save the newsletter first before publishing');
       return;
     }
 
     if (confirm('Publish this newsletter? Players will be able to see it immediately.')) {
-      onPublish(currentNewsletter.id);
+      onPublish(turnNewsletter.id);
     }
   };
 
   const handleUnpublish = () => {
-    if (!currentNewsletter) return;
+    if (!turnNewsletter) return;
 
     if (confirm('Unpublish this newsletter? Players will no longer be able to see it.')) {
-      onUnpublish(currentNewsletter.id);
+      onUnpublish(turnNewsletter.id);
     }
   };
 
@@ -103,48 +110,48 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
         </h3>
         
         <div className="flex items-center space-x-2">
-          {currentNewsletter && (
+          {turnNewsletter && (
             <span className={`px-2 py-1 rounded text-xs font-bold ${
-              currentNewsletter.isPublished 
-                ? 'bg-green-600 text-white' 
+              turnNewsletter.isPublished
+                ? 'bg-green-600 text-white'
                 : 'bg-yellow-600 text-white'
             }`}>
-              {currentNewsletter.isPublished ? 'PUBLISHED' : 'DRAFT'}
+              {turnNewsletter.isPublished ? 'PUBLISHED' : 'DRAFT'}
             </span>
           )}
         </div>
       </div>
 
-      {!isEditing && currentNewsletter ? (
+      {!isEditing && turnNewsletter ? (
         // Display mode
         <div className="space-y-4">
           <div className="p-4 rounded bg-slate-800 border border-slate-600">
-            <h4 className="font-bold text-white mb-2">{currentNewsletter.title}</h4>
-            <div 
+            <h4 className="font-bold text-white mb-2">{turnNewsletter.title}</h4>
+            <div
               className="prose prose-invert prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ 
-                __html: currentNewsletter.content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/^# (.*$)/gm, '<h1>$1</h1>').replace(/^## (.*$)/gm, '<h2>$1</h2>').replace(/^### (.*$)/gm, '<h3>$1</h3>')
+              dangerouslySetInnerHTML={{
+                __html: turnNewsletter.content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/^# (.*$)/gm, '<h1>$1</h1>').replace(/^## (.*$)/gm, '<h2>$1</h2>').replace(/^### (.*$)/gm, '<h3>$1</h3>')
               }}
             />
           </div>
 
           <div className="flex space-x-3">
-            <Button 
+            <Button
               onClick={() => setIsEditing(true)}
               className="bg-blue-600 hover:bg-blue-700"
             >
               ✏️ Edit Newsletter
             </Button>
 
-            {currentNewsletter.isPublished ? (
-              <Button 
+            {turnNewsletter.isPublished ? (
+              <Button
                 onClick={handleUnpublish}
                 className="bg-orange-600 hover:bg-orange-700"
               >
                 📤 Unpublish
               </Button>
             ) : (
-              <Button 
+              <Button
                 onClick={handlePublish}
                 className="bg-green-600 hover:bg-green-700"
               >

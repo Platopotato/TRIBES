@@ -198,27 +198,28 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         </g>
       )}
 
-      {!isPoliticalMode && !isFogged && getPresenceIndicator()}
-
       {!isPoliticalMode && startOrder !== null && !isFogged && (
          <g className="pointer-events-none">
-          {/* Large castle symbol for starting location/home base */}
+          {/* Large settlement symbol behind tribe icons for starting location/home base */}
           <text
             x="0"
             y="0"
             textAnchor="middle"
             dominantBaseline="central"
             className="select-none"
-            fontSize={size * 1.2}
+            fontSize={size * 1.4}
             style={{
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-              fill: '#fbbf24'
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))',
+              fill: '#8b5cf6',
+              opacity: 0.7
             }}
           >
-            🏰
+            🏚️
           </text>
         </g>
       )}
+
+      {!isPoliticalMode && !isFogged && getPresenceIndicator()}
 
        {!isPoliticalMode && isFogged && (
         <polygon

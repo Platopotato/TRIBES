@@ -972,6 +972,26 @@ export class SocketHandler {
       }
     });
 
+    // Game suspension control
+    socket.on('admin:toggleGameSuspension', async ({ suspended, message }) => {
+      console.log(`🚨 Admin ${suspended ? 'suspending' : 'resuming'} game access`);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          gameState.suspended = suspended;
+          gameState.suspensionMessage = suspended ? message : undefined;
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Game ${suspended ? 'suspended' : 'resumed'} successfully`);
+          if (suspended) {
+            console.log(`📢 Suspension message: "${message}"`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error toggling game suspension:`, error);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
     });

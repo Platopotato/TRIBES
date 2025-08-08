@@ -316,6 +316,8 @@ export interface GameState {
     loginAnnouncements?: LoginAnnouncementState;
     turnDeadline?: TurnDeadline;
     newsletter?: NewsletterState;
+    suspended?: boolean;
+    suspensionMessage?: string;
     // These are now primarily for use within the map editor for generating new base maps
     mapSeed?: number;
     mapSettings?: MapSettings;

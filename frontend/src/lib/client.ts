@@ -417,6 +417,10 @@ export const syncPasswordWithEnv = () => socket.emit('admin:syncPasswordWithEnv'
 export const debugAdminPassword = () => socket.emit('admin:debugPassword');
 export const debugSocket = () => socket.emit('debug_socket');
 
+// Game suspension
+export const toggleGameSuspension = (suspended: boolean, message: string) =>
+  socket.emit('admin:toggleGameSuspension', { suspended, message });
+
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');

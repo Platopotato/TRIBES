@@ -78,6 +78,10 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [confirmationText, setConfirmationText] = useState('');
   const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0); // 0=not started, 1=first confirm, 2=final confirm
 
+  // Game suspension
+  const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+  const [suspensionMessage, setSuspensionMessage] = useState('We are currently performing essential maintenance. Please check back shortly.');
+
 
 
   const handleConfirmRemove = () => {
@@ -373,6 +377,28 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleDebugSocket = () => {
     client.debugSocket();
+  };
+
+  // Game suspension handlers
+  const handleToggleGameSuspension = () => {
+    if (gameState.suspended) {
+      // Resume game
+      if (confirm('Resume the game? Players will be able to access the game again.')) {
+        client.toggleGameSuspension(false, '');
+      }
+    } else {
+      // Suspend game - show modal for custom message
+      setShowSuspensionModal(true);
+    }
+  };
+
+  const handleConfirmSuspension = () => {
+    if (suspensionMessage.trim()) {
+      client.toggleGameSuspension(true, suspensionMessage.trim());
+      setShowSuspensionModal(false);
+    } else {
+      alert('Please enter a maintenance message for players.');
+    }
   };
 
   const handleSyncPasswordWithEnv = () => {
@@ -714,6 +740,42 @@ GAME STATISTICS:
             {/* SAFE ZONE - Always accessible */}
             <div className="border-l-4 border-green-500 pl-4">
               <h2 className="text-xl font-bold text-green-400 mb-4">🟢 SAFE ZONE - View & Approve</h2>
+
+            {/* Game Suspension Control */}
+            <Card title="🚨 Game Access Control" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50 mb-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-neutral-600">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full ${gameState.suspended ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+                    <div>
+                      <span className="text-lg font-bold text-neutral-200">
+                        Game Status: {gameState.suspended ? 'SUSPENDED' : 'ACTIVE'}
+                      </span>
+                      {gameState.suspended && gameState.suspensionMessage && (
+                        <p className="text-sm text-orange-300 mt-1">"{gameState.suspensionMessage}"</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleToggleGameSuspension}
+                    className={`px-6 py-2 font-bold ${
+                      gameState.suspended
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
+                  >
+                    {gameState.suspended ? '✅ Resume Game' : '🚨 Suspend Game'}
+                  </Button>
+                </div>
+                <p className="text-sm text-neutral-400">
+                  {gameState.suspended
+                    ? 'Game is currently suspended. Players cannot access the game and will see a maintenance message.'
+                    : 'Game is active. Players can access all features normally.'
+                  }
+                </p>
+              </div>
+            </Card>
+
             <Card title="Turn Status" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
@@ -2099,6 +2161,53 @@ GAME STATISTICS:
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   Update Speed
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Suspension Modal */}
+      {showSuspensionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-red-400 mb-4">🚨 Suspend Game Access</h3>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-red-900/20 border border-red-600">
+                <p className="text-red-300 text-sm font-medium">⚠️ This will immediately block all player access</p>
+                <p className="text-red-200 text-xs mt-1">
+                  Players will see a maintenance message and cannot access any game features.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Maintenance Message for Players
+                </label>
+                <textarea
+                  value={suspensionMessage}
+                  onChange={(e) => setSuspensionMessage(e.target.value)}
+                  placeholder="Enter a message to display to players..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowSuspensionModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmSuspension}
+                  disabled={!suspensionMessage.trim()}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  🚨 Suspend Game
                 </Button>
               </div>
             </div>

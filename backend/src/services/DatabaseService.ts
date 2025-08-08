@@ -218,9 +218,17 @@ export class DatabaseService {
     }
 
     try {
+      // Find the existing game state record
+      const existingGameState = await this.prisma.gameState.findFirst();
+
+      if (!existingGameState) {
+        console.log('⚠️ No GameState record found, falling back to full update');
+        return this.updateGameState(gameState);
+      }
+
       // Update only the main game state fields
       await this.prisma.gameState.update({
-        where: { id: "1" },
+        where: { id: existingGameState.id },
         data: {
           turn: gameState.turn,
           suspended: gameState.suspended || false,

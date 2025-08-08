@@ -170,7 +170,8 @@ export class GameService {
     console.log('✅ GAMESERVICE: processGlobalTurn completed');
 
     console.log('💾 GAMESERVICE: Updating game state...');
-    await this.updateGameState(newGameState);
+    // Use lightweight update instead of full recreation
+    await this.databaseService.updateGameStateLight(newGameState);
     console.log('✅ GAMESERVICE: Game state updated, processTurn() complete');
   }
 

@@ -209,6 +209,52 @@ export class DatabaseService {
     }
   }
 
+  async updateGameStateLight(gameState: GameState): Promise<void> {
+    console.log('🔄 Lightweight game state update...');
+
+    if (!this.useDatabase || !this.prisma) {
+      // Fallback to regular update for file-based storage
+      return this.updateGameState(gameState);
+    }
+
+    try {
+      // Update only the main game state fields
+      await this.prisma.gameState.update({
+        where: { id: "1" },
+        data: {
+          turn: gameState.turn,
+          suspended: gameState.suspended || false,
+          suspensionMessage: gameState.suspensionMessage || null,
+        }
+      });
+      console.log(`✅ Updated main game state: turn ${gameState.turn}`);
+
+      // Update tribes individually without recreating
+      for (const tribe of gameState.tribes) {
+        await this.prisma.tribe.update({
+          where: { id: tribe.id },
+          data: {
+            actions: tribe.actions as any,
+            turnSubmitted: tribe.turnSubmitted,
+            lastTurnResults: tribe.lastTurnResults as any,
+            journeyResponses: tribe.journeyResponses as any,
+            globalResources: tribe.globalResources as any,
+            garrisons: tribe.garrisons as any,
+            stats: tribe.stats as any,
+            rationLevel: tribe.rationLevel,
+            exploredHexes: tribe.exploredHexes,
+          }
+        });
+        console.log(`✅ Updated tribe: ${tribe.tribeName}`);
+      }
+
+      console.log('✅ Lightweight game state update completed');
+    } catch (error) {
+      console.error('❌ Error in lightweight game state update:', error);
+      throw error;
+    }
+  }
+
   async createGameState(gameState: GameState): Promise<void> {
     if (this.useDatabase && this.prisma) {
       await this.prisma.gameState.create({

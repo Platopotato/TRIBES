@@ -178,8 +178,16 @@ export class SocketHandler {
     });
 
     socket.on('process_turn', async () => {
-      await this.gameService.processTurn();
-      await emitGameState();
+      console.log('🚨 BACKEND: process_turn event received from socket:', socket.id);
+      try {
+        console.log('🔄 BACKEND: Starting turn processing...');
+        await this.gameService.processTurn();
+        console.log('✅ BACKEND: Turn processing completed');
+        await emitGameState();
+        console.log('✅ BACKEND: Game state emitted after turn processing');
+      } catch (error) {
+        console.error('❌ BACKEND: Error processing turn:', error);
+      }
     });
 
     // Generic action handler for simple state updates

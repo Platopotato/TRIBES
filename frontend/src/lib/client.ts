@@ -426,7 +426,10 @@ export const toggleGameSuspension = (suspended: boolean, message: string) => {
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');
 export const submitTurn = createEmitter<{ tribeId: string; plannedActions: GameAction[]; journeyResponses: Tribe['journeyResponses'] }>('submit_turn');
-export const processTurn = () => socket.emit('process_turn');
+export const processTurn = () => {
+  console.log('🚨 FRONTEND: Emitting process_turn event to backend');
+  socket.emit('process_turn');
+};
 export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
 export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const startNewGame = () => socket.emit('start_new_game');

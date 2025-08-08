@@ -238,6 +238,7 @@ export class DatabaseService {
       console.log(`✅ Updated main game state: turn ${gameState.turn}`);
 
       // Update tribes individually without recreating
+      // Only update simple fields to avoid Prisma relationship complexity
       for (const tribe of gameState.tribes) {
         await this.prisma.tribe.update({
           where: { id: tribe.id },
@@ -247,10 +248,10 @@ export class DatabaseService {
             lastTurnResults: tribe.lastTurnResults as any,
             journeyResponses: tribe.journeyResponses as any,
             globalResources: tribe.globalResources as any,
-            garrisons: tribe.garrisons as any,
             stats: tribe.stats as any,
             rationLevel: tribe.rationLevel,
             exploredHexes: tribe.exploredHexes,
+            // Skip garrisons - they're handled as separate records
           }
         });
         console.log(`✅ Updated tribe: ${tribe.tribeName}`);

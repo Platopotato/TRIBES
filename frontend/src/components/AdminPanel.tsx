@@ -72,6 +72,12 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Safety features
+  const [safetyLockEnabled, setSafetyLockEnabled] = useState(true);
+  const [dangerousActionConfirmStep, setDangerousActionConfirmStep] = useState<string | null>(null);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0); // 0=not started, 1=first confirm, 2=final confirm
+
 
 
   const handleConfirmRemove = () => {
@@ -85,6 +91,84 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleConfirmNewGame = () => {
     onStartNewGame();
     setShowNewGameConfirm(false);
+  };
+
+  // Safety handlers
+  const handleSafetyLockToggle = () => {
+    if (!safetyLockEnabled) {
+      // Enabling safety lock - no confirmation needed
+      setSafetyLockEnabled(true);
+      setDangerousActionConfirmStep(null);
+      setConfirmationText('');
+      setProcessTurnConfirmStep(0);
+    } else {
+      // Disabling safety lock - require confirmation
+      const confirmed = confirm('⚠️ DISABLE SAFETY LOCK?\n\nThis will enable dangerous admin actions that could break the game.\n\nOnly disable if you are absolutely sure you need to perform dangerous operations.');
+      if (confirmed) {
+        setSafetyLockEnabled(false);
+      }
+    }
+  };
+
+  const handleDangerousAction = (actionType: string, actionHandler: () => void) => {
+    if (safetyLockEnabled) {
+      alert('🔒 Safety Lock Enabled\n\nDangerous actions are locked. Disable the safety lock first to access this feature.');
+      return;
+    }
+
+    if (dangerousActionConfirmStep !== actionType) {
+      setDangerousActionConfirmStep(actionType);
+      setConfirmationText('');
+      return;
+    }
+
+    // Second step - require typing confirmation
+    const requiredText = 'I UNDERSTAND THE RISKS';
+    if (confirmationText !== requiredText) {
+      alert(`Please type exactly: ${requiredText}`);
+      return;
+    }
+
+    // Final confirmation
+    const finalConfirm = confirm(`🚨 FINAL CONFIRMATION\n\nYou are about to perform: ${actionType}\n\nThis action cannot be undone. Are you absolutely sure?`);
+    if (finalConfirm) {
+      actionHandler();
+      setDangerousActionConfirmStep(null);
+      setConfirmationText('');
+    }
+  };
+
+  const handleProcessTurnSafely = () => {
+    if (safetyLockEnabled) {
+      alert('🔒 Safety Lock Enabled\n\nProcess Turn is locked. Disable the safety lock first.');
+      return;
+    }
+
+    if (processTurnConfirmStep === 0) {
+      setProcessTurnConfirmStep(1);
+      return;
+    }
+
+    if (processTurnConfirmStep === 1) {
+      const confirmed = confirm('⚠️ PROCESS ALL TURNS?\n\nThis will:\n- Execute all pending tribe actions\n- Advance the game to the next turn\n- Generate AI actions for inactive tribes\n- Update all game statistics\n\nThis cannot be undone. Continue?');
+      if (confirmed) {
+        setProcessTurnConfirmStep(2);
+        return;
+      } else {
+        setProcessTurnConfirmStep(0);
+        return;
+      }
+    }
+
+    if (processTurnConfirmStep === 2) {
+      const finalConfirm = confirm('🚨 FINAL CONFIRMATION\n\nYou are about to PROCESS ALL TURNS.\n\nThis is the point of no return. Are you absolutely certain?');
+      if (finalConfirm) {
+        onProcessTurn();
+        setProcessTurnConfirmStep(0);
+      } else {
+        setProcessTurnConfirmStep(0);
+      }
+    }
   };
 
   const handleResetPassword = (userId: string) => {
@@ -330,7 +414,29 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   };
 
   const handleLoadBackupClick = () => {
-    fileInputRef.current?.click();
+    if (safetyLockEnabled) {
+      alert('🔒 Safety Lock Enabled\n\nLoad Backup is locked. Disable the safety lock first.');
+      return;
+    }
+
+    if (dangerousActionConfirmStep !== 'LOAD_BACKUP') {
+      setDangerousActionConfirmStep('LOAD_BACKUP');
+      setConfirmationText('');
+      return;
+    }
+
+    const requiredText = 'I UNDERSTAND THE RISKS';
+    if (confirmationText !== requiredText) {
+      alert(`Please type exactly: ${requiredText}`);
+      return;
+    }
+
+    const finalConfirm = confirm('🚨 FINAL CONFIRMATION\n\nYou are about to LOAD A BACKUP.\n\nThis will REPLACE ALL current game data including:\n- All tribes and their progress\n- All user accounts\n- All game settings\n- Current turn progress\n\nThis action cannot be undone. Are you absolutely sure?');
+    if (finalConfirm) {
+      fileInputRef.current?.click();
+      setDangerousActionConfirmStep(null);
+      setConfirmationText('');
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -569,8 +675,45 @@ GAME STATISTICS:
           </Button>
         </div>
 
+        {/* Safety Zone Headers */}
+        <div className="mb-8">
+          <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center space-x-4 bg-neutral-800/50 rounded-lg px-6 py-3 border border-neutral-600">
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${safetyLockEnabled ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+                <span className="text-lg font-bold text-neutral-200">
+                  Admin Safety Status: {safetyLockEnabled ? 'PROTECTED' : 'UNLOCKED'}
+                </span>
+              </div>
+              {!safetyLockEnabled && (
+                <div className="text-orange-400 text-sm font-medium">
+                  ⚠️ Dangerous actions enabled
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div className="bg-green-900/20 border border-green-600/50 rounded-lg p-4">
+              <div className="text-green-400 font-bold text-lg mb-2">🟢 SAFE ZONE</div>
+              <p className="text-green-300 text-sm">View data, approve requests, manage settings</p>
+            </div>
+            <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4">
+              <div className="text-yellow-400 font-bold text-lg mb-2">🟡 MODERATE ZONE</div>
+              <p className="text-yellow-300 text-sm">User management, backups, AI tribes</p>
+            </div>
+            <div className="bg-red-900/20 border border-red-600/50 rounded-lg p-4">
+              <div className="text-red-400 font-bold text-lg mb-2">🔴 DANGER ZONE</div>
+              <p className="text-red-300 text-sm">Turn processing, new games, data loading</p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="space-y-8 xl:col-span-2">
+            {/* SAFE ZONE - Always accessible */}
+            <div className="border-l-4 border-green-500 pl-4">
+              <h2 className="text-xl font-bold text-green-400 mb-4">🟢 SAFE ZONE - View & Approve</h2>
             <Card title="Turn Status" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
@@ -614,12 +757,80 @@ GAME STATISTICS:
                     </table>
                   </div>
                   <div className="pt-6 border-t border-neutral-600/50">
-                    <Button onClick={onProcessTurn} className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        Process All Turns
-                    </Button>
+                    {/* Safety Lock Status */}
+                    <div className="mb-4 p-3 rounded-lg bg-neutral-700/50 border border-neutral-600">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${safetyLockEnabled ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                          <span className="text-sm font-medium text-neutral-300">
+                            Safety Lock: {safetyLockEnabled ? 'ENABLED' : 'DISABLED'}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={handleSafetyLockToggle}
+                          className={`text-xs px-3 py-1 ${safetyLockEnabled ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {safetyLockEnabled ? '🔓 Disable' : '🔒 Enable'}
+                        </Button>
+                      </div>
+                      {!safetyLockEnabled && (
+                        <p className="text-xs text-orange-400 mt-2">⚠️ Dangerous actions are now available. Use with extreme caution!</p>
+                      )}
+                    </div>
+
+                    {/* Process Turn Button with Multi-Step Safety */}
+                    <div className="space-y-2">
+                      {processTurnConfirmStep === 0 && (
+                        <Button
+                          onClick={handleProcessTurnSafely}
+                          disabled={safetyLockEnabled}
+                          className={`w-full font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 ${
+                            safetyLockEnabled
+                              ? 'bg-gray-500 cursor-not-allowed opacity-50'
+                              : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white hover:shadow-xl transform hover:scale-[1.02]'
+                          }`}
+                        >
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          {safetyLockEnabled ? '🔒 Process All Turns (LOCKED)' : 'Process All Turns'}
+                        </Button>
+                      )}
+
+                      {processTurnConfirmStep === 1 && (
+                        <div className="space-y-2">
+                          <div className="p-3 bg-orange-900/50 border border-orange-600 rounded-lg">
+                            <p className="text-orange-300 text-sm font-medium">⚠️ Step 1 of 2: Confirm Turn Processing</p>
+                            <p className="text-orange-200 text-xs mt-1">This will execute all pending actions and advance the game turn.</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button onClick={handleProcessTurnSafely} className="flex-1 bg-orange-600 hover:bg-orange-700">
+                              Continue →
+                            </Button>
+                            <Button onClick={() => setProcessTurnConfirmStep(0)} className="bg-gray-600 hover:bg-gray-700">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {processTurnConfirmStep === 2 && (
+                        <div className="space-y-2">
+                          <div className="p-3 bg-red-900/50 border border-red-600 rounded-lg">
+                            <p className="text-red-300 text-sm font-medium">🚨 Step 2 of 2: Final Confirmation</p>
+                            <p className="text-red-200 text-xs mt-1">This action cannot be undone. Click to proceed with turn processing.</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button onClick={handleProcessTurnSafely} className="flex-1 bg-red-600 hover:bg-red-700 font-bold">
+                              🚨 PROCESS TURNS NOW
+                            </Button>
+                            <Button onClick={() => setProcessTurnConfirmStep(0)} className="bg-gray-600 hover:bg-gray-700">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
               </div>
             </Card>
@@ -920,6 +1131,20 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            </div>
+
+            {/* DANGER ZONE - Requires safety lock to be disabled */}
+            <div className="border-l-4 border-red-500 pl-4">
+              <h2 className="text-xl font-bold text-red-400 mb-4">🔴 DANGER ZONE - Game Breaking Actions</h2>
+              {safetyLockEnabled && (
+                <div className="bg-red-900/20 border border-red-600/50 rounded-lg p-4 mb-6">
+                  <p className="text-red-300 text-sm">
+                    🔒 <strong>Safety Lock Enabled:</strong> Dangerous actions are locked to prevent accidental game damage.
+                    Disable the safety lock above to access these features.
+                  </p>
+                </div>
+              )}
+
             <Card title="World Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
                 <div className="space-y-4">
                     <p className="text-neutral-400 leading-relaxed">Edit the game world directly or start a new game on the current map.</p>
@@ -935,18 +1160,66 @@ GAME STATISTICS:
                       </svg>
                       Game Editor
                     </Button>
-                     <Button
-                        className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
-                        onClick={() => setShowNewGameConfirm(true)}
-                    >
+                    {dangerousActionConfirmStep === 'START_NEW_GAME' ? (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-red-900/50 border border-red-600 rounded-lg">
+                          <p className="text-red-300 text-sm font-medium">🚨 DANGEROUS ACTION: Start New Game</p>
+                          <p className="text-red-200 text-xs mt-1">This will DELETE ALL tribes, requests, and game progress!</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-neutral-400 mb-1">Type "I UNDERSTAND THE RISKS" to continue:</label>
+                          <input
+                            type="text"
+                            value={confirmationText}
+                            onChange={(e) => setConfirmationText(e.target.value)}
+                            className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded text-white text-sm"
+                            placeholder="I UNDERSTAND THE RISKS"
+                          />
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => handleDangerousAction('START_NEW_GAME', () => setShowNewGameConfirm(true))}
+                            disabled={confirmationText !== 'I UNDERSTAND THE RISKS'}
+                            className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            🚨 CONFIRM START NEW GAME
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setDangerousActionConfirmStep(null);
+                              setConfirmationText('');
+                            }}
+                            className="bg-gray-600 hover:bg-gray-700"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        className={`w-full font-semibold py-3 px-4 rounded-lg shadow-lg transition-all duration-200 ${
+                          safetyLockEnabled
+                            ? 'bg-gray-500 cursor-not-allowed opacity-50'
+                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white hover:shadow-xl transform hover:scale-[1.02]'
+                        }`}
+                        onClick={() => handleDangerousAction('START_NEW_GAME', () => setShowNewGameConfirm(true))}
+                        disabled={safetyLockEnabled}
+                      >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Start New Game
-                    </Button>
+                        {safetyLockEnabled ? '🔒 Start New Game (LOCKED)' : 'Start New Game'}
+                      </Button>
+                    )}
                 </div>
             </Card>
             
+            </div>
+
+            {/* MODERATE ZONE - Requires some caution */}
+            <div className="border-l-4 border-yellow-500 pl-4">
+              <h2 className="text-xl font-bold text-yellow-400 mb-4">🟡 MODERATE ZONE - Use With Caution</h2>
+
             <Card title="AI Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <p className="text-neutral-400 leading-relaxed">Add computer-controlled tribes with different personalities. There are currently <span className="text-amber-400 font-semibold">{aiTribesCount}</span> AI tribes in the game.</p>
@@ -1198,12 +1471,57 @@ GAME STATISTICS:
                     </svg>
                     Save Enhanced Backup (with Passwords)
                   </Button>
-                  <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={handleLoadBackupClick}>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                    </svg>
-                    Load Game Backup
-                  </Button>
+                  {dangerousActionConfirmStep === 'LOAD_BACKUP' ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-red-900/50 border border-red-600 rounded-lg">
+                        <p className="text-red-300 text-sm font-medium">🚨 DANGEROUS ACTION: Load Backup</p>
+                        <p className="text-red-200 text-xs mt-1">This will REPLACE ALL current game data and cannot be undone!</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">Type "I UNDERSTAND THE RISKS" to continue:</label>
+                        <input
+                          type="text"
+                          value={confirmationText}
+                          onChange={(e) => setConfirmationText(e.target.value)}
+                          className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded text-white text-sm"
+                          placeholder="I UNDERSTAND THE RISKS"
+                        />
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={handleLoadBackupClick}
+                          disabled={confirmationText !== 'I UNDERSTAND THE RISKS'}
+                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          🚨 CONFIRM LOAD BACKUP
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setDangerousActionConfirmStep(null);
+                            setConfirmationText('');
+                          }}
+                          className="bg-gray-600 hover:bg-gray-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      className={`w-full font-semibold py-3 px-4 rounded-lg shadow-lg transition-all duration-200 ${
+                        safetyLockEnabled
+                          ? 'bg-gray-500 cursor-not-allowed opacity-50'
+                          : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white hover:shadow-xl transform hover:scale-[1.02]'
+                      }`}
+                      onClick={handleLoadBackupClick}
+                      disabled={safetyLockEnabled}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                      {safetyLockEnabled ? '🔒 Load Game Backup (LOCKED)' : 'Load Game Backup'}
+                    </Button>
+                  )}
                   <Button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={() => setShowTurnSummary(true)}>
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1243,6 +1561,8 @@ GAME STATISTICS:
                 <p className="text-slate-400 text-center p-4">No tribes have been founded yet.</p>
               )}
             </Card>
+
+            </div> {/* End Danger Zone */}
           </div>
         </div>
       </div>

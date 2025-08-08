@@ -715,7 +715,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
             <TerrainPatterns />
           </defs>
       </svg>
-      <h3 className="text-lg font-bold text-amber-400 tracking-wider mb-4 flex-shrink-0">{isPoliticalMode ? 'Territory Map' : 'Wasteland Map'}</h3>
+      <h3 className="text-lg font-bold text-amber-400 tracking-wider mb-4 flex-shrink-0 text-center">{isPoliticalMode ? 'Territory Map' : 'Wasteland Map'}</h3>
       <div ref={mapContainerRef} className={mapContainerClasses} style={{ flexGrow: 1 }}>
         {selectionMode && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-slate-900/80 text-amber-400 px-3 py-1 rounded-md border border-slate-600 font-bold animate-pulse">

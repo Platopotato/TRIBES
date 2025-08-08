@@ -6,11 +6,17 @@ services:
     plan: free
     rootDir: .
     buildCommand: |
-      npm install --prefix shared &&
+      echo "=== Installing shared dependencies ===" &&
+      npm install --prefix shared --include=dev &&
+      echo "=== Building shared package ===" &&
       npm run build --prefix shared &&
-      npm install --prefix backend &&
+      echo "=== Installing backend dependencies ===" &&
+      npm install --prefix backend --include=dev &&
+      echo "=== Building backend package ===" &&
       npm run build --prefix backend &&
-      cd backend && npx prisma generate
+      echo "=== Generating Prisma client ===" &&
+      cd backend && npx prisma generate &&
+      echo "=== Build complete ==="
     startCommand: |
       cd backend &&
       npx prisma migrate deploy &&

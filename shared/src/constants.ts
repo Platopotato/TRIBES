@@ -26,6 +26,10 @@ export const TRIBE_ICONS: { [key: string]: string } = {
   spider: "🕷️",
   serpent: "🐍",
   claw: "🦅",
+  castle: "🏰",
+  fortress: "🏛️",
+  tower: "🗼",
+  shield: "🛡️",
 };
 
 export const TRIBE_COLORS: string[] = [

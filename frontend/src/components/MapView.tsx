@@ -780,6 +780,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
                       startOrder={startLocationIndex !== -1 ? startLocationIndex + 1 : null}
                       isPoliticalMode={isPoliticalMode}
                       politicalData={politicalData}
+                      isHomeBase={hexCoords === homeBaseLocation}
                       onClick={() => {
                         console.log('🔥 HEXAGON CLICK:', hex.q, hex.r, 'selectionMode:', selectionMode);
                         if(selectionMode && hex.terrain !== 'Water') {

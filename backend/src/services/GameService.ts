@@ -98,7 +98,26 @@ export class GameService {
     console.log(`🤖 GAMESERVICE: Processed ${aiTribesProcessed} AI tribes`);
 
     console.log('⚙️ GAMESERVICE: Calling processGlobalTurn...');
-    const newGameState = processGlobalTurn(gameState);
+
+    // Add timeout to prevent hanging
+    const processGlobalTurnWithTimeout = () => {
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('processGlobalTurn timed out after 30 seconds'));
+        }, 30000);
+
+        try {
+          const result = processGlobalTurn(gameState);
+          clearTimeout(timeout);
+          resolve(result);
+        } catch (error) {
+          clearTimeout(timeout);
+          reject(error);
+        }
+      });
+    };
+
+    const newGameState = await processGlobalTurnWithTimeout() as GameState;
     console.log('✅ GAMESERVICE: processGlobalTurn completed');
 
     console.log('💾 GAMESERVICE: Updating game state...');

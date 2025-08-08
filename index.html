@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- ULTRA AGGRESSIVE cache prevention -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Last-Modified" content="0" />
+    <meta http-equiv="If-Modified-Since" content="0" />
+    <meta http-equiv="ETag" content="" />
+    
+    <title>Radix Tribes - Redirecting to Production</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            border: 2px solid #f59e0b;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #f59e0b;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .redirect-info {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+            margin-bottom: 2rem;
+        }
+        
+        .countdown {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #10b981;
+            margin: 1rem 0;
+        }
+        
+        .manual-link {
+            display: inline-block;
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .manual-link:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(245, 158, 11, 0.3);
+            border-top: 3px solid #f59e0b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏜️ RADIX TRIBES</div>
+        
+        <div class="message">
+            <strong>This test frontend has been replaced!</strong><br>
+            You're being redirected to the production version with the latest features and fixes.
+        </div>
+        
+        <div class="redirect-info">
+            <div>🚀 <strong>Redirecting to Production Frontend</strong></div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                Latest version with all bug fixes and improvements
+            </div>
+        </div>
+        
+        <div class="spinner"></div>
+        <div class="countdown" id="countdown">5</div>
+        
+        <a href="https://radix-tribes-frontend.onrender.com/" class="manual-link" id="manualLink">
+            🎮 Go to Production Game Now
+        </a>
+        
+        <div class="footer">
+            <div>Production URL: <strong>radix-tribes-frontend.onrender.com</strong></div>
+            <div style="margin-top: 0.5rem;">Cache-busted redirect • Always latest version</div>
+        </div>
+    </div>
+
+    <script>
+        // Aggressive cache-busting redirect
+        function redirectToProduction() {
+            const timestamp = Date.now();
+            const randomParam = Math.random().toString(36).substring(7);
+            const productionUrl = `https://radix-tribes-frontend.onrender.com/?_cb=${timestamp}&_r=${randomParam}&_nocache=1`;
+            
+            console.log('🚀 Redirecting to production with cache-busting:', productionUrl);
+            window.location.replace(productionUrl);
+        }
+        
+        // Countdown timer
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        const manualLink = document.getElementById('manualLink');
+        
+        // Update manual link with cache-busting
+        function updateManualLink() {
+            const timestamp = Date.now();
+            const randomParam = Math.random().toString(36).substring(7);
+            manualLink.href = `https://radix-tribes-frontend.onrender.com/?_cb=${timestamp}&_r=${randomParam}&_nocache=1`;
+        }
+        
+        updateManualLink();
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                countdownElement.textContent = 'Redirecting...';
+                redirectToProduction();
+            }
+        }, 1000);
+        
+        // Manual click handler with cache-busting
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            updateManualLink();
+            redirectToProduction();
+        });
+        
+        // Prevent back button caching
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                redirectToProduction();
+            }
+        });
+        
+        // Additional cache prevention
+        if (window.performance && window.performance.navigation.type === 2) {
+            redirectToProduction();
+        }
+    </script>
+</body>
+</html>

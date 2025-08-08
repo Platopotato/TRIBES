@@ -499,7 +499,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   />
                   <TribeStats stats={playerTribe.stats} />
                   <ActionPanel
-                    actions={plannedActions}
+                    actions={turnSubmitted ? (playerTribe?.actions || []) : plannedActions}
                     maxActions={maxActions}
                     onOpenModal={() => {
                       // Clear any previous selection state when opening new action modal
@@ -796,7 +796,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-2">
                 {turnSubmitted ?
-                  `⚡ Turn Actions (${plannedActions.length}/${maxActions}) TURN SUBMITTED` :
+                  `⚡ Turn Actions (${playerTribe?.actions?.length || 0}/${maxActions}) TURN SUBMITTED` :
                   '⚡ Actions'}
               </h2>
               <p className="text-slate-300">
@@ -843,7 +843,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   }`}
                 >
                   {turnSubmitted ?
-                    `✅ TURN SUBMITTED (${plannedActions.length}/${maxActions})` :
+                    `✅ TURN SUBMITTED (${playerTribe?.actions?.length || 0}/${maxActions})` :
                    plannedActions.length >= maxActions ? `Max Actions Reached (${maxActions})` : '+ Add New Action'}
                 </button>
                 <div className="bg-slate-700 p-4 rounded-lg">

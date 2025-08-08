@@ -72,6 +72,16 @@ function getTechEffects(tribe: Tribe): CombinedEffects {
 }
 
 
+// Apply diminishing returns to prevent asset stacking from being overpowered
+function applyDiminishingReturns(value: number, assetCount: number): number {
+    if (assetCount <= 1) return value;
+
+    // Diminishing returns formula: value * (1 - (assetCount - 1) * 0.1)
+    // Each additional asset reduces effectiveness by 10%
+    const diminishingFactor = Math.max(0.3, 1 - (assetCount - 1) * 0.1);
+    return value * diminishingFactor;
+}
+
 function getAssetEffects(tribe: Tribe): CombinedEffects {
     const effects: CombinedEffects = {
         passiveFood: 0,
@@ -85,40 +95,98 @@ function getAssetEffects(tribe: Tribe): CombinedEffects {
 
     if (!tribe.assets) return effects;
 
+    // Count assets by type for diminishing returns
+    const assetCounts = {
+        passive: 0,
+        scavenge: 0,
+        combat: 0,
+        movement: 0
+    };
+
+    // First pass: count asset types
     for (const assetName of tribe.assets) {
         const asset = getAsset(assetName);
         if (!asset) continue;
         for (const effect of asset.effects) {
             switch (effect.type) {
                 case TechnologyEffectType.PassiveFoodGeneration:
-                    effects.passiveFood += effect.value;
-                    break;
                 case TechnologyEffectType.PassiveScrapGeneration:
-                    effects.passiveScrap += effect.value;
+                    assetCounts.passive++;
                     break;
                 case TechnologyEffectType.ScavengeYieldBonus:
-                    if (effect.resource) effects.scavengeBonuses[effect.resource] += effect.value;
+                    assetCounts.scavenge++;
                     break;
                 case TechnologyEffectType.CombatBonusAttack:
-                     if (effect.terrain) {
-                         effects.terrainCombatBonuses.attack[effect.terrain] = (effects.terrainCombatBonuses.attack[effect.terrain] || 0) + effect.value;
-                    } else {
-                        effects.globalCombatAttackBonus += effect.value;
-                    }
-                    break;
                 case TechnologyEffectType.CombatBonusDefense:
-                    if (effect.terrain) {
-                         effects.terrainCombatBonuses.defense[effect.terrain] = (effects.terrainCombatBonuses.defense[effect.terrain] || 0) + effect.value;
-                    } else {
-                        effects.globalCombatDefenseBonus += effect.value;
-                    }
+                    assetCounts.combat++;
                     break;
                 case TechnologyEffectType.MovementSpeedBonus:
-                    effects.movementSpeedBonus += effect.value;
+                    assetCounts.movement++;
                     break;
             }
         }
     }
+
+    // Second pass: apply effects with diminishing returns
+    for (const assetName of tribe.assets) {
+        const asset = getAsset(assetName);
+        if (!asset) continue;
+        for (const effect of asset.effects) {
+            switch (effect.type) {
+                case TechnologyEffectType.PassiveFoodGeneration:
+                    effects.passiveFood += applyDiminishingReturns(effect.value, assetCounts.passive);
+                    break;
+                case TechnologyEffectType.PassiveScrapGeneration:
+                    effects.passiveScrap += applyDiminishingReturns(effect.value, assetCounts.passive);
+                    break;
+                case TechnologyEffectType.ScavengeYieldBonus:
+                    if (effect.resource) {
+                        effects.scavengeBonuses[effect.resource] += applyDiminishingReturns(effect.value, assetCounts.scavenge);
+                    }
+                    break;
+                case TechnologyEffectType.CombatBonusAttack:
+                     if (effect.terrain) {
+                         const diminishedValue = applyDiminishingReturns(effect.value, assetCounts.combat);
+                         effects.terrainCombatBonuses.attack[effect.terrain] = (effects.terrainCombatBonuses.attack[effect.terrain] || 0) + diminishedValue;
+                    } else {
+                        effects.globalCombatAttackBonus += applyDiminishingReturns(effect.value, assetCounts.combat);
+                    }
+                    break;
+                case TechnologyEffectType.CombatBonusDefense:
+                    if (effect.terrain) {
+                         const diminishedValue = applyDiminishingReturns(effect.value, assetCounts.combat);
+                         effects.terrainCombatBonuses.defense[effect.terrain] = (effects.terrainCombatBonuses.defense[effect.terrain] || 0) + diminishedValue;
+                    } else {
+                        effects.globalCombatDefenseBonus += applyDiminishingReturns(effect.value, assetCounts.combat);
+                    }
+                    break;
+                case TechnologyEffectType.MovementSpeedBonus:
+                    effects.movementSpeedBonus += applyDiminishingReturns(effect.value, assetCounts.movement);
+                    break;
+            }
+        }
+    }
+
+    // Apply hard caps to prevent extreme values
+    effects.passiveFood = Math.min(effects.passiveFood, 15); // Cap at 15 food/turn
+    effects.passiveScrap = Math.min(effects.passiveScrap, 15); // Cap at 15 scrap/turn
+    effects.scavengeBonuses.Food = Math.min(effects.scavengeBonuses.Food, 0.5); // Cap at 50%
+    effects.scavengeBonuses.Scrap = Math.min(effects.scavengeBonuses.Scrap, 0.5); // Cap at 50%
+    effects.scavengeBonuses.Weapons = Math.min(effects.scavengeBonuses.Weapons, 0.3); // Cap at 30%
+    effects.globalCombatAttackBonus = Math.min(effects.globalCombatAttackBonus, 0.25); // Cap at 25%
+    effects.globalCombatDefenseBonus = Math.min(effects.globalCombatDefenseBonus, 0.25); // Cap at 25%
+    effects.movementSpeedBonus = Math.min(effects.movementSpeedBonus, 1.5); // Cap at 50% speed bonus
+
+    // Cap terrain bonuses
+    Object.keys(effects.terrainCombatBonuses.attack).forEach(terrain => {
+        const terrainKey = terrain as keyof typeof effects.terrainCombatBonuses.attack;
+        effects.terrainCombatBonuses.attack[terrainKey] = Math.min(effects.terrainCombatBonuses.attack[terrainKey] || 0, 0.4);
+    });
+    Object.keys(effects.terrainCombatBonuses.defense).forEach(terrain => {
+        const terrainKey = terrain as keyof typeof effects.terrainCombatBonuses.defense;
+        effects.terrainCombatBonuses.defense[terrainKey] = Math.min(effects.terrainCombatBonuses.defense[terrainKey] || 0, 0.4);
+    });
+
     return effects;
 }
 

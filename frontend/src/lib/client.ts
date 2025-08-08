@@ -418,8 +418,10 @@ export const debugAdminPassword = () => socket.emit('admin:debugPassword');
 export const debugSocket = () => socket.emit('debug_socket');
 
 // Game suspension
-export const toggleGameSuspension = (suspended: boolean, message: string) =>
+export const toggleGameSuspension = (suspended: boolean, message: string) => {
+  console.log('🚨 Emitting toggleGameSuspension:', { suspended, message });
   socket.emit('admin:toggleGameSuspension', { suspended, message });
+};
 
 // Game action emitters
 export const createTribe = createEmitter<any>('create_tribe');

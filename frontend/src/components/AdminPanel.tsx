@@ -381,18 +381,26 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   // Game suspension handlers
   const handleToggleGameSuspension = () => {
+    console.log('🚨 Suspension toggle clicked. Current state:', {
+      suspended: gameState.suspended,
+      suspensionMessage: gameState.suspensionMessage
+    });
+
     if (gameState.suspended) {
       // Resume game
       if (confirm('Resume the game? Players will be able to access the game again.')) {
+        console.log('🚨 Resuming game...');
         client.toggleGameSuspension(false, '');
       }
     } else {
       // Suspend game - show modal for custom message
+      console.log('🚨 Opening suspension modal...');
       setShowSuspensionModal(true);
     }
   };
 
   const handleConfirmSuspension = () => {
+    console.log('🚨 Confirming suspension with message:', suspensionMessage.trim());
     if (suspensionMessage.trim()) {
       client.toggleGameSuspension(true, suspensionMessage.trim());
       setShowSuspensionModal(false);
@@ -754,6 +762,9 @@ GAME STATISTICS:
                       {gameState.suspended && gameState.suspensionMessage && (
                         <p className="text-sm text-orange-300 mt-1">"{gameState.suspensionMessage}"</p>
                       )}
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Debug: suspended={String(gameState.suspended)}, message="{gameState.suspensionMessage || 'none'}"
+                      </p>
                     </div>
                   </div>
                   <Button

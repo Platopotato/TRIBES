@@ -366,8 +366,8 @@ const App: React.FC = () => {
       return <TransitionScreen message="Loading Wasteland..." />;
     }
 
-    // Check for game suspension (except for admin users)
-    if (gameState.suspended && currentUser?.role !== 'admin') {
+    // Check for game suspension (except for admin users and login screen)
+    if (gameState.suspended && currentUser?.role !== 'admin' && view !== 'login') {
       return (
         <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-neutral-800 rounded-lg border border-red-600 shadow-2xl">
@@ -387,12 +387,20 @@ const App: React.FC = () => {
                   <p className="mt-2">Please try again in a few minutes.</p>
                 </div>
               </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                Refresh Page
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  Refresh Page
+                </button>
+                <button
+                  onClick={() => setView('login')}
+                  className="w-full bg-neutral-600 hover:bg-neutral-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  Admin Login
+                </button>
+              </div>
             </div>
           </div>
         </div>

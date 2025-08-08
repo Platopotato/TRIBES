@@ -187,6 +187,16 @@ export class SocketHandler {
         console.log('✅ BACKEND: Game state emitted after turn processing');
       } catch (error) {
         console.error('❌ BACKEND: Error processing turn:', error);
+        console.error('❌ BACKEND: Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          type: typeof error
+        });
+
+        // Emit error to client
+        socket.emit('turn_processing_error', {
+          error: error instanceof Error ? error.message : 'Unknown error occurred during turn processing'
+        });
       }
     });
 

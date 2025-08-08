@@ -74,19 +74,36 @@ export class GameService {
 
   // Game-specific methods
   async processTurn(): Promise<void> {
+    console.log('🎮 GAMESERVICE: processTurn() started');
+
     const gameState = await this.getGameState();
-    if (!gameState) return;
+    if (!gameState) {
+      console.log('❌ GAMESERVICE: No game state found, aborting turn processing');
+      return;
+    }
+
+    console.log(`🎮 GAMESERVICE: Processing turn ${gameState.turn} with ${gameState.tribes.length} tribes`);
 
     // Add AI actions for tribes that haven't submitted
+    console.log('🤖 GAMESERVICE: Processing AI tribes...');
+    let aiTribesProcessed = 0;
     gameState.tribes.forEach(tribe => {
       if (tribe.isAI && !tribe.turnSubmitted) {
+        console.log(`🤖 GAMESERVICE: Generating AI actions for tribe ${tribe.tribeName}`);
         tribe.actions = generateAIActions(tribe, gameState.tribes, gameState.mapData);
         tribe.turnSubmitted = true;
+        aiTribesProcessed++;
       }
     });
+    console.log(`🤖 GAMESERVICE: Processed ${aiTribesProcessed} AI tribes`);
 
+    console.log('⚙️ GAMESERVICE: Calling processGlobalTurn...');
     const newGameState = processGlobalTurn(gameState);
+    console.log('✅ GAMESERVICE: processGlobalTurn completed');
+
+    console.log('💾 GAMESERVICE: Updating game state...');
     await this.updateGameState(newGameState);
+    console.log('✅ GAMESERVICE: Game state updated, processTurn() complete');
   }
 
   async createTribe(tribeData: any): Promise<boolean> {

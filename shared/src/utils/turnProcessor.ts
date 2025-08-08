@@ -156,23 +156,190 @@ function getCombinedEffects(tribe: Tribe): CombinedEffects {
 }
 
 function handleRandomMoveEvent(movingForce: { troops: number, weapons: number, chiefs: Chief[] }): { newForce: { troops: number, weapons: number, chiefs: Chief[] }, eventResult: string | null } {
-    const EVENT_CHANCE = 0.20;
+    const EVENT_CHANCE = 0.25; // Increased chance for more excitement
     if (Math.random() > EVENT_CHANCE || movingForce.troops === 0) {
         return { newForce: movingForce, eventResult: null };
     }
+
     type MoveEvent = { weight: number; run: (force: { troops: number; weapons: number; chiefs: Chief[]; }) => { newForce: { troops: number; weapons: number; chiefs: Chief[] }; eventResult: string; } | null; };
+
     const events: MoveEvent[] = [
-        { weight: 5, run: (force) => { if (force.troops < 5) return null; const losses = Math.max(1, Math.floor(force.troops * (Math.random() * 0.1 + 0.05))); return { newForce: { ...force, troops: Math.max(0, force.troops - losses) }, eventResult: `The group was ambushed by bandits! They fought them off but lost ${losses} troops.` }; } },
-        { weight: 3, run: (force) => { if (force.troops < 2) return null; return { newForce: { ...force, troops: force.troops - 1 }, eventResult: `A scout was bitten by a rabid dog and had to be dispatched to prevent disease.` }; } },
-        { weight: 4, run: (force) => { if (force.weapons < 1) return null; const lostWeapons = Math.max(1, Math.floor(force.weapons * 0.2)); if (lostWeapons === 0) return null; return { newForce: { ...force, weapons: Math.max(0, force.weapons - lostWeapons) }, eventResult: `A supply cart overturned, losing ${lostWeapons} weapons in a ravine.` }; } },
-        { weight: 2, run: (force) => ({ newForce: { ...force, troops: force.troops + 1 }, eventResult: `The party found a lone survivor. Grateful for the rescue, they've joined your ranks.` }) }
+        // HOSTILE ENCOUNTERS
+        { weight: 6, run: (force) => {
+            if (force.troops < 5) return null;
+            const losses = Math.max(1, Math.floor(force.troops * (Math.random() * 0.12 + 0.05)));
+            const narratives = [
+                `Savage raiders emerge from the ruins, screaming war cries! Your warriors fight valiantly but ${losses} brave souls fall to the ambush.`,
+                `A pack of feral cannibals attacks from the shadows! Despite fierce resistance, ${losses} of your people are overwhelmed by the bloodthirsty horde.`,
+                `Mutant beasts with glowing eyes charge from a toxic crater! Your group fights desperately, losing ${losses} warriors to the creatures' venomous claws.`,
+                `Rival scavengers dispute your passage through their territory! The skirmish costs you ${losses} fighters before they retreat into the wasteland.`,
+                `A gang of wasteland pirates demands tribute! When your group refuses, the ensuing battle claims ${losses} lives before the pirates flee.`
+            ];
+            return { newForce: { ...force, troops: Math.max(0, force.troops - losses) }, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // ENVIRONMENTAL HAZARDS
+        { weight: 4, run: (force) => {
+            if (force.troops < 2) return null;
+            const narratives = [
+                `A violent radiation storm sweeps across the wasteland! One of your scouts succumbs to the toxic winds despite all efforts to save them.`,
+                `The ground gives way to a hidden sinkhole! A warrior falls into the depths, their screams echoing before silence takes hold.`,
+                `Poisonous spores from a mutant fungal bloom overwhelm a member of your party. They die gasping, warning others to stay back.`,
+                `A rabid two-headed hound attacks from the ruins! Though the beast is slain, its diseased bite claims one of your people.`,
+                `Toxic gas seeps from a cracked pipeline! Despite covering their faces, one warrior cannot escape the deadly fumes.`
+            ];
+            return { newForce: { ...force, troops: force.troops - 1 }, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // EQUIPMENT LOSS
+        { weight: 5, run: (force) => {
+            if (force.weapons < 1) return null;
+            const lostWeapons = Math.max(1, Math.floor(force.weapons * (Math.random() * 0.25 + 0.1)));
+            if (lostWeapons === 0) return null;
+            const narratives = [
+                `A treacherous bridge collapses under your supply cart! ${lostWeapons} precious weapons tumble into the toxic river below, lost forever.`,
+                `Acid rain from the polluted sky corrodes your weapon cache! ${lostWeapons} weapons dissolve into useless slag before your eyes.`,
+                `Scavenger birds with metal beaks swoop down and steal ${lostWeapons} shiny weapons from your packs, disappearing into the irradiated clouds.`,
+                `A magnetic anomaly in the wasteland pulls ${lostWeapons} metal weapons from your hands, embedding them in a twisted metal spire.`,
+                `Your pack animals panic during a dust storm, scattering ${lostWeapons} weapons across the dunes where they're quickly buried.`
+            ];
+            return { newForce: { ...force, weapons: Math.max(0, force.weapons - lostWeapons) }, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // POSITIVE ENCOUNTERS
+        { weight: 3, run: (force) => {
+            const narratives = [
+                `A grateful hermit emerges from a hidden bunker, offering to join your cause after you share your water with them.`,
+                `You discover a wounded warrior from a destroyed settlement. After tending their injuries, they pledge their loyalty to your group.`,
+                `A former soldier, tired of wandering the wasteland alone, asks to join your party after witnessing your group's discipline and honor.`,
+                `Your group rescues a trapped scavenger from mutant spider webs. In gratitude, they swear an oath to fight alongside you.`,
+                `A skilled fighter, impressed by your group's reputation, approaches and requests to join your ranks.`
+            ];
+            return { newForce: { ...force, troops: force.troops + 1 }, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // RESOURCE DISCOVERIES
+        { weight: 2, run: (force) => {
+            const weaponsFound = Math.floor(Math.random() * 3) + 1;
+            const narratives = [
+                `Your scouts discover a hidden weapons cache in an abandoned military bunker! You claim ${weaponsFound} pristine weapons for your arsenal.`,
+                `The remains of a fallen warrior yield ${weaponsFound} well-maintained weapons that will serve your cause well.`,
+                `A crashed supply drone contains ${weaponsFound} military-grade weapons, still functional after all these years.`,
+                `Your group stumbles upon a forgotten armory in the ruins, securing ${weaponsFound} weapons from the pre-war stockpile.`
+            ];
+            return { newForce: { ...force, weapons: force.weapons + weaponsFound }, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }}
     ];
+
     const applicableEvents = events.filter(event => event.run(movingForce) !== null);
     if (applicableEvents.length === 0) return { newForce: movingForce, eventResult: null };
     const totalWeight = applicableEvents.reduce((sum, event) => sum + event.weight, 0);
     let random = Math.random() * totalWeight;
     for (const event of applicableEvents) { if (random < event.weight) return event.run(movingForce)!; random -= event.weight; }
     return { newForce: movingForce, eventResult: null };
+}
+
+// --- SETTLEMENT RANDOM EVENTS ---
+function handleSettlementRandomEvent(tribe: Tribe, location: string): { tribe: Tribe, eventResult: string | null } {
+    const EVENT_CHANCE = 0.15; // 15% chance per settlement per turn
+    if (Math.random() > EVENT_CHANCE) {
+        return { tribe, eventResult: null };
+    }
+
+    const garrison = tribe.garrisons?.[location];
+    if (!garrison || garrison.troops === 0) {
+        return { tribe, eventResult: null };
+    }
+
+    type SettlementEvent = {
+        weight: number;
+        run: (tribe: Tribe, location: string, garrison: any) => { tribe: Tribe; eventResult: string; } | null;
+    };
+
+    const events: SettlementEvent[] = [
+        // POSITIVE EVENTS
+        { weight: 4, run: (tribe, location, garrison) => {
+            const newRecruit = Math.floor(Math.random() * 2) + 1;
+            const updatedTribe = JSON.parse(JSON.stringify(tribe));
+            updatedTribe.garrisons[location].troops += newRecruit;
+            const narratives = [
+                `Word of ${tribe.tribeName}'s strength spreads through the wasteland! ${newRecruit} skilled wanderers arrive at ${location}, seeking to join your cause.`,
+                `A group of refugees fleeing from raiders finds sanctuary at ${location}. Grateful for protection, ${newRecruit} of them pledge to fight for your tribe.`,
+                `Your settlement's reputation for fairness attracts ${newRecruit} experienced fighters who were tired of serving cruel warlords.`,
+                `A caravan of traders brings news of your tribe's honor. Inspired by the tales, ${newRecruit} of their guards decide to stay and serve ${tribe.tribeName}.`
+            ];
+            return { tribe: updatedTribe, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        { weight: 3, run: (tribe, location, garrison) => {
+            const moraleBoost = Math.floor(Math.random() * 8) + 5;
+            const updatedTribe = JSON.parse(JSON.stringify(tribe));
+            updatedTribe.globalResources.morale = Math.min(100, updatedTribe.globalResources.morale + moraleBoost);
+            const narratives = [
+                `The discovery of an intact pre-war entertainment system at ${location} brings joy to your people! Morale increases by ${moraleBoost} as they enjoy forgotten music and films.`,
+                `A successful hunt brings fresh meat to ${location}! The feast that follows strengthens bonds and raises spirits by ${moraleBoost}.`,
+                `Your people at ${location} uncover a cache of pre-war luxury items - chocolate, coffee, and books! The rare treats boost morale by ${moraleBoost}.`,
+                `A traveling storyteller shares epic tales of heroism at ${location}, inspiring your people and raising morale by ${moraleBoost}.`
+            ];
+            return { tribe: updatedTribe, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // NEUTRAL/CHALLENGING EVENTS
+        { weight: 3, run: (tribe, location, garrison) => {
+            if (garrison.troops < 3) return null;
+            const losses = 1;
+            const updatedTribe = JSON.parse(JSON.stringify(tribe));
+            updatedTribe.garrisons[location].troops -= losses;
+            const narratives = [
+                `A virulent plague sweeps through ${location}! Despite the healers' best efforts, ${losses} warrior succumbs to the mysterious disease.`,
+                `Toxic fumes from a nearby chemical spill reach ${location}. One of your people, despite wearing protection, falls victim to the poisonous vapors.`,
+                `A structural collapse in the old ruins of ${location} traps and kills ${losses} of your people during a routine scavenging operation.`,
+                `A pack of mutant rats infests ${location}! Though eventually driven off, their diseased bites claim ${losses} life.`
+            ];
+            return { tribe: updatedTribe, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        { weight: 2, run: (tribe, location, garrison) => {
+            if (garrison.weapons < 2) return null;
+            const weaponLoss = Math.floor(garrison.weapons * 0.15) + 1;
+            const updatedTribe = JSON.parse(JSON.stringify(tribe));
+            updatedTribe.garrisons[location].weapons = Math.max(0, updatedTribe.garrisons[location].weapons - weaponLoss);
+            const narratives = [
+                `A fire breaks out in the weapon storage at ${location}! Despite heroic efforts to contain it, ${weaponLoss} weapons are destroyed in the blaze.`,
+                `Acid rain corrodes the metal storage containers at ${location}, ruining ${weaponLoss} weapons before they can be moved to safety.`,
+                `A group of weapon thieves infiltrates ${location} under cover of darkness, making off with ${weaponLoss} of your finest arms.`,
+                `An electrical storm causes a power surge that destroys ${weaponLoss} energy weapons stored at ${location}.`
+            ];
+            return { tribe: updatedTribe, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }},
+
+        // DISCOVERY EVENTS
+        { weight: 2, run: (tribe, location, garrison) => {
+            const scrapFound = Math.floor(Math.random() * 15) + 10;
+            const updatedTribe = JSON.parse(JSON.stringify(tribe));
+            updatedTribe.globalResources.scrap += scrapFound;
+            const narratives = [
+                `Your scavengers at ${location} break through into a sealed section of the old city! They emerge with ${scrapFound} units of valuable scrap metal.`,
+                `A landslide near ${location} reveals a buried vehicle graveyard. Your people salvage ${scrapFound} units of useful scrap from the wreckage.`,
+                `Construction work at ${location} uncovers a forgotten maintenance tunnel filled with ${scrapFound} units of pre-war materials.`,
+                `Your people discover that the 'decorative' metal fixtures at ${location} are actually valuable alloys worth ${scrapFound} scrap units!`
+            ];
+            return { tribe: updatedTribe, eventResult: narratives[Math.floor(Math.random() * narratives.length)] };
+        }}
+    ];
+
+    const applicableEvents = events.filter(event => event.run(tribe, location, garrison) !== null);
+    if (applicableEvents.length === 0) return { tribe, eventResult: null };
+    const totalWeight = applicableEvents.reduce((sum, event) => sum + event.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (const event of applicableEvents) {
+        if (random < event.weight) {
+            const result = event.run(tribe, location, garrison);
+            return result || { tribe, eventResult: null };
+        }
+        random -= event.weight;
+    }
+    return { tribe, eventResult: null };
 }
 
 // --- JOURNEY ARRIVAL HANDLERS ---
@@ -462,19 +629,47 @@ function processRest(tribe: Tribe, action: GameAction): { tribe: Tribe, result: 
     const { troops, start_location } = action.actionData;
     const moraleGained = Math.floor((15 + Math.random() * 10) * (1 + (tribe.stats.leadership * 0.01)));
     const updatedTribe = { ...tribe, globalResources: { ...tribe.globalResources, morale: Math.min(100, tribe.globalResources.morale + moraleGained) }};
-    return { tribe: updatedTribe, result: { ...action, result: `Troops resting at ${start_location} feel rejuvenated, boosting tribe morale by ${moraleGained}.` } };
+
+    // Rich narrative descriptions for rest action
+    const narratives = [
+        `The weary warriors of ${tribe.tribeName} gather around crackling fires at ${start_location}, sharing stories of past victories and tending to their wounds. The respite restores their fighting spirit, boosting morale by ${moraleGained}.`,
+        `Under the watchful eyes of their leaders, the troops at ${start_location} take time to rest and recover. They sharpen their weapons, mend their gear, and strengthen their bonds of brotherhood. Morale increases by ${moraleGained}.`,
+        `The harsh wasteland takes its toll, but the resilient members of ${tribe.tribeName} find solace in each other's company at ${start_location}. They feast on their rations and tell tales of home, lifting spirits by ${moraleGained}.`,
+        `A well-deserved rest at ${start_location} allows your people to recover from the constant dangers of the wasteland. They emerge refreshed and ready for whatever challenges await, with morale boosted by ${moraleGained}.`,
+        `The settlement at ${start_location} becomes a haven of peace as your troops lay down their arms and rest. Veterans share wisdom with newcomers, and the tribe's unity grows stronger. Morale rises by ${moraleGained}.`
+    ];
+
+    const selectedNarrative = narratives[Math.floor(Math.random() * narratives.length)];
+    return { tribe: updatedTribe, result: { ...action, result: selectedNarrative } };
 }
 
 function processBuildWeapons(tribe: Tribe, action: GameAction): { tribe: Tribe, result: GameAction } {
     const { scrap: scrapUsed, start_location } = action.actionData;
-    if (scrapUsed > tribe.globalResources.scrap) return { tribe, result: { ...action, result: `Not enough global scrap.` } };
-    
+    if (scrapUsed > tribe.globalResources.scrap) {
+        const failureNarratives = [
+            `The weapon smiths at ${start_location} search through the tribe's scrap piles, but find only rusted fragments and broken metal. More scrap is needed before any weapons can be forged.`,
+            `Your crafters at ${start_location} shake their heads in disappointment - the scrap reserves are too depleted to create anything worthwhile. The forges remain cold.`,
+            `The ambitious weapon-making plans at ${start_location} come to a halt when the smiths realize there isn't enough quality scrap metal to work with.`
+        ];
+        return { tribe, result: { ...action, result: failureNarratives[Math.floor(Math.random() * failureNarratives.length)] } };
+    }
+
     const weaponsBuilt = Math.floor(scrapUsed * 0.4 * (1 + (tribe.stats.intelligence * 0.02)));
     const updatedTribe = JSON.parse(JSON.stringify(tribe));
     updatedTribe.globalResources.scrap -= scrapUsed;
     if (!updatedTribe.garrisons[start_location]) updatedTribe.garrisons[start_location] = { troops: 0, weapons: 0, chiefs: [] };
     updatedTribe.garrisons[start_location].weapons += weaponsBuilt;
-    return { tribe: updatedTribe, result: { ...action, result: `Your weapon smiths at ${start_location} skillfully converted ${scrapUsed} scrap into ${weaponsBuilt} new weapons.` } };
+
+    const successNarratives = [
+        `The forges at ${start_location} burn bright as skilled smiths of ${tribe.tribeName} work tirelessly, hammering ${scrapUsed} units of scrap into ${weaponsBuilt} deadly weapons. The ring of metal on metal echoes through the settlement.`,
+        `Master crafters at ${start_location} demonstrate their expertise, transforming ${scrapUsed} pieces of wasteland scrap into ${weaponsBuilt} formidable weapons. Each blade gleams with lethal promise.`,
+        `The weapon-makers at ${start_location} toil through the day, their hammers singing as they forge ${scrapUsed} units of scrap into ${weaponsBuilt} instruments of war. Your tribe's arsenal grows stronger.`,
+        `Sparks fly and anvils ring at ${start_location} as your smiths work their magic, converting ${scrapUsed} scrap into ${weaponsBuilt} weapons worthy of ${tribe.tribeName}'s warriors.`,
+        `The resourceful crafters at ${start_location} prove their worth once again, salvaging ${scrapUsed} pieces of scrap and reshaping them into ${weaponsBuilt} weapons that will serve the tribe well in battle.`
+    ];
+
+    const selectedNarrative = successNarratives[Math.floor(Math.random() * successNarratives.length)];
+    return { tribe: updatedTribe, result: { ...action, result: selectedNarrative } };
 }
 
 
@@ -1045,6 +1240,26 @@ export function processGlobalTurn(gameState: GameState): GameState {
         const upkeepOutcome = endOfTurnUpkeep(tribe, troopsOnJourneys);
         Object.assign(tribe, upkeepOutcome.tribe);
         if (upkeepOutcome.result) resultsByTribe[tribe.id].push(upkeepOutcome.result);
+    });
+
+    // --- SETTLEMENT RANDOM EVENTS ---
+    // Process random events for each tribe's settlements
+    tribeMap.forEach(tribe => {
+        if (tribe.garrisons) {
+            Object.keys(tribe.garrisons).forEach(location => {
+                const eventResult = handleSettlementRandomEvent(tribe, location);
+                if (eventResult.eventResult) {
+                    // Update the tribe in the map with any changes
+                    Object.assign(tribe, eventResult.tribe);
+                    resultsByTribe[tribe.id].push({
+                        id: `settlement-event-${tribe.id}-${location}-${state.turn}`,
+                        actionType: 'Settlement Event' as any,
+                        actionData: { location },
+                        result: `At ${location}: ${eventResult.eventResult}`
+                    });
+                }
+            });
+        }
     });
 
     // --- FINALIZATION & HISTORY RECORDING ---

@@ -44,7 +44,7 @@ const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, onLo
   const [playerName, setPlayerName] = useState(user.username);
   const [tribeName, setTribeName] = useState('');
   
-  const [selectedIcon, setSelectedIcon] = useState<string>(Object.keys(TRIBE_ICONS)[0] || 'skull');
+  const [selectedIcon, setSelectedIcon] = useState<string>(Object.keys(TRIBE_ICONS)[0] || 'castle');
   const [selectedColor, setSelectedColor] = useState<string>(TRIBE_COLORS[0]);
 
   const [stats, setStats] = useState<TribeStats>({

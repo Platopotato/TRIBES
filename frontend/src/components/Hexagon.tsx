@@ -62,7 +62,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         const garrison = tribe.garrisons[hexCoords];
         const troops = garrison?.troops ?? 0;
         const chiefCount = garrison?.chiefs?.length ?? 0;
-        const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['skull'];
+        const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
         
         return (
             <g className="pointer-events-none transform-gpu transition-transform group-hover:-translate-y-1 duration-200">
@@ -121,7 +121,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     return (
         <g className="pointer-events-none">
             {tribesOnHex.map((tribe, index) => {
-                const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['skull'];
+                const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
                 const xOffset = startX + index * (iconSize / 1.8);
                 return (
                     <g key={tribe.id} transform={`translate(${xOffset}, 0)`}>

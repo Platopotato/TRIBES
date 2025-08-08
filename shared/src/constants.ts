@@ -18,6 +18,10 @@ export const INITIAL_GARRISON = {
 };
 
 export const TRIBE_ICONS: { [key: string]: string } = {
+  castle: "🏰",
+  fortress: "🏛️",
+  tower: "🗼",
+  shield: "🛡️",
   skull: "💀",
   wolf: "🐺",
   raven: "🐦‍⬛",
@@ -26,10 +30,6 @@ export const TRIBE_ICONS: { [key: string]: string } = {
   spider: "🕷️",
   serpent: "🐍",
   claw: "🦅",
-  castle: "🏰",
-  fortress: "🏛️",
-  tower: "🗼",
-  shield: "🛡️",
 };
 
 export const TRIBE_COLORS: string[] = [

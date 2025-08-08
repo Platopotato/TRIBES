@@ -610,6 +610,8 @@ export class DatabaseService {
   }
 
   private convertDbGameStateToGameState(dbGameState: any): GameState {
+    console.log(`🔍 DB CONVERSION: Converting game state with ${dbGameState.tribes?.length || 0} tribes`);
+
     // This is a simplified conversion - in a real implementation,
     // you'd need to properly convert all the nested structures
     return {
@@ -645,16 +647,31 @@ export class DatabaseService {
         assets: tribe.assets,
         currentResearch: tribe.currentResearch,
         journeyResponses: tribe.journeyResponses,
-        garrisons: tribe.garrisons.reduce((acc: any, garrison: any) => {
-          const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
-          acc[hexKey] = {
-            troops: garrison.troops,
-            weapons: garrison.weapons,
-            chiefs: garrison.chiefs
-          };
-          console.log(`🔍 DB CONVERSION: ${tribe.tribeName} garrison at ${hexKey}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
-          return acc;
-        }, {}),
+        garrisons: (() => {
+          const garrisons = tribe.garrisons.reduce((acc: any, garrison: any) => {
+            const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+            acc[hexKey] = {
+              troops: garrison.troops,
+              weapons: garrison.weapons,
+              chiefs: garrison.chiefs
+            };
+            console.log(`🔍 DB CONVERSION: ${tribe.tribeName} garrison at ${hexKey}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
+            return acc;
+          }, {});
+
+          // CRITICAL FIX: Ensure every tribe has at least their home garrison
+          if (Object.keys(garrisons).length === 0 && tribe.location) {
+            console.log(`🚨 GARRISON FIX: ${tribe.tribeName} has no garrisons, creating home garrison at ${tribe.location}`);
+            garrisons[tribe.location] = {
+              troops: 20,
+              weapons: 10,
+              chiefs: []
+            };
+          }
+
+          console.log(`🔍 DB CONVERSION: ${tribe.tribeName} final garrison count: ${Object.keys(garrisons).length}`);
+          return garrisons;
+        })(),
         diplomacy: this.buildDiplomacyObject(tribe)
       })),
       turn: dbGameState.turn,

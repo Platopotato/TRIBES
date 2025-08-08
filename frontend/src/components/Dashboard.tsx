@@ -189,6 +189,16 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       };
     });
 
+    // SAFETY CHECK: If no garrisons exist, create a temporary home garrison for UI
+    if (Object.keys(available).length === 0 && playerTribe.location) {
+      console.log(`🚨 FRONTEND FIX: ${playerTribe.tribeName} has no garrisons, creating temporary home garrison for UI`);
+      available[playerTribe.location] = {
+        troops: 20,
+        weapons: 10,
+        chiefs: []
+      };
+    }
+
     // Deduct resources for planned actions
     for (const action of plannedActions) {
       const { start_location, troops, weapons, chiefsToMove, location, assignedTroops } = action.actionData;

@@ -38,19 +38,41 @@ export class GameService {
   async getGameState(): Promise<GameState | null> {
     const gameState = await this.databaseService.getGameState();
 
-    // Debug garrison loading
+    // Debug garrison loading and fix missing garrisons
     if (gameState) {
       console.log(`🔍 GARRISON DEBUG: Loaded ${gameState.tribes.length} tribes`);
+      let fixedTribes = 0;
+
       gameState.tribes.forEach(tribe => {
         const garrisonCount = Object.keys(tribe.garrisons || {}).length;
         const totalTroops = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
         console.log(`🔍 ${tribe.tribeName}: ${garrisonCount} garrisons, ${totalTroops} total troops`);
+
+        // CRITICAL FIX: Ensure every tribe has at least their home garrison
+        if (garrisonCount === 0 && tribe.location) {
+          console.log(`🚨 GARRISON FIX: ${tribe.tribeName} has no garrisons, creating home garrison at ${tribe.location}`);
+          tribe.garrisons = {
+            [tribe.location]: {
+              troops: 20,
+              weapons: 10,
+              chiefs: []
+            }
+          };
+          fixedTribes++;
+        }
+
         if (garrisonCount > 0) {
           Object.entries(tribe.garrisons).forEach(([loc, garrison]) => {
             console.log(`  📍 ${loc}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
           });
         }
       });
+
+      if (fixedTribes > 0) {
+        console.log(`🔧 GARRISON FIX: Fixed ${fixedTribes} tribes with missing garrisons`);
+        // Save the fixed game state
+        await this.updateGameState(gameState);
+      }
     }
 
     return gameState;

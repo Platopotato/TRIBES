@@ -652,6 +652,7 @@ export class DatabaseService {
             weapons: garrison.weapons,
             chiefs: garrison.chiefs
           };
+          console.log(`🔍 DB CONVERSION: ${tribe.tribeName} garrison at ${hexKey}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
           return acc;
         }, {}),
         diplomacy: this.buildDiplomacyObject(tribe)

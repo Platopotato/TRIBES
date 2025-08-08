@@ -36,7 +36,24 @@ export class GameService {
 
   // Public methods for accessing game state
   async getGameState(): Promise<GameState | null> {
-    return await this.databaseService.getGameState();
+    const gameState = await this.databaseService.getGameState();
+
+    // Debug garrison loading
+    if (gameState) {
+      console.log(`🔍 GARRISON DEBUG: Loaded ${gameState.tribes.length} tribes`);
+      gameState.tribes.forEach(tribe => {
+        const garrisonCount = Object.keys(tribe.garrisons || {}).length;
+        const totalTroops = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
+        console.log(`🔍 ${tribe.tribeName}: ${garrisonCount} garrisons, ${totalTroops} total troops`);
+        if (garrisonCount > 0) {
+          Object.entries(tribe.garrisons).forEach(([loc, garrison]) => {
+            console.log(`  📍 ${loc}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
+          });
+        }
+      });
+    }
+
+    return gameState;
   }
 
   async getUsers(): Promise<User[]> {

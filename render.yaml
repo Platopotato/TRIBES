@@ -6,11 +6,11 @@ services:
     plan: free
     rootDir: .
     buildCommand: |
-      npm install --prefix shared --include=dev &&
+      npm install --prefix shared &&
       npm run build --prefix shared &&
-      npm install --prefix backend --include=dev &&
+      npm install --prefix backend &&
       npm run build --prefix backend &&
-      npx prisma generate --schema=backend/prisma/schema.prisma
+      cd backend && npx prisma generate
     startCommand: |
       cd backend &&
       npx prisma migrate deploy &&

@@ -33,7 +33,7 @@ services:
       - key: FRONTEND_URL
         value: https://radix-tribes-frontend.onrender.com
       - key: ADMIN_PASSWORD
-        value: TestAdmin123
+        value: Gravedaleh1!
     healthCheckPath: /health
 
   # Frontend Web Service (serving static files)

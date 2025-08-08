@@ -178,10 +178,47 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
   const availableGarrisons = useMemo(() => {
     if (!playerTribe) return {};
-    return Object.fromEntries(
-      Object.entries(playerTribe.garrisons || {}).filter(([_, garrison]) => garrison.troops > 0)
-    );
-  }, [playerTribe]);
+
+    // Start with a deep copy of all garrisons
+    const available: { [key: string]: { troops: number; weapons: number; chiefs: any[] } } = {};
+
+    Object.entries(playerTribe.garrisons || {}).forEach(([location, garrison]) => {
+      available[location] = {
+        troops: garrison.troops,
+        weapons: garrison.weapons,
+        chiefs: [...(garrison.chiefs || [])]
+      };
+    });
+
+    // Deduct resources for planned actions
+    for (const action of plannedActions) {
+      const { start_location, troops, weapons, chiefsToMove, location, assignedTroops } = action.actionData;
+      const garrisonLocation = start_location || location;
+
+      if (garrisonLocation && available[garrisonLocation]) {
+        if (troops) available[garrisonLocation].troops -= troops;
+        if (weapons) available[garrisonLocation].weapons -= weapons;
+        if (assignedTroops) available[garrisonLocation].troops -= assignedTroops;
+
+        if (chiefsToMove && Array.isArray(chiefsToMove)) {
+            available[garrisonLocation].chiefs = (available[garrisonLocation].chiefs || []).filter(
+                (chief: { name: string; }) => !chiefsToMove.includes(chief.name)
+            );
+        }
+      }
+    }
+
+    // Deduct troops for current research
+    if (playerTribe.currentResearch) {
+        const { location, assignedTroops } = playerTribe.currentResearch;
+        if (available[location]) {
+            available[location].troops = Math.max(0, available[location].troops - assignedTroops);
+        }
+    }
+
+    return available;
+
+  }, [playerTribe, plannedActions]);
 
   const formatHexCoords = (q: number, r: number): string => {
     return `${q},${r}`;

@@ -20,11 +20,10 @@ interface HexagonProps {
   onTouchEnd?: (event: React.TouchEvent) => void;
   isPoliticalMode?: boolean;
   politicalData?: { color: string; tribeName: string };
-  isHomeBase?: boolean;
 }
 
 export const Hexagon: React.FC<HexagonProps> = (props) => {
-  const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData, isHomeBase } = props;
+  const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
 
   const { q, r, terrain, poi } = hexData;
   const width = Math.sqrt(3) * size;
@@ -66,18 +65,6 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         
         return (
             <g className="pointer-events-none transform-gpu transition-transform group-hover:-translate-y-1 duration-200">
-                {/* Home base gets a special golden border */}
-                {isHomeBase && (
-                    <circle
-                        cx="0"
-                        cy={-size * 0.1}
-                        r={size * 0.55}
-                        fill="none"
-                        stroke="#fbbf24"
-                        strokeWidth="2"
-                        style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }}
-                    />
-                )}
                 <circle
                     cx="0"
                     cy={-size * 0.1}
@@ -90,12 +77,6 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                 <text x="0" y={-size * 0.1} textAnchor="middle" className="select-none" fontSize={size * 0.6} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                     {icon}
                 </text>
-                {/* Home base crown indicator */}
-                {isHomeBase && (
-                    <text x={size * 0.35} y={-size * 0.45} textAnchor="middle" className="select-none" fontSize={size * 0.3} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
-                        👑
-                    </text>
-                )}
                 {troops > 0 && (
                      <g transform={`translate(0, ${size * 0.5})`}>
                         <rect x={-size*0.4} y="0" width={size*0.8} height={size*0.4} rx="2" className={`${getTroopBoxStyle(tribe)} stroke-black/50`} strokeWidth="0.5" />
@@ -221,16 +202,21 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
 
       {!isPoliticalMode && startOrder !== null && !isFogged && (
          <g className="pointer-events-none">
-          <path 
-            d={`M ${-size*0.6} ${size*0.5} L 0 ${-size*0.5} L ${size*0.6} ${size*0.5} Z`}
-            className="fill-amber-200 stroke-slate-800"
-            strokeWidth="0.7"
-          />
-           <path 
-            d={`M 0 ${-size*0.5} L 0 ${size*0.5}`} 
-            className="stroke-slate-800"
-            strokeWidth="0.7"
-          />
+          {/* Large castle symbol for starting location/home base */}
+          <text
+            x="0"
+            y="0"
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="select-none"
+            fontSize={size * 1.2}
+            style={{
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+              fill: '#fbbf24'
+            }}
+          >
+            🏰
+          </text>
         </g>
       )}
 

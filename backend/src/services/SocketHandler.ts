@@ -648,6 +648,37 @@ export class SocketHandler {
       }
     });
 
+    // AI Management handlers
+    socket.on('admin:addAITribe', async (aiData: any) => {
+      console.log(`🤖 Admin adding AI tribe:`, aiData);
+      try {
+        const success = await this.gameService.addAITribeAdvanced(aiData);
+        if (success) {
+          await emitGameState();
+          console.log(`✅ AI tribe added successfully`);
+        } else {
+          console.log(`❌ Failed to add AI tribe - no suitable location`);
+        }
+      } catch (error) {
+        console.error(`❌ Error adding AI tribe:`, error);
+      }
+    });
+
+    socket.on('admin:removeAITribe', async (tribeId: string) => {
+      console.log(`🤖 Admin removing AI tribe: ${tribeId}`);
+      try {
+        const success = await this.gameService.removeAITribe(tribeId);
+        if (success) {
+          await emitGameState();
+          console.log(`✅ AI tribe removed successfully`);
+        } else {
+          console.log(`❌ Failed to remove AI tribe - tribe not found`);
+        }
+      } catch (error) {
+        console.error(`❌ Error removing AI tribe:`, error);
+      }
+    });
+
     // Login announcement management handlers
     socket.on('admin:addLoginAnnouncement', async (announcement: LoginAnnouncement) => {
       console.log(`📢 Admin adding login announcement: ${announcement.title}`);

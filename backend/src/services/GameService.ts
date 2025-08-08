@@ -278,4 +278,117 @@ export class GameService {
   async addWandererAITribe(): Promise<boolean> {
     return this.addAITribe(AIType.Wanderer, true);
   }
+
+  // Advanced AI tribe management with full control
+  async addAITribeAdvanced(aiData: {
+    aiType: string;
+    spawnLocation: string;
+    customName?: string;
+    backstory?: string;
+  }): Promise<boolean> {
+    const gameState = await this.getGameState();
+    if (!gameState) return false;
+
+    // Validate spawn location is not occupied
+    const occupied = new Set(gameState.tribes.map(t => t.location));
+    if (occupied.has(aiData.spawnLocation)) {
+      console.log(`❌ Spawn location ${aiData.spawnLocation} is already occupied`);
+      return false;
+    }
+
+    // Validate the hex exists and is suitable
+    const targetHex = gameState.mapData.find(hex => {
+      const coords = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+      return coords === aiData.spawnLocation;
+    });
+
+    if (!targetHex || !['Plains', 'Forest', 'Wasteland', 'Desert'].includes(targetHex.terrain)) {
+      console.log(`❌ Invalid spawn location: ${aiData.spawnLocation}`);
+      return false;
+    }
+
+    // Generate AI tribe with custom parameters
+    const existingNames = gameState.tribes.map(t => t.tribeName);
+    const aiTribe = generateAITribe(
+      aiData.spawnLocation,
+      existingNames,
+      aiData.aiType as any,
+      gameState.mapData
+    );
+
+    // Apply custom name if provided
+    if (aiData.customName && aiData.customName.trim()) {
+      aiTribe.tribeName = aiData.customName.trim();
+    }
+
+    // Store backstory in a custom field if provided
+    if (aiData.backstory && aiData.backstory.trim()) {
+      (aiTribe as any).backstory = aiData.backstory.trim();
+    }
+
+    // Set up diplomacy based on AI type
+    gameState.tribes.forEach(t => {
+      let initialStatus = DiplomaticStatus.War;
+
+      // More nuanced diplomacy based on AI type
+      switch (aiTribe.aiType) {
+        case AIType.Trader:
+          // Traders start neutral with players, war with other AI
+          initialStatus = t.isAI ? DiplomaticStatus.War : DiplomaticStatus.Neutral;
+          break;
+        case AIType.Defensive:
+          // Defensive AI starts neutral with everyone
+          initialStatus = DiplomaticStatus.Neutral;
+          break;
+        case AIType.Scavenger:
+          // Scavengers avoid conflict initially
+          initialStatus = DiplomaticStatus.Neutral;
+          break;
+        case AIType.Aggressive:
+        case AIType.Expansionist:
+        default:
+          // Aggressive types start at war
+          initialStatus = DiplomaticStatus.War;
+          break;
+      }
+
+      aiTribe.diplomacy[t.id] = { status: initialStatus };
+      t.diplomacy[aiTribe.id] = { status: initialStatus };
+    });
+
+    gameState.tribes.push(aiTribe);
+    await this.updateGameState(gameState);
+
+    console.log(`✅ Added AI tribe: ${aiTribe.tribeName} (${aiTribe.aiType}) at ${aiData.spawnLocation}`);
+    return true;
+  }
+
+  async removeAITribe(tribeId: string): Promise<boolean> {
+    const gameState = await this.getGameState();
+    if (!gameState) return false;
+
+    const tribeIndex = gameState.tribes.findIndex(t => t.id === tribeId && t.isAI);
+    if (tribeIndex === -1) {
+      console.log(`❌ AI tribe not found: ${tribeId}`);
+      return false;
+    }
+
+    const removedTribe = gameState.tribes[tribeIndex];
+
+    // Remove the tribe
+    gameState.tribes.splice(tribeIndex, 1);
+
+    // Clean up diplomacy references
+    gameState.tribes.forEach(t => {
+      delete t.diplomacy[tribeId];
+    });
+
+    // Remove any journeys belonging to this tribe
+    gameState.journeys = gameState.journeys.filter(j => j.ownerTribeId !== tribeId);
+
+    await this.updateGameState(gameState);
+
+    console.log(`✅ Removed AI tribe: ${removedTribe.tribeName} (${removedTribe.aiType})`);
+    return true;
+  }
 }

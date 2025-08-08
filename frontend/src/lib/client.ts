@@ -395,6 +395,10 @@ export const saveNewsletter = createEmitter<any>('admin:saveNewsletter');
 export const publishNewsletter = createEmitter<string>('admin:publishNewsletter');
 export const unpublishNewsletter = createEmitter<string>('admin:unpublishNewsletter');
 
+// AI Management emitters
+export const addAITribe = createEmitter<any>('admin:addAITribe');
+export const removeAITribe = createEmitter<string>('admin:removeAITribe');
+
 // Login announcement emitters
 export const addLoginAnnouncement = createEmitter<any>('admin:addLoginAnnouncement');
 export const toggleLoginAnnouncement = createEmitter<string>('admin:toggleLoginAnnouncement');
@@ -451,8 +455,8 @@ export const requestAsset = createEmitter<{ tribeId: string, assetName: string, 
 export const approveAsset = createEmitter<string>('approve_asset');
 export const denyAsset = createEmitter<string>('deny_asset');
 
-// AI emitter
-export const addAITribe = (aiType?: string) => socket.emit('add_ai_tribe', aiType);
+// Legacy AI emitter (keeping for backward compatibility)
+export const addAITribeLegacy = (aiType?: string) => socket.emit('add_ai_tribe', aiType);
 
 // Diplomacy emitters
 export const proposeAlliance = createEmitter<{ fromTribeId: string, toTribeId: string }>('propose_alliance');

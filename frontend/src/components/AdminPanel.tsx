@@ -29,7 +29,7 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   console.log('🛠️ AdminPanel rendering with props:', { gameState: !!props.gameState, users: props.users?.length, currentUser: !!props.currentUser });
   const { gameState, users, currentUser, onBack, onNavigateToEditor, onNavigateToGameEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
-  const [selectedAIType, setSelectedAIType] = useState<AIType>(AIType.Wanderer);
+
 
   // Safety checks
   if (!gameState) {
@@ -60,6 +60,14 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [announcementEnabled, setAnnouncementEnabled] = useState(true);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<any>(null);
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
+
+  // AI Management state
+  const [showAIManagementModal, setShowAIManagementModal] = useState(false);
+  const [showAddAIModal, setShowAddAIModal] = useState(false);
+  const [selectedAIType, setSelectedAIType] = useState<string>('Aggressive');
+  const [selectedSpawnLocation, setSelectedSpawnLocation] = useState('');
+  const [aiTribeName, setAITribeName] = useState('');
+  const [aiBackstory, setAIBackstory] = useState('');
   const [backupList, setBackupList] = useState<BackupFile[]>([]);
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
   const [deadlineHours, setDeadlineHours] = useState(24);
@@ -387,6 +395,45 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleUnpublishNewsletter = (newsletterId: string) => {
     client.unpublishNewsletter(newsletterId);
+  };
+
+  // AI Management handlers
+  const handleAddAITribe = () => {
+    if (!selectedSpawnLocation) {
+      alert('Please select a spawn location for the AI tribe');
+      return;
+    }
+
+    const aiData = {
+      aiType: selectedAIType,
+      spawnLocation: selectedSpawnLocation,
+      customName: aiTribeName.trim() || undefined,
+      backstory: aiBackstory.trim() || undefined
+    };
+
+    client.addAITribe(aiData);
+    setShowAddAIModal(false);
+    setAITribeName('');
+    setAIBackstory('');
+    setSelectedSpawnLocation('');
+  };
+
+  const handleRemoveAITribe = (tribeId: string) => {
+    if (confirm('Are you sure you want to remove this AI tribe? This action cannot be undone.')) {
+      client.removeAITribe(tribeId);
+    }
+  };
+
+  const handleBulkRemoveAI = () => {
+    const aiTribes = gameState.tribes.filter(t => t.isAI);
+    if (aiTribes.length === 0) {
+      alert('No AI tribes to remove');
+      return;
+    }
+
+    if (confirm(`Are you sure you want to remove all ${aiTribes.length} AI tribes? This action cannot be undone.`)) {
+      aiTribes.forEach(tribe => client.removeAITribe(tribe.id));
+    }
   };
 
   // Set up backup status callback and fetch initial status
@@ -1055,6 +1102,56 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            <Card title="AI Tribe Management" className="bg-gradient-to-br from-purple-800/90 to-purple-900/90 backdrop-blur-sm border-purple-600/50">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => setShowAIManagementModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    🤖 Manage AI Tribes
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddAIModal(true)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    ➕ Add AI Tribe
+                  </Button>
+                </div>
+
+                <div className="bg-purple-900/20 border border-purple-600 rounded p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-purple-300">Current AI Tribes:</span>
+                    <span className="text-xs text-purple-400">
+                      {gameState.tribes.filter(t => t.isAI).length} active
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {gameState.tribes.filter(t => t.isAI).map(tribe => (
+                      <div key={tribe.id} className="flex items-center justify-between p-2 bg-purple-800/30 rounded">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">{tribe.icon}</span>
+                          <div>
+                            <div className="text-sm font-medium text-purple-200">{tribe.tribeName}</div>
+                            <div className="text-xs text-purple-400">{tribe.aiType} • {tribe.location}</div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => handleRemoveAITribe(tribe.id)}
+                          className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    )) || (
+                      <p className="text-purple-400 text-sm text-center py-2">No AI tribes active</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             <Card title="Newsletter Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <p className="text-neutral-400 leading-relaxed">
@@ -1192,7 +1289,7 @@ GAME STATISTICS:
 
                   <Button
                     className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
-                    onClick={() => onAddAITribe(selectedAIType)}
+                    onClick={() => setShowAddAIModal(true)}
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1996,6 +2093,169 @@ GAME STATISTICS:
           </div>
         </div>
       )}
+      {/* Add AI Tribe Modal */}
+      {showAddAIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-[500px] border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">🤖 Add AI Tribe</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  AI Personality Type
+                </label>
+                <select
+                  value={selectedAIType}
+                  onChange={(e) => setSelectedAIType(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="Aggressive">⚔️ Aggressive - Warlike and expansionist</option>
+                  <option value="Defensive">🛡️ Defensive - Cautious and protective</option>
+                  <option value="Expansionist">🗺️ Expansionist - Territory focused</option>
+                  <option value="Trader">💰 Trader - Commerce and diplomacy</option>
+                  <option value="Scavenger">🔍 Scavenger - Resource gathering</option>
+                  <option value="Wanderer">🚶 Wanderer - Nomadic and unpredictable</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Spawn Location
+                </label>
+                <select
+                  value={selectedSpawnLocation}
+                  onChange={(e) => setSelectedSpawnLocation(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Select spawn location...</option>
+                  {gameState.mapData
+                    .filter(hex =>
+                      ['Plains', 'Forest', 'Wasteland', 'Desert'].includes(hex.terrain) &&
+                      !hex.poi &&
+                      !gameState.tribes.some(t => t.location === `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`)
+                    )
+                    .slice(0, 50) // Limit options for performance
+                    .map(hex => {
+                      const coords = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+                      return (
+                        <option key={coords} value={coords}>
+                          {coords} ({hex.terrain})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Custom Tribe Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={aiTribeName}
+                  onChange={(e) => setAITribeName(e.target.value)}
+                  placeholder="Leave empty for auto-generated name"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Backstory (Optional)
+                </label>
+                <textarea
+                  value={aiBackstory}
+                  onChange={(e) => setAIBackstory(e.target.value)}
+                  placeholder="A brief backstory for this AI tribe..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowAddAIModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddAITribe}
+                  disabled={!selectedSpawnLocation}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Add AI Tribe
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Management Modal */}
+      {showAIManagementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-[600px] border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">🤖 AI Tribe Management</h3>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-300">
+                  Managing {gameState.tribes.filter(t => t.isAI).length} AI tribes
+                </span>
+                <Button
+                  onClick={handleBulkRemoveAI}
+                  className="bg-red-600 hover:bg-red-700 text-sm"
+                  disabled={gameState.tribes.filter(t => t.isAI).length === 0}
+                >
+                  Remove All AI
+                </Button>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto space-y-3">
+                {gameState.tribes.filter(t => t.isAI).map(tribe => (
+                  <div key={tribe.id} className="p-4 bg-purple-900/20 border border-purple-600 rounded">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{tribe.icon}</span>
+                        <div>
+                          <div className="font-medium text-purple-200">{tribe.tribeName}</div>
+                          <div className="text-sm text-purple-400">
+                            {tribe.aiType} • Location: {tribe.location}
+                          </div>
+                          <div className="text-xs text-neutral-400 mt-1">
+                            Troops: {Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0)} •
+                            Weapons: {Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.weapons, 0)} •
+                            Morale: {tribe.globalResources.morale}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleRemoveAITribe(tribe.id)}
+                        className="bg-red-600 hover:bg-red-700 text-sm"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )) || (
+                  <p className="text-neutral-400 text-center py-8">No AI tribes currently active</p>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setShowAIManagementModal(false)}
+                  variant="secondary"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

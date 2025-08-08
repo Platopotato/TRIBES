@@ -238,8 +238,8 @@ export class DatabaseService {
       console.log(`✅ Updated main game state: turn ${gameState.turn}`);
 
       // Update tribes individually without recreating
-      // Only update simple fields to avoid Prisma relationship complexity
       for (const tribe of gameState.tribes) {
+        // Update basic tribe data
         await this.prisma.tribe.update({
           where: { id: tribe.id },
           data: {
@@ -251,10 +251,40 @@ export class DatabaseService {
             stats: tribe.stats as any,
             rationLevel: tribe.rationLevel,
             exploredHexes: tribe.exploredHexes,
-            // Skip garrisons - they're handled as separate records
           }
         });
-        console.log(`✅ Updated tribe: ${tribe.tribeName}`);
+        console.log(`✅ Updated tribe basic data: ${tribe.tribeName}`);
+
+        // Update garrisons separately (they're separate database records)
+        if (tribe.garrisons) {
+          console.log(`🏰 Updating garrisons for ${tribe.tribeName}...`);
+
+          // Delete existing garrisons for this tribe
+          await this.prisma.garrison.deleteMany({
+            where: { tribeId: tribe.id }
+          });
+
+          // Create new garrisons
+          for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
+            // Parse hex coordinate (format: "066.046" -> q=66, r=46)
+            const [qStr, rStr] = hexCoord.split('.');
+            const hexQ = parseInt(qStr, 10);
+            const hexR = parseInt(rStr, 10);
+
+            await this.prisma.garrison.create({
+              data: {
+                tribeId: tribe.id,
+                hexQ: hexQ,
+                hexR: hexR,
+                troops: garrisonData.troops || 0,
+                weapons: garrisonData.weapons || 0,
+                chiefs: garrisonData.chiefs as any || [],
+                hexId: hexCoord, // Store the original coordinate string for reference
+              }
+            });
+          }
+          console.log(`✅ Updated ${Object.keys(tribe.garrisons).length} garrisons for ${tribe.tribeName}`);
+        }
       }
 
       console.log('✅ Lightweight game state update completed');

@@ -61,27 +61,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ALWAYS fetch from network with aggressive cache-busting
-  event.respondWith(
-    fetch(request.url + (request.url.includes('?') ? '&' : '?') + '_cb=' + Date.now(), {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    }).catch(() => {
-      // If cache-busted request fails, try original request
-      return fetch(request, {
+  // Only cache-bust same-origin requests to avoid CORS issues
+  const isSameOrigin = url.origin === self.location.origin;
+
+  if (isSameOrigin) {
+    // Same-origin: use aggressive cache-busting
+    event.respondWith(
+      fetch(request.url + (request.url.includes('?') ? '&' : '?') + '_cb=' + Date.now(), {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
         }
-      });
-    })
-  );
+      }).catch(() => {
+        // If cache-busted request fails, try original request
+        return fetch(request, { cache: 'no-store' });
+      })
+    );
+  } else {
+    // Cross-origin: use original request to avoid CORS issues
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+    );
+  }
 });
 
 // Force reload all clients when service worker updates

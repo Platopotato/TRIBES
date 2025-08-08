@@ -167,9 +167,12 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     if (processTurnConfirmStep === 2) {
       const finalConfirm = confirm('🚨 FINAL CONFIRMATION\n\nYou are about to PROCESS ALL TURNS.\n\nThis is the point of no return. Are you absolutely certain?');
       if (finalConfirm) {
+        console.log('🚨 FINAL STEP: Calling onProcessTurn()');
         onProcessTurn();
         setProcessTurnConfirmStep(0);
+        console.log('✅ FINAL STEP: onProcessTurn() called, step reset to 0');
       } else {
+        console.log('❌ FINAL STEP: User cancelled final confirmation');
         setProcessTurnConfirmStep(0);
       }
     }

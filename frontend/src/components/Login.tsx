@@ -36,11 +36,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
 
 
       <div className="mb-8 max-w-sm w-full">
-        <img
-          src="https://www.platopotato.com/NFT/Tribes/assets/Tribeslogo.png"
-          alt="Radix Tribes Logo"
-          className="w-full h-32 object-contain rounded-lg border-2 border-amber-500 p-4 bg-slate-800/50"
-        />
+        <div className="w-full h-32 flex items-center justify-center rounded-lg border-2 border-amber-500 p-4 bg-slate-800/50">
+          <h1 className="text-3xl font-bold text-amber-400 text-center">
+            RADIX TRIBES
+          </h1>
+        </div>
       </div>
 
       {/* Game Suspension Warning */}

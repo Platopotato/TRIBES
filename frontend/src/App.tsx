@@ -528,7 +528,6 @@ const App: React.FC = () => {
             onAcceptProposal={handleAcceptProposal}
             onRejectProposal={handleRejectProposal}
             turnDeadline={gameState.turnDeadline}
-            ticker={gameState.ticker}
           />
         );
           }

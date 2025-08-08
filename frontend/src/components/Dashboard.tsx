@@ -17,7 +17,7 @@ import TechTreeModal from './TechTreeModal';
 import HelpModal from './HelpModal';
 import CodexModal from './CodexModal';
 import PendingTradesPanel from './PendingTradesPanel';
-import Ticker from './Ticker';
+
 import JourneysPanel from './JourneysPanel';
 import DiplomacyPanel from './DiplomacyPanel';
 import Leaderboard from './Leaderboard';
@@ -56,14 +56,13 @@ interface DashboardProps {
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
   turnDeadline?: TurnDeadline;
-  ticker?: any; // Ticker data for home screen
   uiMode?: 'mobile' | 'desktop'; // New prop to control UI mode
 }
 
 type DashboardView = 'planning' | 'results' | 'waiting';
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, turnDeadline, ticker, uiMode = 'mobile' } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, turnDeadline, uiMode = 'mobile' } = props;
 
   // Smart UI detection - mobile gets floating modals, desktop gets integrated windows
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
@@ -713,10 +712,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               </div>
             )}
 
-            {/* Ticker - only show on home tab */}
-            {ticker && (
-              <Ticker ticker={ticker} />
-            )}
+
           </div>
         )}
 

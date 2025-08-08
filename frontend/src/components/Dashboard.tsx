@@ -796,7 +796,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-2">
                 {turnSubmitted ?
-                  `⚡ Turn Actions (${playerTribe?.actions?.length || 0}/${maxActions}) TURN SUBMITTED` :
+                  `⚡ Turn Actions (${plannedActions.length}/${maxActions}) TURN SUBMITTED` :
                   '⚡ Actions'}
               </h2>
               <p className="text-slate-300">
@@ -843,7 +843,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   }`}
                 >
                   {turnSubmitted ?
-                    `✅ TURN SUBMITTED (${playerTribe?.actions?.length || 0}/${maxActions})` :
+                    `✅ TURN SUBMITTED (${plannedActions.length}/${maxActions})` :
                    plannedActions.length >= maxActions ? `Max Actions Reached (${maxActions})` : '+ Add New Action'}
                 </button>
                 <div className="bg-slate-700 p-4 rounded-lg">

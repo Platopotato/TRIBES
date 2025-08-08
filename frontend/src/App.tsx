@@ -91,7 +91,10 @@ const App: React.FC = () => {
     const timestamp = new Date().toLocaleTimeString();
     const fullMessage = `${timestamp}: ${message}`;
     setDebugMessages(prev => [...prev.slice(-9), fullMessage]); // Keep last 10 messages
-    console.log(fullMessage); // Still log to console too
+    // Only log important messages to reduce console spam
+    if (message.includes('❌') || message.includes('✅') || message.includes('🎯')) {
+      console.log(fullMessage);
+    }
   }, []);
   
   useEffect(() => {
@@ -140,95 +143,55 @@ const App: React.FC = () => {
   
   const playerTribe = useMemo(() => {
     if (!currentUser || !gameState) {
-      addDebugMessage(`🔍 TRIBE: Missing data - user:${!!currentUser} state:${!!gameState}`);
       return undefined;
     }
-
-    addDebugMessage(`🔍 TRIBE: Looking for ${currentUser.username} (ID: ${currentUser.id})`);
-
-    // Debug: Show all tribe playerIds
-    const tribeInfo = gameState.tribes.map(t => `${t.tribeName}:${t.playerId}`).join(', ');
-    addDebugMessage(`🏘️ TRIBES: ${tribeInfo}`);
 
     // First try to find by user ID
     let tribe = gameState.tribes.find(t => t.playerId === currentUser.id);
 
     // If not found by ID, try to find by username (fallback for ID mismatches)
     if (!tribe) {
-      addDebugMessage(`🔍 TRIBE: ID lookup failed, trying username fallback...`);
       tribe = gameState.tribes.find(t => t.playerName === currentUser.username);
-      if (tribe) {
-        addDebugMessage(`✅ TRIBE: Found by username! ${tribe.tribeName} (playerName: ${tribe.playerName}, playerID: ${tribe.playerId})`);
-        addDebugMessage(`🔧 TRIBE: ID mismatch detected - tribe has ${tribe.playerId}, user has ${currentUser.id}`);
-      } else {
-        addDebugMessage(`❌ TRIBE: Username fallback failed - no tribe with playerName: ${currentUser.username}`);
-      }
-    }
-
-    addDebugMessage(`🎯 TRIBE: ${tribe ? tribe.tribeName : 'NONE FOUND'}`);
-
-    if (!tribe && currentUser.role !== 'admin') {
-      addDebugMessage(`⚠️ TRIBE: No tribe for non-admin! Will redirect!`);
     }
 
     return tribe;
-  }, [currentUser, gameState]);
+  }, [currentUser?.id, currentUser?.username, gameState?.tribes]);
 
+  // Consolidated effect for view management
   useEffect(() => {
     if (isLoading) {
-      console.log('🔄 EFFECT 1: Skipping - isLoading:', isLoading);
-      return;
+      return; // Wait for initial load
     }
 
     // Handle logout case - if no user, go to login (but allow register, forgot_password views)
     if (!currentUser && view !== 'register' && view !== 'forgot_password' && view !== 'registration_success') {
-      console.log('🔄 EFFECT 1: No user, setting view to login (current view was:', view, ')');
       setView('login');
       return;
     }
 
     // Handle case where user exists but no game state yet
     if (currentUser && !gameState) {
-      console.log('🔄 EFFECT 1: User exists but no game state yet, waiting...');
-      return;
+      return; // Wait for game state
     }
 
-    if (view === 'create_tribe' && playerTribe) {
-        console.log('🔄 EFFECT 1: User has tribe, redirecting from create_tribe to game');
-        setView('game');
-    }
-  }, [gameState, playerTribe, currentUser, view, isLoading]);
-
-  // Handle view changes when user is loaded from session storage
-  useEffect(() => {
-    if (!currentUser || isLoading) {
-      console.log('🔄 EFFECT 2: Skipping - currentUser:', !!currentUser, 'isLoading:', isLoading);
-      return;
-    }
-
-    console.log('🔄 EFFECT 2: User loaded, updating view for:', currentUser.username, 'current view:', view);
-
-    // If we're still on login view but have a user, redirect appropriately
-    if (view === 'login') {
-      if (gameState) {
+    // Handle view transitions for authenticated users
+    if (currentUser && gameState) {
+      if (view === 'login') {
+        // User is authenticated but still on login view - redirect appropriately
         const userTribe = gameState.tribes.find(t => t.playerId === currentUser.id);
         if (userTribe) {
-          console.log('👥 EFFECT 2: User has tribe, redirecting to game');
           setView('game');
         } else if (currentUser.role !== 'admin') {
-          console.log('🏗️ EFFECT 2: User needs to create tribe');
           setView('create_tribe');
         } else {
-          console.log('👑 EFFECT 2: Admin user, redirecting to game');
-          setView('game');
+          setView('game'); // Admin without tribe
         }
-      } else {
-        console.log('🔄 EFFECT 2: No gameState yet, waiting...');
+      } else if (view === 'create_tribe' && playerTribe) {
+        // User created a tribe, redirect to game
+        setView('game');
       }
-    } else {
-      console.log('🔄 EFFECT 2: Not on login view, current view:', view);
     }
-  }, [currentUser, gameState, view, isLoading]);
+  }, [currentUser, gameState, view, isLoading, playerTribe]);
 
   // Remove the polling effect since Socket.IO will handle real-time updates
   // useEffect(() => {

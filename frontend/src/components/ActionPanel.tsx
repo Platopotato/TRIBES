@@ -45,9 +45,24 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
     return details || 'No details';
   };
 
+  const cardTitle = phase === 'waiting'
+    ? `Turn Actions (${actions.length}/${maxActions}) TURN SUBMITTED`
+    : `Turn Actions (${actions.length}/${maxActions})`;
+
   return (
-    <Card title={`Turn Actions (${actions.length}/${maxActions})`}>
+    <Card title={cardTitle}>
       <div className="space-y-3">
+        {phase === 'waiting' && (
+          <div className="bg-green-900/50 border border-green-400 p-3 rounded-lg text-center mb-3">
+            <div className="text-green-200 font-bold text-sm">
+              ✅ Turn Submitted Successfully
+            </div>
+            <div className="text-green-300 text-xs mt-1">
+              Actions are locked in and waiting for admin processing
+            </div>
+          </div>
+        )}
+
         {actions.length > 0 ? (
           <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
             {actions.map(action => (
@@ -74,12 +89,15 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
             {isPlanning ? 'No actions planned.' : 'Processing...'}
           </p>
         )}
-        <div className="flex space-x-2 pt-2 border-t border-slate-700">
-          <Button variant="secondary" className="flex-1" onClick={onOpenModal} disabled={!isPlanning || actions.length >= maxActions}>
-            Add Action
-          </Button>
-          <Button className="flex-1" onClick={onFinalize} disabled={!isPlanning || actions.length === 0}>Finalize Actions</Button>
-        </div>
+
+        {isPlanning && (
+          <div className="flex space-x-2 pt-2 border-t border-slate-700">
+            <Button variant="secondary" className="flex-1" onClick={onOpenModal} disabled={!isPlanning || actions.length >= maxActions}>
+              Add Action
+            </Button>
+            <Button className="flex-1" onClick={onFinalize} disabled={!isPlanning || actions.length === 0}>Finalize Actions</Button>
+          </div>
+        )}
       </div>
     </Card>
   );

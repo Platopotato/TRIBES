@@ -758,10 +758,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           <div className="space-y-4">
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-2">
-                {turnSubmitted ? '🔒 Turn Submitted' : '⚡ Actions'}
+                {turnSubmitted ?
+                  `⚡ Turn Actions (${playerTribe?.actions?.length || 0}/${maxActions}) TURN SUBMITTED` :
+                  '⚡ Actions'}
               </h2>
               <p className="text-slate-300">
-                {turnSubmitted ? 'Waiting for admin to process the turn.' : 'Plan your tribe\'s actions for this turn.'}
+                {turnSubmitted ?
+                  'Your actions are locked in and waiting for admin to process the turn.' :
+                  'Plan your tribe\'s actions for this turn.'}
               </p>
 
               {/* Success Message */}
@@ -795,9 +799,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     setIsModalOpen(true);
                   }}
                   disabled={turnSubmitted || plannedActions.length >= maxActions}
-                  className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-3 rounded-lg font-bold transition-colors"
+                  className={`w-full p-3 rounded-lg font-bold transition-colors ${
+                    turnSubmitted
+                      ? 'bg-green-700 text-green-100 cursor-not-allowed'
+                      : 'bg-amber-600 hover:bg-amber-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white'
+                  }`}
                 >
-                  {turnSubmitted ? '🔒 Turn Submitted' :
+                  {turnSubmitted ?
+                    `✅ TURN SUBMITTED (${playerTribe?.actions?.length || 0}/${maxActions})` :
                    plannedActions.length >= maxActions ? `Max Actions Reached (${maxActions})` : '+ Add New Action'}
                 </button>
                 <div className="bg-slate-700 p-4 rounded-lg">
@@ -875,12 +884,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 )}
 
                 {turnSubmitted && (
-                  <div className="bg-blue-900/50 border border-blue-400 p-4 rounded-lg text-center">
-                    <div className="text-blue-200 font-bold text-lg mb-2">⏳ Waiting for Admin</div>
-                    <div className="text-blue-300 text-sm">
-                      Your {playerTribe?.actions?.length || 0} action{(playerTribe?.actions?.length || 0) !== 1 ? 's have' : ' has'} been submitted.
+                  <div className="bg-green-900/50 border border-green-400 p-4 rounded-lg text-center">
+                    <div className="text-green-200 font-bold text-lg mb-2">
+                      ✅ Turn Submitted Successfully
+                    </div>
+                    <div className="text-green-300 text-sm">
+                      Your {playerTribe?.actions?.length || 0} action{(playerTribe?.actions?.length || 0) !== 1 ? 's are' : ' is'} locked in and ready for processing.
                       <br />
-                      Please wait for the admin to process the turn.
+                      <span className="text-green-200 font-medium">⏳ Waiting for admin to process Turn {turn}</span>
                     </div>
                   </div>
                 )}

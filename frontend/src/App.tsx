@@ -366,8 +366,14 @@ const App: React.FC = () => {
       return <TransitionScreen message="Loading Wasteland..." />;
     }
 
-    // Check for game suspension (except for admin users and login screen)
-    if (gameState.suspended && currentUser?.role !== 'admin' && view !== 'login') {
+    // Check for game suspension - show to everyone except logged-in admins
+    // Allow access to login screen for admin login
+    if (gameState.suspended && currentUser?.role !== 'admin') {
+      // If on login screen, allow it to render normally
+      if (view === 'login') {
+        // Show suspension warning on login screen but allow login
+        // This will be handled in the login component
+      } else {
       return (
         <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-neutral-800 rounded-lg border border-red-600 shadow-2xl">
@@ -405,6 +411,7 @@ const App: React.FC = () => {
           </div>
         </div>
       );
+      }
     }
 
     console.log('🎯 Rendering view:', view);
@@ -440,6 +447,8 @@ const App: React.FC = () => {
                 onClearError={() => setLoginError('')}
                 announcements={gameState?.loginAnnouncements?.announcements || []}
                 announcementsEnabled={gameState?.loginAnnouncements?.isEnabled || false}
+                gameSuspended={gameState?.suspended || false}
+                suspensionMessage={gameState?.suspensionMessage}
               />;
 
             case 'register':

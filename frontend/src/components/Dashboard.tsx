@@ -114,8 +114,22 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     if (playerTribe && playerTribe.turnSubmitted !== undefined) {
       console.log('🔄 FRONTEND: Syncing turnSubmitted state:', playerTribe.turnSubmitted);
       setTurnSubmitted(playerTribe.turnSubmitted);
+
+      // AGGRESSIVE FIX: Force component re-render when server state changes
+      if (!playerTribe.turnSubmitted && turnSubmitted) {
+        console.log('🚨 FRONTEND: FORCING STATE RESET - Server says false, local was true');
+        setTurnSubmitted(false);
+        // Force view recalculation
+        setTimeout(() => {
+          if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
+            setView('results');
+          } else {
+            setView('planning');
+          }
+        }, 100);
+      }
     }
-  }, [playerTribe?.turnSubmitted]);
+  }, [playerTribe?.turnSubmitted, turnSubmitted]);
 
   useEffect(() => {
     if (playerTribe) {
@@ -955,6 +969,26 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                       <br />
                       <span className="text-green-200 font-medium">⏳ Waiting for admin to process Turn {turn}</span>
                     </div>
+                  </div>
+                )}
+
+                {/* DEBUGGING: Manual state reset button */}
+                {!playerTribe?.turnSubmitted && !turnSubmitted && playerTribe?.lastTurnResults && playerTribe.lastTurnResults.length > 0 && (
+                  <div className="bg-blue-900/50 border border-blue-400 p-4 rounded-lg text-center">
+                    <div className="text-blue-200 font-bold text-sm mb-2">
+                      🔧 DEBUG: Turn completed but UI stuck?
+                    </div>
+                    <button
+                      onClick={() => {
+                        console.log('🔧 MANUAL RESET: Forcing UI to planning mode');
+                        setTurnSubmitted(false);
+                        setView('planning');
+                        setPlannedActions([]);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                    >
+                      🔄 Force UI Reset
+                    </button>
                   </div>
                 )}
               </div>

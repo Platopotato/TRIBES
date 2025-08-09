@@ -26,7 +26,11 @@ export function processGlobalTurn(gameState: GameState): GameState {
         for (const action of tribe.actions || []) {
             let result = '';
 
-            switch (action.actionType) {
+            // Validate action data
+            if (!action.actionData) {
+                result = `❌ Invalid action: ${action.actionType} - missing action data.`;
+            } else {
+                switch (action.actionType) {
                 case ActionType.Recruit:
                     result = processRecruitAction(tribe, action);
                     break;
@@ -59,6 +63,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
+                }
             }
 
             tribe.lastTurnResults.push({
@@ -76,12 +81,12 @@ export function processGlobalTurn(gameState: GameState): GameState {
         tribe.actions = [];
         tribe.turnSubmitted = false;
 
-        // Add turn completion result to ensure players know they can submit again
-        tribe.lastTurnResults.push({
+        // Add prominent turn completion message
+        tribe.lastTurnResults.unshift({
             id: `turn-complete-${tribe.id}`,
             actionType: ActionType.Upkeep,
             actionData: {},
-            result: `🎯 Turn ${state.turn - 1} completed for ${tribe.tribeName}. You may now plan and submit actions for Turn ${state.turn}.`
+            result: `🎯 TURN ${state.turn - 1} COMPLETED! 🎯\n\n✅ ${tribe.tribeName} may now plan and submit actions for Turn ${state.turn}.\n\n📋 Review your results below and plan your next moves!`
         });
     }
 
@@ -156,11 +161,15 @@ function processDiplomaticProposals(state: any): void {
 
 // --- BASIC ACTION PROCESSORS ---
 function processRecruitAction(tribe: any, action: any): string {
-    const location = action.actionData.location;
-    const garrison = tribe.garrisons[location];
+    const location = action.actionData?.location;
 
+    if (!location) {
+        return `❌ Recruit action failed: No location specified.`;
+    }
+
+    const garrison = tribe.garrisons[location];
     if (!garrison) {
-        return `No garrison found at ${location} to recruit troops.`;
+        return `❌ No garrison found at ${location} to recruit troops. You must have troops at a location to recruit more.`;
     }
 
     const foodCost = 2;
@@ -172,7 +181,7 @@ function processRecruitAction(tribe: any, action: any): string {
     tribe.globalResources.food -= foodCost;
     garrison.troops += 1;
 
-    return `Successfully recruited 1 troop at ${location}. Cost: ${foodCost} food.`;
+    return `✅ Successfully recruited 1 troop at ${location}! Cost: ${foodCost} food. Garrison now has ${garrison.troops} troops.`;
 }
 
 function processRestAction(tribe: any, action: any): string {
@@ -204,13 +213,21 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
 
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
 function processMoveAction(tribe: any, action: any, state: any): string {
-    const fromLocation = action.actionData.fromLocation;
-    const toLocation = action.actionData.toLocation;
-    const troopsToMove = action.actionData.troops || 1;
+    const fromLocation = action.actionData?.fromLocation;
+    const toLocation = action.actionData?.toLocation;
+    const troopsToMove = action.actionData?.troops || 1;
+
+    if (!fromLocation) {
+        return `❌ Move action failed: No source location specified.`;
+    }
+
+    if (!toLocation) {
+        return `❌ Move action failed: No destination location specified.`;
+    }
 
     const fromGarrison = tribe.garrisons[fromLocation];
     if (!fromGarrison) {
-        return `No garrison found at ${fromLocation} to move troops from.`;
+        return `❌ No garrison found at ${fromLocation} to move troops from. You must have troops at the source location.`;
     }
 
     if (fromGarrison.troops < troopsToMove) {
@@ -231,7 +248,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         tribe.exploredHexes.push(toLocation);
     }
 
-    return `Successfully moved ${troopsToMove} troops from ${fromLocation} to ${toLocation}.`;
+    return `✅ Successfully moved ${troopsToMove} troops from ${fromLocation} to ${toLocation}! Destination garrison now has ${tribe.garrisons[toLocation].troops} troops.`;
 }
 
 function processTradeAction(tribe: any, action: any, state: any): string {

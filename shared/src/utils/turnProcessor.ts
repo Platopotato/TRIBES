@@ -1,5 +1,23 @@
 import { GameState, ActionType } from '../types.js';
 
+// --- COORDINATE CONVERSION UTILITIES ---
+function convertToStandardFormat(coords: string): string {
+    // Handle different coordinate formats and convert to standard "051.044" format
+    if (coords.includes(',')) {
+        // Format: "14,-4" -> "064.046" (add 50 offset and pad)
+        const [qStr, rStr] = coords.split(',');
+        const q = parseInt(qStr.trim());
+        const r = parseInt(rStr.trim());
+        return `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
+    } else if (coords.includes('.')) {
+        // Already in correct format: "051.044"
+        return coords;
+    } else {
+        // Unknown format, return as-is
+        return coords;
+    }
+}
+
 // --- PHASE 1 RESTORATION: BASIC ACTIONS ---
 export function processGlobalTurn(gameState: GameState): GameState {
     // PHASE 1: Restore basic actions and upkeep
@@ -258,17 +276,21 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
 function processMoveAction(tribe: any, action: any, state: any): string {
     // Handle both old and new field names
-    const fromLocation = action.actionData?.fromLocation || action.actionData?.start_location;
-    const toLocation = action.actionData?.toLocation || action.actionData?.finish_location;
+    const fromLocationRaw = action.actionData?.fromLocation || action.actionData?.start_location;
+    const toLocationRaw = action.actionData?.toLocation || action.actionData?.finish_location;
     const troopsToMove = action.actionData?.troops || 1;
 
-    if (!fromLocation) {
+    if (!fromLocationRaw) {
         return `❌ Move action failed: No source location specified.`;
     }
 
-    if (!toLocation) {
+    if (!toLocationRaw) {
         return `❌ Move action failed: No destination location specified.`;
     }
+
+    // Convert coordinates to standard format
+    const fromLocation = convertToStandardFormat(fromLocationRaw);
+    const toLocation = convertToStandardFormat(toLocationRaw);
 
     const fromGarrison = tribe.garrisons[fromLocation];
     if (!fromGarrison) {
@@ -284,7 +306,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 
     // Create or update destination garrison
     if (!tribe.garrisons[toLocation]) {
-        tribe.garrisons[toLocation] = { troops: 0, weapons: 0 };
+        tribe.garrisons[toLocation] = { troops: 0, weapons: 0, chiefs: [] };
     }
     tribe.garrisons[toLocation].troops += troopsToMove;
 
@@ -319,7 +341,14 @@ function processTradeAction(tribe: any, action: any, state: any): string {
 
 function processScoutAction(tribe: any, action: any): string {
     // Handle both old and new field names
-    const location = action.actionData.location || action.actionData.target_location;
+    const locationRaw = action.actionData.location || action.actionData.target_location;
+
+    if (!locationRaw) {
+        return `❌ Scout action failed: No location specified.`;
+    }
+
+    // Convert coordinates to standard format
+    const location = convertToStandardFormat(locationRaw);
 
     // Add to explored hexes (only if valid location)
     if (location && !tribe.exploredHexes.includes(location)) {
@@ -335,44 +364,44 @@ function processScoutAction(tribe: any, action: any): string {
 
 function processScavengeAction(tribe: any, action: any): string {
     // Handle both old and new field names
-    const location = action.actionData.location || action.actionData.target_location;
+    const locationRaw = action.actionData.location || action.actionData.target_location;
     const resourceType = action.actionData.resource_type || 'food';
 
-    if (!location) {
+    if (!locationRaw) {
         return `❌ Scavenge action failed: No location specified.`;
     }
+
+    // Convert coordinates to standard format
+    const location = convertToStandardFormat(locationRaw);
 
     // Add to explored hexes
     if (!tribe.exploredHexes.includes(location)) {
         tribe.exploredHexes.push(location);
     }
 
-    // Scavenging results based on resource type
+    // Enhanced scavenging results - better rewards for POI locations
     let resourceGained = 0;
     let resourceName = '';
 
-    switch (resourceType) {
+    // Base scavenging amounts (will be enhanced if POI detected)
+    switch (resourceType.toLowerCase()) {
         case 'food':
-            resourceGained = Math.floor(Math.random() * 3) + 1; // 1-3 food
+            resourceGained = Math.floor(Math.random() * 3) + 2; // 2-4 food (improved)
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
             break;
         case 'scrap':
-            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 scrap
+            resourceGained = Math.floor(Math.random() * 2) + 2; // 2-3 scrap (improved)
             tribe.globalResources.scrap += resourceGained;
             resourceName = 'scrap';
             break;
         case 'weapons':
-            resourceGained = Math.floor(Math.random() * 2); // 0-1 weapons
-            if (resourceGained > 0) {
-                tribe.globalResources.weapons += resourceGained;
-                resourceName = 'weapons';
-            } else {
-                return `Scavenged ${location} for weapons but found nothing useful. The area has been picked clean.`;
-            }
+            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 weapons (improved)
+            tribe.globalResources.weapons += resourceGained;
+            resourceName = 'weapons';
             break;
         default:
-            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 food as default
+            resourceGained = Math.floor(Math.random() * 3) + 2; // 2-4 food as default
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
     }
@@ -518,7 +547,14 @@ function processTradeResponseAction(tribe: any, action: any, state: any): string
 
 function processExploreAction(tribe: any, action: any): string {
     // Handle both old and new field names
-    const location = action.actionData.location || action.actionData.target_location;
+    const locationRaw = action.actionData.location || action.actionData.target_location;
+
+    if (!locationRaw) {
+        return `❌ Explore action failed: No location specified.`;
+    }
+
+    // Convert coordinates to standard format
+    const location = convertToStandardFormat(locationRaw);
 
     // Add to explored hexes (only if valid location)
     if (location && !tribe.exploredHexes.includes(location)) {

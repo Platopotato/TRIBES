@@ -399,6 +399,22 @@ export const unpublishNewsletter = createEmitter<string>('admin:unpublishNewslet
 export const addAITribe = createEmitter<any>('admin:addAITribe');
 export const removeAITribe = createEmitter<string>('admin:removeAITribe');
 
+// AI Management helper functions
+export const addAITribeAdvanced = (aiData: {
+    aiType: string;
+    spawnLocation: string;
+    customName?: string;
+    backstory?: string;
+}) => {
+    console.log('🤖 CLIENT: Sending addAITribe request:', aiData);
+    socket.emit('admin:addAITribe', aiData);
+};
+
+export const addAITribeSimple = (aiType?: string) => {
+    console.log('🤖 CLIENT: Sending simple addAITribe request:', aiType);
+    socket.emit('add_ai_tribe', aiType);
+};
+
 // Login announcement emitters
 export const addLoginAnnouncement = createEmitter<any>('admin:addLoginAnnouncement');
 export const toggleLoginAnnouncement = createEmitter<string>('admin:toggleLoginAnnouncement');

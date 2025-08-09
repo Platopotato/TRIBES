@@ -411,7 +411,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       backstory: aiBackstory.trim() || undefined
     };
 
-    client.addAITribe(aiData);
+    console.log('🤖 ADMIN: Adding AI tribe with data:', aiData);
+    client.addAITribeAdvanced(aiData);
     setShowAddAIModal(false);
     setAITribeName('');
     setAIBackstory('');

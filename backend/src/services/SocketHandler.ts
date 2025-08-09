@@ -287,7 +287,17 @@ export class SocketHandler {
         if (req) req.status = 'denied';
       },
       'add_ai_tribe': async (state: GameState, users: User[], aiType?: string) => {
-        await this.gameService.addAITribe(aiType as any);
+        console.log(`🤖 Legacy AI tribe creation requested with type:`, aiType);
+        try {
+          const success = await this.gameService.addAITribe(aiType as any);
+          if (success) {
+            console.log(`✅ Legacy AI tribe added successfully`);
+          } else {
+            console.log(`❌ Legacy AI tribe creation failed - no suitable location`);
+          }
+        } catch (error) {
+          console.error(`❌ Error in legacy AI tribe creation:`, error);
+        }
       }
     };
 

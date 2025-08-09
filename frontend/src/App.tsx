@@ -317,7 +317,11 @@ const App: React.FC = () => {
   const handleRequestAsset = (tribeId: string, assetName: string, radixAddressSnippet: string) => client.requestAsset({ tribeId, assetName, radixAddressSnippet });
   const handleApproveAsset = (requestId: string) => client.approveAsset(requestId);
   const handleDenyAsset = (requestId: string) => client.denyAsset(requestId);
-  const handleAddAITribe = (aiType?: AIType) => client.addAITribe(aiType);
+  const handleAddAITribe = (aiType?: AIType) => {
+    console.log('🤖 APP: handleAddAITribe called with:', aiType);
+    // Use the simple legacy method for backward compatibility
+    client.addAITribeSimple(aiType);
+  };
   const handleProposeAlliance = (fromTribeId: string, toTribeId: string) => client.proposeAlliance({ fromTribeId, toTribeId });
   const handleSueForPeace = (fromTribeId: string, toTribeId: string, reparations: { food: number; scrap: number; weapons: number; }) => client.sueForPeace({ fromTribeId, toTribeId, reparations });
   const handleAcceptProposal = (proposalId: string) => client.acceptProposal(proposalId);

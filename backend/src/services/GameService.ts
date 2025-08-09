@@ -306,37 +306,61 @@ export class GameService {
     });
 
     // CRITICAL: Create user record FIRST in separate transaction BEFORE updating game state
-    console.log(`🤖 Creating user record for AI tribe: ${aiTribe.playerId}`);
+    console.log(`🤖 STEP 1: Creating user record for AI tribe: ${aiTribe.playerId}`);
+    console.log(`🤖 AI tribe details: ${aiTribe.tribeName} (${aiTribe.aiType}) at ${aiTribe.location}`);
+
+    const aiUserData = {
+      id: aiTribe.playerId,
+      username: `AI_${aiTribe.tribeName.replace(/\s+/g, '_')}`,
+      role: 'player'
+    };
+    console.log(`🤖 Creating AI user:`, aiUserData);
+
     try {
-      await this.databaseService.createAIUser({
-        id: aiTribe.playerId,
-        username: `AI_${aiTribe.tribeName.replace(/\s+/g, '_')}`,
-        role: 'player'
-      });
-      console.log(`✅ AI user record created successfully`);
+      await this.databaseService.createAIUser(aiUserData);
+      console.log(`✅ STEP 1 COMPLETE: AI user record created successfully`);
     } catch (error) {
       console.error(`❌ CRITICAL: AI user record creation failed:`, error);
+      console.error(`❌ Error type:`, error?.constructor?.name);
+      console.error(`❌ Error message:`, error?.message);
       console.error(`❌ Cannot proceed with AI tribe creation without valid user record`);
       return false;
     }
 
-    // Verify user was created by checking if it exists
+    // STEP 2: Verify user was created by checking if it exists
+    console.log(`🤖 STEP 2: Verifying AI user exists in database...`);
     try {
       const allUsers = await this.getAllUsers();
+      console.log(`🤖 Total users in database: ${allUsers.length}`);
       const userExists = allUsers.some(u => u.id === aiTribe.playerId);
       if (!userExists) {
         console.error(`❌ CRITICAL: AI user ${aiTribe.playerId} was not found after creation`);
+        console.error(`❌ Available user IDs:`, allUsers.map(u => u.id).slice(0, 5));
         return false;
       }
-      console.log(`✅ Verified AI user exists in database`);
+      console.log(`✅ STEP 2 COMPLETE: Verified AI user exists in database`);
     } catch (error) {
       console.error(`❌ Error verifying AI user existence:`, error);
       return false;
     }
 
     console.log(`🤖 About to save game state with AI tribe...`);
-    await this.updateGameState(gameState);
-    console.log(`🤖 AI TRIBE DEBUG: Game state updated successfully`);
+
+    // Use lightweight update to avoid the problematic full transaction
+    try {
+      await this.databaseService.updateGameStateLight(gameState);
+      console.log(`🤖 AI TRIBE DEBUG: Game state updated successfully using lightweight update`);
+    } catch (error) {
+      console.error(`❌ Lightweight update failed, falling back to regular update:`, error);
+      try {
+        await this.updateGameState(gameState);
+        console.log(`🤖 AI TRIBE DEBUG: Game state updated successfully using regular update`);
+      } catch (fallbackError) {
+        console.error(`❌ Both update methods failed:`, fallbackError);
+        return false;
+      }
+    }
+
     return true;
   }
 

@@ -137,8 +137,18 @@ export class GameService {
     console.log(`🤖 GAMESERVICE: Processed ${aiTribesProcessed} AI tribes`);
 
     console.log('⚙️ GAMESERVICE: Calling processGlobalTurn...');
-    const newGameState = processGlobalTurn(gameState);
-    console.log('✅ GAMESERVICE: processGlobalTurn completed');
+    console.log('🔍 TURN PROCESSOR: Starting processGlobalTurn');
+    console.log('🔍 TURN PROCESSOR: Creating state copy...');
+
+    let newGameState: GameState;
+    try {
+      newGameState = processGlobalTurn(gameState);
+      console.log('✅ GAMESERVICE: processGlobalTurn completed successfully');
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR in processGlobalTurn:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
+    }
 
     console.log('💾 GAMESERVICE: Updating game state...');
     await this.updateGameState(newGameState);

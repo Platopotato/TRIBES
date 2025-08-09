@@ -276,7 +276,7 @@ export class GameService {
       gameState.mapData
     );
 
-    // Create a user record for the AI tribe to satisfy foreign key constraints
+    // CRITICAL: Create user record FIRST in separate transaction to satisfy foreign key constraints
     console.log(`🤖 Creating user record for AI tribe: ${aiTribe.playerId}`);
     try {
       await this.databaseService.createAIUser({
@@ -286,8 +286,23 @@ export class GameService {
       });
       console.log(`✅ AI user record created successfully`);
     } catch (error) {
-      console.log(`⚠️ AI user record creation failed (may already exist):`, error);
-      // Continue anyway - user might already exist
+      console.error(`❌ CRITICAL: AI user record creation failed:`, error);
+      console.error(`❌ Cannot proceed with AI tribe creation without valid user record`);
+      return false;
+    }
+
+    // Verify user was created by checking if it exists
+    try {
+      const allUsers = await this.getAllUsers();
+      const userExists = allUsers.some(u => u.id === aiTribe.playerId);
+      if (!userExists) {
+        console.error(`❌ CRITICAL: AI user ${aiTribe.playerId} was not found after creation`);
+        return false;
+      }
+      console.log(`✅ Verified AI user exists in database`);
+    } catch (error) {
+      console.error(`❌ Error verifying AI user existence:`, error);
+      return false;
     }
 
     // Set up diplomacy based on AI type
@@ -315,9 +330,11 @@ export class GameService {
       tribeName: aiTribe.tribeName,
       isAI: aiTribe.isAI,
       location: aiTribe.location,
+      playerId: aiTribe.playerId,
       garrisons: Object.keys(aiTribe.garrisons)
     });
 
+    console.log(`🤖 About to save game state with AI tribe...`);
     await this.updateGameState(gameState);
     console.log(`🤖 AI TRIBE DEBUG: Game state updated successfully`);
     return true;

@@ -341,23 +341,37 @@ export class DatabaseService {
 
   async createAIUser(userData: { id: string; username: string; role: string }): Promise<void> {
     if (this.useDatabase && this.prisma) {
-      await this.prisma.user.upsert({
-        where: { id: userData.id },
-        create: {
-          id: userData.id,
-          username: userData.username,
-          passwordHash: 'AI_NO_PASSWORD', // AI users don't need real passwords
-          role: userData.role,
-          securityQuestion: 'AI',
-          securityAnswerHash: 'AI_NO_ANSWER'
-        },
-        update: {
-          username: userData.username,
-          role: userData.role
-        }
-      });
+      console.log(`🤖 DATABASE: Creating AI user with ID: ${userData.id}, username: ${userData.username}`);
+
+      try {
+        const result = await this.prisma.user.upsert({
+          where: { id: userData.id },
+          create: {
+            id: userData.id,
+            username: userData.username,
+            passwordHash: 'AI_NO_PASSWORD', // AI users don't need real passwords
+            role: userData.role,
+            securityQuestion: 'AI',
+            securityAnswerHash: 'AI_NO_ANSWER'
+          },
+          update: {
+            username: userData.username,
+            role: userData.role
+          }
+        });
+
+        console.log(`✅ DATABASE: AI user upserted successfully:`, {
+          id: result.id,
+          username: result.username,
+          role: result.role
+        });
+      } catch (error) {
+        console.error(`❌ DATABASE: Error creating AI user:`, error);
+        throw error;
+      }
+    } else {
+      console.log(`📁 FILE STORAGE: Skipping AI user creation (not needed for file storage)`);
     }
-    // For file storage, we don't need to create user records
   }
 
   async createUser(user: User): Promise<void> {

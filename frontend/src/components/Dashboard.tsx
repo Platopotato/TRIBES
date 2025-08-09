@@ -169,11 +169,16 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     console.log('  - playerTribe.turnSubmitted:', playerTribe.turnSubmitted);
     console.log('  - playerTribe.lastTurnResults:', playerTribe.lastTurnResults);
     console.log('  - lastTurnResults length:', playerTribe.lastTurnResults?.length);
-    console.log('  - lastTurnResults content:', JSON.stringify(playerTribe.lastTurnResults, null, 2));
+    console.log('  - turnProcessingComplete:', (playerTribe as any).turnProcessingComplete);
 
-    // SIMPLE LOGIC: Trust server state completely
-    // After turn processing, backend automatically clears lastTurnResults for all players
-    // This ensures immediate transition to planning mode
+    // NEW LOGIC: Check for turn processing complete flag
+    // This allows players to see results AND add actions for next turn
+    if ((playerTribe as any).turnProcessingComplete && !playerTribe.turnSubmitted) {
+      console.log('🔍 DASHBOARD: gamePhase = planning (turnProcessingComplete flag detected)');
+      return 'planning';
+    }
+
+    // STANDARD LOGIC: Trust server state completely
     if (playerTribe.turnSubmitted) {
       console.log('🔍 DASHBOARD: gamePhase = waiting (turnSubmitted = true)');
       return 'waiting';
@@ -184,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     }
     console.log('🔍 DASHBOARD: gamePhase = planning (default)');
     return 'planning';
-  }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
+  }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults, (playerTribe as any)?.turnProcessingComplete]);
 
   // Calculate total chiefs across all garrisons
   const totalChiefs = useMemo(() => {

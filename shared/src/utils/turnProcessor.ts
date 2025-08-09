@@ -167,10 +167,10 @@ function processDiplomaticProposals(state: any): void {
     });
 }
 
-// --- FORCE REFRESH LOGIC (SAME AS ADMIN FUNCTION) ---
+// --- FORCE REFRESH LOGIC (MODIFIED FOR TURN PROCESSING) ---
 function applyForceRefreshToAllTribes(state: any): void {
-    // Apply the same logic as the "Force Refresh" admin button to all tribes
-    // This ensures players can add actions for the next turn
+    // Apply modified Force Refresh logic that allows players to see results
+    // but enables them to add actions for the next turn
 
     // NOTE: Debugging removed for shared package compatibility
     // The backend will log when this function is called
@@ -178,16 +178,16 @@ function applyForceRefreshToAllTribes(state: any): void {
     for (const tribe of state.tribes) {
         // Only apply to human players (not AI)
         if (!tribe.isAI) {
-            // CRITICAL: This is exactly what the "Force Refresh" admin button does
-            // Clear lastTurnResults COMPLETELY to force frontend into planning mode
-            // This is the key fix - no results means frontend goes to planning mode
+            // MODIFIED LOGIC: Don't clear results immediately after turn processing
+            // Instead, set flags that allow frontend to show results AND enable planning
 
-            // COMPLETE CLEAR: No results at all (same as Force Refresh admin button)
-            tribe.lastTurnResults = [];
-
-            // Ensure clean state for next turn
+            // Ensure clean state for next turn (but keep results visible)
             tribe.turnSubmitted = false;
             tribe.actions = [];
+
+            // Add special flag to indicate turn processing is complete
+            // Frontend can use this to enable planning mode while showing results
+            tribe.turnProcessingComplete = true;
         }
     }
 }

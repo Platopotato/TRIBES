@@ -164,9 +164,9 @@ export class GameService {
 
       // DEBUG: Check if Force Refresh was applied and what actions were processed
       const humanTribes = newGameState.tribes.filter(t => !t.isAI);
-      console.log('🚨 GAMESERVICE: Checking Force Refresh results:');
+      console.log('🚨 GAMESERVICE: Checking turn processing results:');
       humanTribes.forEach(tribe => {
-        console.log(`  - ${tribe.tribeName}: lastTurnResults.length = ${tribe.lastTurnResults?.length}, turnSubmitted = ${tribe.turnSubmitted}`);
+        console.log(`  - ${tribe.tribeName}: lastTurnResults.length = ${tribe.lastTurnResults?.length}, turnSubmitted = ${tribe.turnSubmitted}, turnProcessingComplete = ${(tribe as any).turnProcessingComplete}`);
 
         // DEBUG: Show what actions were processed
         if (tribe.lastTurnResults && tribe.lastTurnResults.length > 0) {
@@ -174,6 +174,8 @@ export class GameService {
           tribe.lastTurnResults.forEach((result, index) => {
             console.log(`      ${index + 1}. ${result.actionType}: ${result.result}`);
           });
+        } else {
+          console.log(`    No actions were processed for ${tribe.tribeName}`);
         }
       });
     } catch (error) {

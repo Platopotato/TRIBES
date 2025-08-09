@@ -97,6 +97,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.RespondToTrade:
                     result = processTradeResponseAction(tribe, action, state);
                     break;
+                case ActionType.SetRation:
+                    result = processSetRationAction(tribe, action);
+                    break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
                 }
@@ -273,6 +276,39 @@ function processRestAction(tribe: any, action: any): string {
     const narrative = restNarratives[Math.floor(Math.random() * restNarratives.length)];
 
     return `😌 ${tribe.tribeName} rested as ${narrative}. Morale increased by ${totalMoraleGain} (${oldMorale} → ${tribe.globalResources.morale}).`;
+}
+
+function processSetRationAction(tribe: any, action: any): string {
+    const rationLevel = action.actionData?.rationLevel || action.actionData?.ration_level;
+
+    if (!rationLevel) {
+        return `❌ Set Ration action failed: No ration level specified.`;
+    }
+
+    // Validate ration level
+    const validRations = ['Hard', 'Normal', 'Generous'];
+    if (!validRations.includes(rationLevel)) {
+        return `❌ Invalid ration level: ${rationLevel}. Valid options: ${validRations.join(', ')}.`;
+    }
+
+    // Set the ration level
+    tribe.rationLevel = rationLevel;
+
+    // Provide feedback about the effects
+    let effectMessage = '';
+    switch (rationLevel) {
+        case 'Hard':
+            effectMessage = 'Troops will consume less food but morale will suffer (-2 per turn).';
+            break;
+        case 'Normal':
+            effectMessage = 'Standard food consumption and morale effects.';
+            break;
+        case 'Generous':
+            effectMessage = 'Troops will consume more food but morale will improve (+2 per turn when food is available).';
+            break;
+    }
+
+    return `📋 Ration level set to ${rationLevel}. ${effectMessage}`;
 }
 
 function processBuildWeaponsAction(tribe: any, action: any): string {
@@ -657,30 +693,39 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
         }
     }
 
-    // Base scavenging amounts (will be multiplied by POI bonus)
+    // ENHANCED SCAVENGING: Scale with troop count for realistic results
+    const troopCount = action.actionData?.troops || 1;
+    const troopMultiplier = Math.max(1, Math.floor(troopCount / 2)); // Every 2 troops adds 1x multiplier
+
+    // Base scavenging amounts (will be multiplied by troop count and POI bonus)
+    let baseAmount = 0;
     switch (resourceType.toLowerCase()) {
         case 'food':
-            resourceGained = Math.floor((Math.floor(Math.random() * 3) + 2) * poiBonus); // 2-4 base * bonus
+            baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
+            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
             break;
         case 'scrap':
-            resourceGained = Math.floor((Math.floor(Math.random() * 2) + 2) * poiBonus); // 2-3 base * bonus
+            baseAmount = Math.floor(Math.random() * 2) + 2; // 2-3 base per 2 troops
+            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.scrap += resourceGained;
             resourceName = 'scrap';
             break;
         case 'weapons':
-            resourceGained = Math.floor((Math.floor(Math.random() * 2) + 1) * poiBonus); // 1-2 base * bonus
+            baseAmount = Math.floor(Math.random() * 2) + 1; // 1-2 base per 2 troops
+            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.weapons += resourceGained;
             resourceName = 'weapons';
             break;
         default:
-            resourceGained = Math.floor((Math.floor(Math.random() * 3) + 2) * poiBonus); // 2-4 base * bonus
+            baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
+            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
     }
 
-    return `✅ Successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage} Area explored and resources gathered.`;
+    return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage} Area explored and resources gathered.`;
 }
 
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---
@@ -843,14 +888,35 @@ function processExploreAction(tribe: any, action: any): string {
 }
 
 function processBasicUpkeep(tribe: any, state?: any): void {
-    // Basic food consumption
+    // Calculate food consumption based on ration level
     const totalTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
-    const foodConsumption = Math.floor(totalTroops / 2);
+    let baseFoodConsumption = Math.floor(totalTroops / 2);
 
+    // Apply ration level modifiers
+    let rationMultiplier = 1.0;
+    let rationMessage = '';
+
+    switch (tribe.rationLevel) {
+        case 'Hard':
+            rationMultiplier = 0.7; // 30% less food consumption
+            rationMessage = ' (Hard rations: -30% food consumption)';
+            break;
+        case 'Generous':
+            rationMultiplier = 1.4; // 40% more food consumption
+            rationMessage = ' (Generous rations: +40% food consumption)';
+            break;
+        case 'Normal':
+        default:
+            rationMultiplier = 1.0;
+            rationMessage = '';
+            break;
+    }
+
+    const foodConsumption = Math.floor(baseFoodConsumption * rationMultiplier);
     const initialFood = tribe.globalResources.food;
     tribe.globalResources.food = Math.max(0, tribe.globalResources.food - foodConsumption);
 
-    let upkeepMessage = `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food. Remaining food: ${tribe.globalResources.food}.`;
+    let upkeepMessage = `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
 
     // POI PASSIVE INCOME SYSTEM
     const poiIncome = processPOIPassiveIncome(tribe, state);

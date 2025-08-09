@@ -1,6 +1,32 @@
-import { GameState, ActionType } from '../types.js';
-import { getHexesInRange, parseHexCoords } from './mapUtils.js';
+import { GameState, ActionType, JourneyType, TerrainType } from '../types.js';
+import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 import { generateAIActions } from '../ai/aiActions.js';
+
+// Combined effects system for movement speed bonuses
+type CombinedEffects = {
+    movementSpeedBonus: number;
+    // Add other effects as needed
+};
+
+function getCombinedEffects(tribe: any): CombinedEffects {
+    // Base movement speed
+    let movementSpeedBonus = 1.0;
+
+    // Technology effects (if implemented)
+    // TODO: Add technology-based movement bonuses
+
+    // Asset effects (if implemented)
+    // TODO: Add asset-based movement bonuses
+
+    // Ration effects
+    if (tribe.rationEffects?.actionEfficiency) {
+        movementSpeedBonus *= tribe.rationEffects.actionEfficiency;
+    }
+
+    return {
+        movementSpeedBonus
+    };
+}
 
 // --- COORDINATE CONVERSION UTILITIES ---
 function convertToStandardFormat(coords: string): string {
@@ -157,29 +183,127 @@ export function processGlobalTurn(gameState: GameState): GameState {
     return state;
 }
 
-// --- JOURNEY PROCESSING ---
+// --- SOPHISTICATED JOURNEY PROCESSING ---
 function processActiveJourneys(state: any): void {
+    if (!state.journeys) {
+        state.journeys = [];
+        return;
+    }
+
     const completedJourneys: any[] = [];
+    const newJourneys: any[] = [];
 
     state.journeys = state.journeys.filter((journey: any) => {
-        journey.turnsRemaining -= 1;
+        // Decrement arrival turn
+        journey.arrivalTurn -= 1;
 
-        if (journey.turnsRemaining <= 0) {
-            // Journey completed
-            const tribe = state.tribes.find((t: any) => t.id === journey.fromTribeId);
-            if (tribe) {
-                tribe.journeyResponses.push({
-                    id: journey.id,
-                    message: `Journey to ${journey.destination} completed successfully. ${journey.purpose} mission accomplished.`,
-                    fromTribeId: journey.toTribeId || 'unknown',
-                    success: true
-                });
+        // Advance journey along path
+        if (journey.arrivalTurn > 0 && journey.path.length > 1) {
+            journey.path.shift(); // Remove current location
+            if (journey.path.length > 0) {
+                journey.currentLocation = journey.path[0]; // Move to next hex
             }
-            return false; // Remove from active journeys
         }
 
-        return true; // Keep active
+        // Check if journey has arrived
+        if (journey.arrivalTurn <= 0) {
+            const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
+            if (tribe) {
+                switch (journey.type) {
+                    case JourneyType.Move:
+                        resolveMoveArrival(journey, tribe, state);
+                        break;
+                    case JourneyType.Trade:
+                        resolveTradeArrival(journey, tribe, state);
+                        break;
+                    // Add other journey types as needed
+                    default:
+                        // Generic journey completion
+                        tribe.lastTurnResults.push({
+                            id: `arrival-${journey.id}`,
+                            actionType: ActionType.Move,
+                            actionData: {},
+                            result: `Journey to ${journey.destination} completed.`
+                        });
+                }
+            }
+            return false; // Remove completed journey
+        }
+
+        return true; // Keep active journey
     });
+
+    // Add any new journeys created during processing
+    state.journeys.push(...newJourneys);
+}
+
+function resolveMoveArrival(journey: any, tribe: any, state: any): void {
+    // Create or update destination garrison
+    if (!tribe.garrisons[journey.destination]) {
+        tribe.garrisons[journey.destination] = { troops: 0, weapons: 0, chiefs: [] };
+    }
+
+    const destGarrison = tribe.garrisons[journey.destination];
+    destGarrison.troops += journey.force.troops;
+    destGarrison.weapons += journey.force.weapons;
+    if (!destGarrison.chiefs) destGarrison.chiefs = [];
+    destGarrison.chiefs.push(...journey.force.chiefs);
+
+    // Add to explored hexes
+    if (!tribe.exploredHexes.includes(journey.destination)) {
+        tribe.exploredHexes.push(journey.destination);
+    }
+
+    // Create arrival message
+    const moveDetails = [];
+    if (journey.force.troops > 0) moveDetails.push(`${journey.force.troops} troops`);
+    if (journey.force.weapons > 0) moveDetails.push(`${journey.force.weapons} weapons`);
+    if (journey.force.chiefs.length > 0) moveDetails.push(`${journey.force.chiefs.length} chief${journey.force.chiefs.length > 1 ? 's' : ''} (${journey.force.chiefs.map((c: any) => c.name).join(', ')})`);
+
+    tribe.lastTurnResults.push({
+        id: `arrival-${journey.id}`,
+        actionType: ActionType.Move,
+        actionData: {},
+        result: `🎯 Journey completed! ${moveDetails.join(', ')} arrived at ${journey.destination}. Garrison now has ${destGarrison.troops} troops, ${destGarrison.weapons} weapons, and ${destGarrison.chiefs.length} chiefs.`
+    });
+}
+
+function resolveTradeArrival(journey: any, tribe: any, state: any): void {
+    // Find target tribe at destination
+    const targetTribe = state.tribes.find((t: any) =>
+        t.garrisons[journey.destination] && t.id !== journey.ownerTribeId
+    );
+
+    if (targetTribe) {
+        // Trade caravan has arrived - create trade proposal
+        tribe.lastTurnResults.push({
+            id: `trade-arrival-${journey.id}`,
+            actionType: ActionType.Trade,
+            actionData: {},
+            result: `🚛 Your trade caravan has arrived at ${targetTribe.tribeName}'s garrison at ${journey.destination} and is awaiting a response.`
+        });
+
+        targetTribe.lastTurnResults.push({
+            id: `trade-offer-${journey.id}`,
+            actionType: ActionType.RespondToTrade,
+            actionData: {},
+            result: `🚛 A trade caravan from ${journey.tradeOffer?.fromTribeName || tribe.tribeName} has arrived at ${journey.destination} with an offer.`
+        });
+
+        // Update journey status to awaiting response
+        journey.status = 'awaiting_response';
+        journey.responseDeadline = state.turn + 3; // 3 turns to respond
+        state.journeys.push(journey); // Keep journey active for response
+    } else {
+        // No tribe at destination - caravan returns
+        tribe.lastTurnResults.push({
+            id: `trade-failed-${journey.id}`,
+            actionType: ActionType.Trade,
+            actionData: {},
+            result: `🚛 Trade caravan found no tribe at ${journey.destination}. Returning home with goods.`
+        });
+        // TODO: Create return journey
+    }
 }
 
 // --- DIPLOMATIC PROPOSAL PROCESSING ---
@@ -373,83 +497,132 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
 
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
 function processMoveAction(tribe: any, action: any, state: any): string {
-    // Handle both old and new field names
-    const fromLocationRaw = action.actionData?.fromLocation || action.actionData?.start_location;
-    const toLocationRaw = action.actionData?.toLocation || action.actionData?.finish_location;
+    // SOPHISTICATED MOVEMENT SYSTEM WITH TERRAIN-BASED PATHFINDING
+    const startLocation = action.actionData?.start_location || action.actionData?.fromLocation;
+    const destination = action.actionData?.finish_location || action.actionData?.toLocation;
     const troopsToMove = action.actionData?.troops || 1;
     const weaponsToMove = action.actionData?.weapons || 0;
     const chiefsToMove = action.actionData?.chiefsToMove || [];
 
-    if (!fromLocationRaw) {
+    if (!startLocation) {
         return `❌ Move action failed: No source location specified.`;
     }
 
-    if (!toLocationRaw) {
+    if (!destination) {
         return `❌ Move action failed: No destination location specified.`;
     }
 
-    // Convert coordinates to standard format
-    const fromLocation = convertToStandardFormat(fromLocationRaw);
-    const toLocation = convertToStandardFormat(toLocationRaw);
-
-    const fromGarrison = tribe.garrisons[fromLocation];
-    if (!fromGarrison) {
-        return `❌ No garrison found at ${fromLocation} to move troops from. You must have troops at the source location.`;
+    const startGarrison = tribe.garrisons[startLocation];
+    if (!startGarrison) {
+        return `❌ No garrison found at ${startLocation} to move troops from.`;
     }
 
-    if (fromGarrison.troops < troopsToMove) {
-        return `❌ Insufficient troops at ${fromLocation}. Need ${troopsToMove}, have ${fromGarrison.troops}.`;
+    // Validate resources
+    if (startGarrison.troops < troopsToMove) {
+        return `❌ Insufficient troops at ${startLocation}. Need ${troopsToMove}, have ${startGarrison.troops}.`;
     }
 
-    if (fromGarrison.weapons < weaponsToMove) {
-        return `❌ Insufficient weapons at ${fromLocation}. Need ${weaponsToMove}, have ${fromGarrison.weapons}.`;
+    if (startGarrison.weapons < weaponsToMove) {
+        return `❌ Insufficient weapons at ${startLocation}. Need ${weaponsToMove}, have ${startGarrison.weapons}.`;
     }
 
-    // Validate chiefs to move
-    const availableChiefs = fromGarrison.chiefs || [];
+    // Validate chiefs
+    const availableChiefs = startGarrison.chiefs || [];
     const invalidChiefs = chiefsToMove.filter((chiefName: string) =>
         !availableChiefs.some((chief: any) => chief.name === chiefName)
     );
 
     if (invalidChiefs.length > 0) {
-        return `❌ Chiefs not available at ${fromLocation}: ${invalidChiefs.join(', ')}.`;
+        return `❌ Chiefs not available at ${startLocation}: ${invalidChiefs.join(', ')}.`;
     }
 
-    // MOVE TROOPS
-    fromGarrison.troops -= troopsToMove;
+    // PATHFINDING: Calculate route and travel time
+    const pathInfo = findPath(parseHexCoords(startLocation), parseHexCoords(destination), state.mapData);
+    if (!pathInfo) {
+        return `❌ Could not find a path from ${startLocation} to ${destination}. Route may be blocked by impassable terrain.`;
+    }
 
-    // MOVE WEAPONS
-    fromGarrison.weapons -= weaponsToMove;
+    // Calculate movement speed with bonuses
+    const combinedEffects = getCombinedEffects(tribe);
+    const arrivalTurn = Math.ceil(pathInfo.cost / combinedEffects.movementSpeedBonus);
 
-    // MOVE CHIEFS
+    // FAST-TRACK LOGIC: Short moves (≤1 turn) are instant
+    const FAST_TRACK_THRESHOLD = 1;
+    const isFastTrackable = arrivalTurn <= FAST_TRACK_THRESHOLD;
+
+    // Deduct forces from source garrison
+    startGarrison.troops -= troopsToMove;
+    startGarrison.weapons -= weaponsToMove;
     const movingChiefs = availableChiefs.filter((chief: any) => chiefsToMove.includes(chief.name));
-    fromGarrison.chiefs = availableChiefs.filter((chief: any) => !chiefsToMove.includes(chief.name));
+    startGarrison.chiefs = availableChiefs.filter((chief: any) => !chiefsToMove.includes(chief.name));
 
-    // Create or update destination garrison
-    if (!tribe.garrisons[toLocation]) {
-        tribe.garrisons[toLocation] = { troops: 0, weapons: 0, chiefs: [] };
+    if (isFastTrackable) {
+        // INSTANT MOVEMENT for short distances
+        if (!tribe.garrisons[destination]) {
+            tribe.garrisons[destination] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+
+        const destGarrison = tribe.garrisons[destination];
+        destGarrison.troops += troopsToMove;
+        destGarrison.weapons += weaponsToMove;
+        if (!destGarrison.chiefs) destGarrison.chiefs = [];
+        destGarrison.chiefs.push(...movingChiefs);
+
+        // Add to explored hexes
+        if (!tribe.exploredHexes.includes(destination)) {
+            tribe.exploredHexes.push(destination);
+        }
+
+        const moveDetails = [];
+        if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);
+        if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
+        if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map((c: any) => c.name).join(', ')})`);
+
+        return `⚡ Fast movement: ${moveDetails.join(', ')} instantly moved from ${startLocation} to ${destination}! (Distance: ${pathInfo.cost.toFixed(1)} movement cost)`;
+    } else {
+        // MULTI-TURN JOURNEY for long distances
+        const journey = {
+            id: `move-${Date.now()}-${tribe.id}`,
+            ownerTribeId: tribe.id,
+            type: JourneyType.Move,
+            origin: startLocation,
+            destination: destination,
+            path: pathInfo.path,
+            currentLocation: pathInfo.path[0], // Start at first step
+            force: {
+                troops: troopsToMove,
+                weapons: weaponsToMove,
+                chiefs: movingChiefs
+            },
+            payload: {
+                food: 0,
+                scrap: 0,
+                weapons: 0
+            },
+            arrivalTurn: arrivalTurn,
+            status: 'en_route'
+        };
+
+        // Initialize journeys array if needed
+        if (!state.journeys) {
+            state.journeys = [];
+        }
+
+        // Advance journey one step immediately for visual feedback
+        if (journey.arrivalTurn > 1 && journey.path.length > 1) {
+            journey.path.shift(); // Remove origin
+            journey.currentLocation = journey.path[0]; // Move to first step
+        }
+
+        state.journeys.push(journey);
+
+        const moveDetails = [];
+        if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);
+        if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
+        if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map((c: any) => c.name).join(', ')})`);
+
+        return `🚶‍♂️ Journey dispatched: ${moveDetails.join(', ')} traveling from ${startLocation} to ${destination}. Expected arrival in ${arrivalTurn} turn${arrivalTurn > 1 ? 's' : ''}. (Route: ${pathInfo.cost.toFixed(1)} movement cost through ${pathInfo.path.length - 1} hexes)`;
     }
-
-    const toGarrison = tribe.garrisons[toLocation];
-    toGarrison.troops += troopsToMove;
-    toGarrison.weapons += weaponsToMove;
-
-    // Add moved chiefs to destination
-    if (!toGarrison.chiefs) toGarrison.chiefs = [];
-    toGarrison.chiefs.push(...movingChiefs);
-
-    // Add to explored hexes (only if valid location)
-    if (toLocation && !tribe.exploredHexes.includes(toLocation)) {
-        tribe.exploredHexes.push(toLocation);
-    }
-
-    // Create detailed result message
-    const moveDetails = [];
-    if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);
-    if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
-    if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map((c: any) => c.name).join(', ')})`);
-
-    return `✅ Successfully moved ${moveDetails.join(', ')} from ${fromLocation} to ${toLocation}! Destination garrison now has ${toGarrison.troops} troops, ${toGarrison.weapons} weapons, and ${toGarrison.chiefs.length} chiefs.`;
 }
 
 function processTradeAction(tribe: any, action: any, state: any): string {

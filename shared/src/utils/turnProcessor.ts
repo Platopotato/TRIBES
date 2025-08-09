@@ -93,75 +93,46 @@ function getAssetEffects(tribe: Tribe): CombinedEffects {
         terrainCombatBonuses: { attack: {}, defense: {} }
     };
 
-    if (!tribe.assets) return effects;
+    if (!tribe.assets || tribe.assets.length === 0) return effects;
 
-    // Count assets by type for diminishing returns
-    const assetCounts = {
-        passive: 0,
-        scavenge: 0,
-        combat: 0,
-        movement: 0
-    };
+    // PERFORMANCE FIX: Simple asset count for diminishing returns
+    const assetCount = tribe.assets.length;
+    const diminishingFactor = Math.max(0.3, 1 - (assetCount - 1) * 0.05); // Reduced penalty
 
-    // First pass: count asset types
+    // Apply effects with simple diminishing returns
     for (const assetName of tribe.assets) {
         const asset = getAsset(assetName);
         if (!asset) continue;
         for (const effect of asset.effects) {
+            const diminishedValue = effect.value * diminishingFactor;
             switch (effect.type) {
                 case TechnologyEffectType.PassiveFoodGeneration:
-                case TechnologyEffectType.PassiveScrapGeneration:
-                    assetCounts.passive++;
-                    break;
-                case TechnologyEffectType.ScavengeYieldBonus:
-                    assetCounts.scavenge++;
-                    break;
-                case TechnologyEffectType.CombatBonusAttack:
-                case TechnologyEffectType.CombatBonusDefense:
-                    assetCounts.combat++;
-                    break;
-                case TechnologyEffectType.MovementSpeedBonus:
-                    assetCounts.movement++;
-                    break;
-            }
-        }
-    }
-
-    // Second pass: apply effects with diminishing returns
-    for (const assetName of tribe.assets) {
-        const asset = getAsset(assetName);
-        if (!asset) continue;
-        for (const effect of asset.effects) {
-            switch (effect.type) {
-                case TechnologyEffectType.PassiveFoodGeneration:
-                    effects.passiveFood += applyDiminishingReturns(effect.value, assetCounts.passive);
+                    effects.passiveFood += diminishedValue;
                     break;
                 case TechnologyEffectType.PassiveScrapGeneration:
-                    effects.passiveScrap += applyDiminishingReturns(effect.value, assetCounts.passive);
+                    effects.passiveScrap += diminishedValue;
                     break;
                 case TechnologyEffectType.ScavengeYieldBonus:
                     if (effect.resource) {
-                        effects.scavengeBonuses[effect.resource] += applyDiminishingReturns(effect.value, assetCounts.scavenge);
+                        effects.scavengeBonuses[effect.resource] += diminishedValue;
                     }
                     break;
                 case TechnologyEffectType.CombatBonusAttack:
                      if (effect.terrain) {
-                         const diminishedValue = applyDiminishingReturns(effect.value, assetCounts.combat);
                          effects.terrainCombatBonuses.attack[effect.terrain] = (effects.terrainCombatBonuses.attack[effect.terrain] || 0) + diminishedValue;
                     } else {
-                        effects.globalCombatAttackBonus += applyDiminishingReturns(effect.value, assetCounts.combat);
+                        effects.globalCombatAttackBonus += diminishedValue;
                     }
                     break;
                 case TechnologyEffectType.CombatBonusDefense:
                     if (effect.terrain) {
-                         const diminishedValue = applyDiminishingReturns(effect.value, assetCounts.combat);
                          effects.terrainCombatBonuses.defense[effect.terrain] = (effects.terrainCombatBonuses.defense[effect.terrain] || 0) + diminishedValue;
                     } else {
-                        effects.globalCombatDefenseBonus += applyDiminishingReturns(effect.value, assetCounts.combat);
+                        effects.globalCombatDefenseBonus += diminishedValue;
                     }
                     break;
                 case TechnologyEffectType.MovementSpeedBonus:
-                    effects.movementSpeedBonus += applyDiminishingReturns(effect.value, assetCounts.movement);
+                    effects.movementSpeedBonus += diminishedValue;
                     break;
             }
         }
@@ -328,8 +299,9 @@ function handleSettlementRandomEvent(tribe: Tribe, location: string): { tribe: T
         // POSITIVE EVENTS
         { weight: 4, run: (tribe, location, garrison) => {
             const newRecruit = Math.floor(Math.random() * 2) + 1;
-            const updatedTribe = JSON.parse(JSON.stringify(tribe));
-            updatedTribe.garrisons[location].troops += newRecruit;
+            // PERFORMANCE FIX: Shallow copy instead of deep clone
+            const updatedTribe = { ...tribe, garrisons: { ...tribe.garrisons } };
+            updatedTribe.garrisons[location] = { ...updatedTribe.garrisons[location], troops: updatedTribe.garrisons[location].troops + newRecruit };
             const narratives = [
                 `Word of ${tribe.tribeName}'s strength spreads through the wasteland! ${newRecruit} skilled wanderers arrive at ${location}, seeking to join your cause.`,
                 `A group of refugees fleeing from raiders finds sanctuary at ${location}. Grateful for protection, ${newRecruit} of them pledge to fight for your tribe.`,
@@ -341,8 +313,8 @@ function handleSettlementRandomEvent(tribe: Tribe, location: string): { tribe: T
 
         { weight: 3, run: (tribe, location, garrison) => {
             const moraleBoost = Math.floor(Math.random() * 8) + 5;
-            const updatedTribe = JSON.parse(JSON.stringify(tribe));
-            updatedTribe.globalResources.morale = Math.min(100, updatedTribe.globalResources.morale + moraleBoost);
+            // PERFORMANCE FIX: Shallow copy instead of deep clone
+            const updatedTribe = { ...tribe, globalResources: { ...tribe.globalResources, morale: Math.min(100, tribe.globalResources.morale + moraleBoost) } };
             const narratives = [
                 `The discovery of an intact pre-war entertainment system at ${location} brings joy to your people! Morale increases by ${moraleBoost} as they enjoy forgotten music and films.`,
                 `A successful hunt brings fresh meat to ${location}! The feast that follows strengthens bonds and raises spirits by ${moraleBoost}.`,
@@ -839,7 +811,8 @@ function applyPassiveEffects(tribe: Tribe, mapData: HexData[]): { tribe: Tribe, 
 
 
 function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe, result: GameAction | null } {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe)) as Tribe;
+    // PERFORMANCE FIX: Shallow copy instead of deep clone
+    let updatedTribe = { ...tribe, globalResources: { ...tribe.globalResources } };
     const troopsInGarrisons = Object.values(updatedTribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
     const totalTroops = troopsInGarrisons + troopsOnJourneys;
 
@@ -877,7 +850,14 @@ function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe
 
 // --- MAIN PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {
-    let state = JSON.parse(JSON.stringify(gameState)) as GameState;
+    // PERFORMANCE FIX: Shallow copy instead of deep clone to prevent timeouts
+    let state: GameState = {
+        ...gameState,
+        tribes: gameState.tribes.map(tribe => ({ ...tribe })),
+        journeys: gameState.journeys.map(journey => ({ ...journey })),
+        diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
+        mapData: gameState.mapData // Map data doesn't change during turn processing
+    };
     const resultsByTribe: Record<string, GameAction[]> = Object.fromEntries(state.tribes.map(t => [t.id, []]));
     let tribeMap = new Map(state.tribes.map(t => [t.id, t]));
 

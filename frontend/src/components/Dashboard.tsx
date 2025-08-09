@@ -188,17 +188,21 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     return 'planning';
   }, [playerTribe, playerTribe?.turnSubmitted]);
 
-  // Calculate total chiefs across all garrisons
+  // Calculate total chiefs across all garrisons plus chiefs on journeys
   const totalChiefs = useMemo(() => {
     if (!playerTribe) return 0;
-    return Object.values(playerTribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
-  }, [playerTribe]);
+    const inGarrisons = Object.values(playerTribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
+    const onJourneys = (journeys || []).filter(j => j.ownerTribeId === playerTribe.id).reduce((sum, j) => sum + (j.force?.chiefs?.length || 0), 0);
+    return inGarrisons + onJourneys;
+  }, [playerTribe, journeys]);
 
-  // Calculate total troops across all garrisons
+  // Calculate total troops across all garrisons plus troops on journeys
   const totalTroops = useMemo(() => {
     if (!playerTribe) return 0;
-    return Object.values(playerTribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
-  }, [playerTribe]);
+    const inGarrisons = Object.values(playerTribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
+    const onJourneys = (journeys || []).filter(j => j.ownerTribeId === playerTribe.id).reduce((sum, j) => sum + (j.force?.troops || 0), 0);
+    return inGarrisons + onJourneys;
+  }, [playerTribe, journeys]);
 
   // Dynamic action calculation based on chiefs and troop count
   const maxActions = useMemo(() => {
@@ -206,9 +210,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
     let baseActions = 3;
 
-    // Troop bonuses: +1 at 60 troops, +2 at 120 troops
+    // Troop bonuses: +1 at 60 members, +2 at 100 members (members = total troops including those on journeys)
     let troopBonus = 0;
-    if (totalTroops >= 120) {
+    if (totalTroops >= 100) {
       troopBonus = 2;
     } else if (totalTroops >= 60) {
       troopBonus = 1;

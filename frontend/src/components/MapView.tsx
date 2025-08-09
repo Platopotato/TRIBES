@@ -63,65 +63,26 @@ const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlay
 
     return (
         <g transform={`translate(${x}, ${y})`}>
-            {/* Main journey circle */}
-            <circle cx="0" cy="0" r={hexSize * 0.45} className={circleFill} stroke={circleStroke} strokeWidth="0.5" />
+            {/* Main token with tribe identity dominant */}
+            <circle cx="0" cy="0" r={hexSize * 0.55} fill={tribe?.color || (isPlayer ? '#14532d' : '#3f1d1d')} stroke={isPlayer ? '#34d399' : '#ef4444'} strokeWidth="0.8" />
 
-            {/* Journey type icon */}
-            <svg x={-hexSize * 0.25} y={-hexSize * 0.25} width={hexSize * 0.5} height={hexSize * 0.5} viewBox="0 0 24 24" className={`fill-current ${iconColor}`}>
+            {/* Tribe logo big and centered */}
+            {tribe && (
+              <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize={hexSize * 0.9} className="select-none">
+                {TRIBE_ICONS[tribe.icon]}
+              </text>
+            )}
+
+            {/* Journey overlay icon (arrow or caravan) */}
+            <svg x={-hexSize * 0.35} y={-hexSize * 0.35} width={hexSize * 0.7} height={hexSize * 0.7} viewBox="0 0 24 24" className={`fill-current ${iconColor}`}>
                {iconPath}
             </svg>
 
-            {/* TRIBE IDENTITY: Show tribe icon in corner */}
-            {tribe && (
-                <g transform={`translate(${hexSize * 0.25}, ${-hexSize * 0.35})`}>
-                    <circle
-                        cx="0"
-                        cy="0"
-                        r={hexSize * 0.15}
-                        fill={tribe.color}
-                        stroke="rgba(0,0,0,0.5)"
-                        strokeWidth="0.5"
-                        style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}
-                    />
-                    <text
-                        x="0"
-                        y="0"
-                        textAnchor="middle"
-                        className="select-none"
-                        fontSize={hexSize * 0.2}
-                        fill="white"
-                        dy="0.1em"
-                        style={{ fontWeight: 'bold' }}
-                    >
-                        {tribe.icon}
-                    </text>
-                </g>
-            )}
-
-            {/* CARAVAN INDICATOR: Extra symbol for trade journeys */}
+            {/* Caravan badge for trade */}
             {journey.type === 'Trade' && (
-                <g transform={`translate(${-hexSize * 0.35}, ${hexSize * 0.25})`}>
-                    <circle
-                        cx="0"
-                        cy="0"
-                        r={hexSize * 0.12}
-                        fill="gold"
-                        stroke="rgba(0,0,0,0.5)"
-                        strokeWidth="0.5"
-                        style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}
-                    />
-                    <text
-                        x="0"
-                        y="0"
-                        textAnchor="middle"
-                        className="select-none"
-                        fontSize={hexSize * 0.15}
-                        fill="black"
-                        dy="0.05em"
-                        style={{ fontWeight: 'bold' }}
-                    >
-                        🚛
-                    </text>
+                <g transform={`translate(${hexSize * 0.4}, ${hexSize * 0.35})`}>
+                    <circle cx="0" cy="0" r={hexSize * 0.14} fill="gold" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
+                    <text x="0" y="0" textAnchor="middle" className="select-none" fontSize={hexSize * 0.16} fill="black" dy="0.05em" style={{ fontWeight: 'bold' }}>🚛</text>
                 </g>
             )}
         </g>

@@ -321,8 +321,8 @@ export class GameService {
       console.log(`✅ STEP 1 COMPLETE: AI user record created successfully`);
     } catch (error) {
       console.error(`❌ CRITICAL: AI user record creation failed:`, error);
-      console.error(`❌ Error type:`, error?.constructor?.name);
-      console.error(`❌ Error message:`, error?.message);
+      console.error(`❌ Error type:`, (error as any)?.constructor?.name);
+      console.error(`❌ Error message:`, (error as any)?.message);
       console.error(`❌ Cannot proceed with AI tribe creation without valid user record`);
       return false;
     }

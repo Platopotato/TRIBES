@@ -151,6 +151,19 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         const serverTurnSubmitted = playerTribe.turnSubmitted;
         console.log('🔄 FRONTEND: View logic - serverTurnSubmitted:', serverTurnSubmitted, 'localTurnSubmitted:', turnSubmitted);
 
+        // AGGRESSIVE FIX: Detect turn completion message and force reset
+        const hasTurnCompletedMessage = playerTribe.lastTurnResults?.some(result =>
+            result.result?.includes('TURN') && result.result?.includes('COMPLETED')
+        );
+
+        if (hasTurnCompletedMessage && !serverTurnSubmitted) {
+            console.log('🚨 FRONTEND: TURN COMPLETED MESSAGE DETECTED - FORCING PLANNING MODE');
+            setTurnSubmitted(false);
+            setView('results'); // Show results first, then allow planning
+            setPlannedActions([]);
+            return;
+        }
+
         if (serverTurnSubmitted) {
             console.log('🔄 FRONTEND: Setting view to waiting');
             setView('waiting');
@@ -162,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             setView('planning');
         }
     }
-  }, [playerTribe, playerTribe?.turnSubmitted]);
+  }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
 
   const gamePhase: GamePhase = useMemo(() => {
     if (!playerTribe) {
@@ -986,8 +999,33 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   </div>
                 )}
 
-                {/* DEBUGGING: Manual state reset button */}
-                {!playerTribe?.turnSubmitted && !turnSubmitted && playerTribe?.lastTurnResults && playerTribe.lastTurnResults.length > 0 && (
+                {/* TURN COMPLETION: Start Planning Button */}
+                {!playerTribe?.turnSubmitted && !turnSubmitted && playerTribe?.lastTurnResults &&
+                 playerTribe.lastTurnResults.some(result => result.result?.includes('TURN') && result.result?.includes('COMPLETED')) && (
+                  <div className="bg-green-900/50 border border-green-400 p-4 rounded-lg text-center">
+                    <div className="text-green-200 font-bold text-lg mb-2">
+                      🎯 Turn Completed!
+                    </div>
+                    <div className="text-green-300 text-sm mb-3">
+                      Review your results above, then start planning your next turn.
+                    </div>
+                    <button
+                      onClick={() => {
+                        console.log('🎯 START PLANNING: Player manually starting next turn');
+                        setTurnSubmitted(false);
+                        setView('planning');
+                        setPlannedActions([]);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-lg"
+                    >
+                      🚀 Start Planning Next Turn
+                    </button>
+                  </div>
+                )}
+
+                {/* DEBUGGING: Manual state reset button (fallback) */}
+                {!playerTribe?.turnSubmitted && !turnSubmitted && playerTribe?.lastTurnResults && playerTribe.lastTurnResults.length > 0 &&
+                 !playerTribe.lastTurnResults.some(result => result.result?.includes('TURN') && result.result?.includes('COMPLETED')) && (
                   <div className="bg-blue-900/50 border border-blue-400 p-4 rounded-lg text-center">
                     <div className="text-blue-200 font-bold text-sm mb-2">
                       🔧 DEBUG: Turn completed but UI stuck?

@@ -378,15 +378,21 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 </select>
             )
         case 'chief_select':
-            const availableChiefs = currentGarrison?.chiefs || [];
+            const rawChiefs = currentGarrison?.chiefs || [];
+            // DEDUPLICATION FIX: Remove duplicate chiefs by name
+            const availableChiefs = rawChiefs.filter((chief, index, array) =>
+                array.findIndex(c => c.name === chief.name) === index
+            );
+
             if (availableChiefs.length === 0) return <p className="text-xs text-slate-500 italic">No chiefs in this garrison.</p>;
             const selectedChiefs = (draftAction?.actionData?.chiefsToMove as string[]) || [];
+
             return (
                 <div className="space-y-2 p-2 bg-slate-800/50 rounded-md max-h-40 overflow-y-auto">
                     {availableChiefs.map((chief: Chief, index: number) => {
                         const isSelected = selectedChiefs.includes(chief.name);
                         return (
-                            <label key={chief.name} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
+                            <label key={`${chief.name}-${index}`} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-slate-700 rounded-md">
                                 <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-amber-500 focus:ring-amber-500"
@@ -394,7 +400,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                                     value={chief.name}
                                     onChange={e => {
                                         const newSelection = e.target.checked
-                                            ? [...selectedChiefs, chief.name]
+                                            ? [...new Set([...selectedChiefs, chief.name])] // Prevent duplicates in selection
                                             : selectedChiefs.filter(name => name !== chief.name);
                                         handleFieldChange('chiefsToMove', newSelection);
                                     }}

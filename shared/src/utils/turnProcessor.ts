@@ -555,19 +555,18 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     try {
         startCoords = normalizeCoords(startLocation);
         destCoords = normalizeCoords(destination);
-        console.log(`🗺️ MOVEMENT: ${startLocation} (${startCoords.q},${startCoords.r}) → ${destination} (${destCoords.q},${destCoords.r})`);
+        // debug: movement input
     } catch (error) {
         return `❌ Invalid coordinate format: ${startLocation} → ${destination}. Error: ${error}`;
     }
 
     const pathInfo = findPath(startCoords, destCoords, state.mapData);
     if (!pathInfo) {
-        console.log(`❌ PATHFINDING FAILED: No path found from (${startCoords.q},${startCoords.r}) to (${destCoords.q},${destCoords.r})`);
+        // debug: pathfinding failed
         return `❌ Could not find a path from ${startLocation} to ${destination}. Route may be blocked by impassable terrain.`;
     }
 
-    console.log(`🗺️ PATHFINDING SUCCESS: Found path with cost ${pathInfo.cost.toFixed(1)} through ${pathInfo.path.length} hexes`);
-    console.log(`🗺️ PATH: ${pathInfo.path.slice(0, 3).join(' → ')}${pathInfo.path.length > 3 ? ` ... → ${pathInfo.path[pathInfo.path.length - 1]}` : ''}`);
+    // debug: pathfinding success
 
     // Calculate movement speed with bonuses
     const combinedEffects = getCombinedEffects(tribe);

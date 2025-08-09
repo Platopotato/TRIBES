@@ -48,6 +48,15 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.Scout:
                     result = processScoutAction(tribe, action);
                     break;
+                case ActionType.Attack:
+                    result = processAttackAction(tribe, action, state);
+                    break;
+                case ActionType.Defend:
+                    result = processDefendAction(tribe, action);
+                    break;
+                case ActionType.RespondToTrade:
+                    result = processTradeResponseAction(tribe, action, state);
+                    break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
             }
@@ -79,6 +88,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
     // Process active journeys
     processActiveJourneys(state);
 
+    // Process diplomatic proposals
+    processDiplomaticProposals(state);
+
     return state;
 }
 
@@ -104,6 +116,41 @@ function processActiveJourneys(state: any): void {
         }
 
         return true; // Keep active
+    });
+}
+
+// --- DIPLOMATIC PROPOSAL PROCESSING ---
+function processDiplomaticProposals(state: any): void {
+    const expiredProposals: any[] = [];
+
+    state.diplomaticProposals = state.diplomaticProposals.filter((proposal: any) => {
+        if (state.turn >= proposal.expiresOnTurn) {
+            // Proposal expired
+            const fromTribe = state.tribes.find((t: any) => t.id === proposal.fromTribeId);
+            const toTribe = state.tribes.find((t: any) => t.id === proposal.toTribeId);
+
+            if (fromTribe) {
+                fromTribe.lastTurnResults.push({
+                    id: `diplomacy-expired-${proposal.id}`,
+                    actionType: ActionType.Technology,
+                    actionData: {},
+                    result: `Your diplomatic proposal to ${toTribe?.tribeName || 'unknown tribe'} has expired.`
+                });
+            }
+
+            if (toTribe) {
+                toTribe.lastTurnResults.push({
+                    id: `diplomacy-expired-${proposal.id}`,
+                    actionType: ActionType.Technology,
+                    actionData: {},
+                    result: `Diplomatic proposal from ${fromTribe?.tribeName || 'unknown tribe'} has expired.`
+                });
+            }
+
+            return false; // Remove expired proposal
+        }
+
+        return true; // Keep active proposal
     });
 }
 
@@ -221,6 +268,142 @@ function processScoutAction(tribe: any, action: any): string {
     const finding = findings[Math.floor(Math.random() * findings.length)];
 
     return `Scouted ${location} and observed ${finding}. Intelligence gathered for tribal planning.`;
+}
+
+// --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---
+function processAttackAction(tribe: any, action: any, state: any): string {
+    const targetLocation = action.actionData.targetLocation;
+    const attackerLocation = action.actionData.fromLocation;
+    const troopsToAttack = action.actionData.troops || 1;
+
+    const attackerGarrison = tribe.garrisons[attackerLocation];
+    if (!attackerGarrison || attackerGarrison.troops < troopsToAttack) {
+        return `Insufficient troops at ${attackerLocation} for attack. Need ${troopsToAttack}, have ${attackerGarrison?.troops || 0}.`;
+    }
+
+    // Find defending tribe
+    const defendingTribe = state.tribes.find((t: any) =>
+        t.id !== tribe.id && t.garrisons[targetLocation]
+    );
+
+    if (!defendingTribe) {
+        return `No enemy garrison found at ${targetLocation} to attack.`;
+    }
+
+    const defenderGarrison = defendingTribe.garrisons[targetLocation];
+
+    // Simple combat resolution
+    const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0);
+    const defenderStrength = defenderGarrison.troops + (defenderGarrison.weapons || 0);
+
+    // Add some randomness
+    const attackerRoll = Math.random() * attackerStrength;
+    const defenderRoll = Math.random() * defenderStrength;
+
+    if (attackerRoll > defenderRoll) {
+        // Attacker wins
+        const troopsLost = Math.min(troopsToAttack, Math.floor(Math.random() * 3) + 1);
+        const defenderLosses = Math.min(defenderGarrison.troops, Math.floor(Math.random() * 4) + 2);
+
+        attackerGarrison.troops -= troopsLost;
+        defenderGarrison.troops -= defenderLosses;
+
+        // Add result to defender
+        defendingTribe.lastTurnResults.push({
+            id: `attack-defense-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You lost ${defenderLosses} troops defending.`
+        });
+
+        return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. You lost ${troopsLost} troops, enemy lost ${defenderLosses} troops.`;
+    } else {
+        // Defender wins
+        const attackerLosses = Math.min(troopsToAttack, Math.floor(Math.random() * 4) + 2);
+        const defenderLosses = Math.min(defenderGarrison.troops, Math.floor(Math.random() * 2) + 1);
+
+        attackerGarrison.troops -= attackerLosses;
+        defenderGarrison.troops -= defenderLosses;
+
+        // Add result to defender
+        defendingTribe.lastTurnResults.push({
+            id: `attack-defense-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You successfully defended, losing ${defenderLosses} troops.`
+        });
+
+        return `Defeat! Attack on ${defendingTribe.tribeName} at ${targetLocation} failed. You lost ${attackerLosses} troops, enemy lost ${defenderLosses} troops.`;
+    }
+}
+
+function processDefendAction(tribe: any, action: any): string {
+    const location = action.actionData.location;
+    const garrison = tribe.garrisons[location];
+
+    if (!garrison) {
+        return `No garrison found at ${location} to fortify defenses.`;
+    }
+
+    // Defensive bonus for this turn
+    garrison.defenseBonus = (garrison.defenseBonus || 0) + 2;
+
+    return `Fortified defenses at ${location}. Garrison gains +2 defensive strength this turn.`;
+}
+
+function processTradeResponseAction(tribe: any, action: any, state: any): string {
+    const journeyId = action.actionData.journeyId;
+    const response = action.actionData.response; // 'accept' or 'reject'
+    const offer = action.actionData.offer;
+
+    // Find the journey
+    const journey = state.journeys.find((j: any) => j.id === journeyId);
+    if (!journey) {
+        return `Trade proposal ${journeyId} not found or has expired.`;
+    }
+
+    const fromTribe = state.tribes.find((t: any) => t.id === journey.fromTribeId);
+    if (!fromTribe) {
+        return `Original trading tribe not found.`;
+    }
+
+    if (response === 'accept') {
+        // Process trade exchange
+        if (offer.food && offer.scrap) {
+            // Example: give food, receive scrap
+            if (tribe.globalResources.food >= offer.food) {
+                tribe.globalResources.food -= offer.food;
+                tribe.globalResources.scrap += offer.scrap;
+
+                fromTribe.globalResources.food += offer.food;
+                fromTribe.globalResources.scrap -= offer.scrap;
+
+                // Notify other tribe
+                fromTribe.lastTurnResults.push({
+                    id: `trade-accepted-${Date.now()}`,
+                    actionType: ActionType.Trade,
+                    actionData: {},
+                    result: `${tribe.tribeName} accepted your trade proposal! Exchanged ${offer.food} food for ${offer.scrap} scrap.`
+                });
+
+                return `Trade accepted! Gave ${offer.food} food to ${fromTribe.tribeName}, received ${offer.scrap} scrap.`;
+            } else {
+                return `Insufficient resources to complete trade. Need ${offer.food} food, have ${tribe.globalResources.food}.`;
+            }
+        }
+    } else {
+        // Notify other tribe of rejection
+        fromTribe.lastTurnResults.push({
+            id: `trade-rejected-${Date.now()}`,
+            actionType: ActionType.Trade,
+            actionData: {},
+            result: `${tribe.tribeName} rejected your trade proposal.`
+        });
+
+        return `Trade proposal from ${fromTribe.tribeName} rejected.`;
+    }
+
+    return `Trade response processed.`;
 }
 
 function processExploreAction(tribe: any, action: any): string {

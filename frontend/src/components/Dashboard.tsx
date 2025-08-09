@@ -128,8 +128,22 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           }
         }, 100);
       }
+
+      // TURN PROCESSOR FIX: Detect forceUIReset flag from turn processing
+      if ((playerTribe as any).forceUIReset) {
+        console.log('🚨 FRONTEND: TURN PROCESSOR FORCE RESET DETECTED');
+        setTurnSubmitted(false);
+        setPlannedActions([]);
+        if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
+          setView('results');
+        } else {
+          setView('planning');
+        }
+        // Clear the flag (we'll need to update the server to clear it too)
+        console.log('🔄 FRONTEND: UI state forcibly reset after turn processing');
+      }
     }
-  }, [playerTribe?.turnSubmitted, turnSubmitted]);
+  }, [playerTribe?.turnSubmitted, playerTribe?.lastStateUpdate, turnSubmitted]);
 
   useEffect(() => {
     if (playerTribe) {

@@ -192,6 +192,8 @@ export interface Tribe {
   currentResearch: ResearchProject | null;
   journeyResponses: { journeyId: string; response: 'accept' | 'reject' }[];
   diplomacy: Record<string, DiplomaticRelation>; // Key is other tribe's ID
+  lastStateUpdate?: number; // Timestamp for frontend state synchronization
+  forceUIReset?: boolean; // Flag to force frontend UI reset after turn processing
 }
 
 export enum ActionType {

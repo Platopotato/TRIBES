@@ -77,9 +77,14 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // Basic upkeep
         processBasicUpkeep(tribe);
 
-        // Clear actions and reset turn submission
+        // CRITICAL: Complete turn state reset (same as Force Refresh admin function)
         tribe.actions = [];
         tribe.turnSubmitted = false;
+
+        // FORCE CLEAN STATE: Ensure frontend can transition properly
+        // Add markers to help frontend detect state change and force reset
+        tribe.lastStateUpdate = Date.now();
+        tribe.forceUIReset = true; // Special flag for frontend to detect
 
         // Add prominent turn completion message
         tribe.lastTurnResults.unshift({
@@ -88,6 +93,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
             actionData: {},
             result: `🎯 TURN ${state.turn - 1} COMPLETED! 🎯\n\n✅ ${tribe.tribeName} may now plan and submit actions for Turn ${state.turn}.\n\n📋 Review your results below and plan your next moves!`
         });
+
+        // DEBUGGING: Add explicit state markers for frontend
+        console.log(`🔄 TURN PROCESSOR: Reset tribe ${tribe.tribeName} - turnSubmitted: ${tribe.turnSubmitted}, actions: ${tribe.actions.length}, results: ${tribe.lastTurnResults.length}`);
     }
 
     // Process active journeys

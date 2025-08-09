@@ -10,6 +10,7 @@ interface MapViewProps {
   playerTribe: Tribe | undefined;
   allTribes: Tribe[];
   journeys: Journey[];
+  journeyLabels?: Record<string, string>;
   startingLocations: string[];
   selectionMode: boolean;
   onHexSelect: (q: number, r: number) => void;
@@ -30,7 +31,7 @@ const MAX_ZOOM = 5;
 const VISIBILITY_RANGE = 1;
 const HEX_SIZE = 12;
 
-const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlayer: boolean; hexSize: number }> = ({ journey, tribe, isPlayer, hexSize }) => {
+const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlayer: boolean; hexSize: number; label?: string }> = ({ journey, tribe, isPlayer, hexSize, label }) => {
     const { q, r } = parseHexCoords(journey.currentLocation);
     const { x, y } = hexToPixel(q, r, hexSize);
 
@@ -77,6 +78,21 @@ const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlay
             <svg x={-hexSize * 0.35} y={-hexSize * 0.35} width={hexSize * 0.7} height={hexSize * 0.7} viewBox="0 0 24 24" className={`fill-current ${iconColor}`}>
                {iconPath}
             </svg>
+
+            {/* Chiefs star badge if chiefs are present */}
+            {(journey.force?.chiefs?.length || 0) > 0 && (
+              <g transform={`translate(${hexSize * 0.45}, ${-hexSize * 0.5})`}>
+                <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize={hexSize * 0.35} className="select-none">★</text>
+              </g>
+            )}
+
+            {/* Label letter above icon if provided */}
+            {label && (
+              <g transform={`translate(0, ${-hexSize * 0.9})`}>
+                <rect x={-hexSize * 0.18} y={-hexSize * 0.18} width={hexSize * 0.36} height={hexSize * 0.36} rx={2} fill="rgba(0,0,0,0.7)" stroke="white" strokeWidth="0.4" />
+                <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize={hexSize * 0.3} fill="white" className="select-none">{label}</text>
+              </g>
+            )}
 
             {/* Caravan badge for trade */}
             {journey.type === 'Trade' && (
@@ -158,7 +174,7 @@ const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlay
 
 
 const MapView: React.FC<MapViewProps> = (props) => {
-  const { mapData, playerTribe, allTribes, journeys, startingLocations, selectionMode, onHexSelect, paintMode = false, onHexPaintStart, onHexPaint, onHexPaintEnd, homeBaseLocation, territoryData, highlightedHex, selectedHexForAction, pendingHexSelection } = props;
+  const { mapData, playerTribe, allTribes, journeys, journeyLabels, startingLocations, selectionMode, onHexSelect, paintMode = false, onHexPaintStart, onHexPaint, onHexPaintEnd, homeBaseLocation, territoryData, highlightedHex, selectedHexForAction, pendingHexSelection } = props;
   
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -1005,6 +1021,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
                             tribe={journeyTribe}
                             isPlayer={journey.ownerTribeId === playerTribe?.id}
                             hexSize={HEX_SIZE}
+                            label={journeyLabels ? journeyLabels[journey.id] : undefined}
                         />
                     );
                 })}

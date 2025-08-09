@@ -227,6 +227,18 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     return baseActions + troopBonus + leadershipBonus + chiefBonus;
   }, [playerTribe, totalTroops, totalChiefs]);
 
+  // Consistent journey labels (A, B, C, ...) for the player's journeys
+  const journeyLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!playerTribe) return map;
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const playerJourneys = (journeys || []).filter(j => j.ownerTribeId === playerTribe.id);
+    playerJourneys.forEach((j, idx) => {
+      map[j.id] = letters[idx % letters.length];
+    });
+    return map;
+  }, [journeys, playerTribe]);
+
   // Calculate other tribes for diplomacy
   const otherTribes = useMemo(() => {
     return allTribes.filter(t => t.id !== playerTribe?.id);
@@ -538,6 +550,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 playerTribe={playerTribe}
                 allTribes={allTribes}
                 journeys={journeys}
+                journeyLabels={journeyLabels}
                 startingLocations={startingLocations}
                 selectionMode={mapSelectionMode.active}
                 onHexSelect={(q, r) => {
@@ -584,6 +597,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     allJourneys={journeys}
                     playerTribeId={playerTribe.id}
                     turn={turn}
+                    labels={journeyLabels}
                   />
                   <ResultsPanel results={playerTribe.lastTurnResults} />
                 </>
@@ -1148,6 +1162,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 playerTribe={playerTribe}
                 allTribes={allTribes}
                 journeys={journeys}
+                journeyLabels={journeyLabels}
                 startingLocations={startingLocations}
                 selectionMode={true} // Always allow selection in this mode
                 onHexSelect={(q, r) => {
@@ -1318,6 +1333,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               playerTribe={playerTribe}
               allTribes={allTribes}
               journeys={journeys}
+              journeyLabels={journeyLabels}
               startingLocations={startingLocations}
               selectionMode={mapSelectionMode.active}
               onHexSelect={(q, r) => {

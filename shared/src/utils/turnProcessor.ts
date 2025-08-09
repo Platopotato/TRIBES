@@ -1,4 +1,5 @@
 import { GameState, ActionType } from '../types.js';
+import { getHexesInRange, parseHexCoords } from './mapUtils.js';
 
 // --- COORDINATE CONVERSION UTILITIES ---
 function convertToStandardFormat(coords: string): string {
@@ -82,7 +83,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     result = processExploreAction(tribe, action);
                     break;
                 case ActionType.Scout:
-                    result = processScoutAction(tribe, action);
+                    result = processScoutAction(tribe, action, state);
                     break;
                 case ActionType.Scavenge:
                     result = processScavengeAction(tribe, action);
@@ -339,7 +340,7 @@ function processTradeAction(tribe: any, action: any, state: any): string {
     return `Trade mission initiated to ${destination} offering ${offer}. Expected arrival in 2 turns.`;
 }
 
-function processScoutAction(tribe: any, action: any): string {
+function processScoutAction(tribe: any, action: any, state?: any): string {
     // Handle both old and new field names
     const locationRaw = action.actionData.location || action.actionData.target_location;
 
@@ -350,16 +351,80 @@ function processScoutAction(tribe: any, action: any): string {
     // Convert coordinates to standard format
     const location = convertToStandardFormat(locationRaw);
 
-    // Add to explored hexes (only if valid location)
-    if (location && !tribe.exploredHexes.includes(location)) {
-        tribe.exploredHexes.push(location);
+    // ENHANCED SCOUTING: Add scouted hex + 1 radius to explored hexes
+    const { q, r } = parseHexCoords(location);
+    const scoutRange = 1; // Scouts reveal 1 hex radius around target
+    const revealedHexes = getHexesInRange({ q, r }, scoutRange);
+
+    // Add all revealed hexes to explored hexes
+    revealedHexes.forEach(hex => {
+        if (!tribe.exploredHexes.includes(hex)) {
+            tribe.exploredHexes.push(hex);
+        }
+    });
+
+    // ENHANCED NARRATIVE: Terrain and context-based scouting reports
+    const terrainNarratives = {
+        forest: [
+            "dense woodland teeming with wildlife and hidden paths",
+            "ancient trees whispering secrets of forgotten civilizations",
+            "shadowy groves where danger lurks behind every trunk",
+            "verdant canopy concealing both bounty and peril"
+        ],
+        mountain: [
+            "towering peaks that scrape the very heavens",
+            "treacherous cliffs hiding caves filled with echoing mysteries",
+            "windswept ridges offering commanding views of distant lands",
+            "rocky bastions where eagles nest and avalanches threaten"
+        ],
+        desert: [
+            "endless dunes shifting like the sands of time itself",
+            "scorching wasteland where mirages dance with deadly beauty",
+            "sun-bleached bones marking the graves of the unwary",
+            "oasis dreams shimmering just beyond the horizon"
+        ],
+        plains: [
+            "rolling grasslands stretching to infinity's edge",
+            "fertile meadows where herds of wild beasts roam free",
+            "windswept steppes perfect for swift cavalry charges",
+            "golden fields swaying like an ocean of grain"
+        ],
+        swamp: [
+            "fetid marshlands where disease breeds in stagnant pools",
+            "treacherous bogs that swallow the unwary whole",
+            "mist-shrouded wetlands echoing with croaks and screams",
+            "poisonous vapors rising from ancient, rotting secrets"
+        ]
+    };
+
+    const discoveries = [
+        "signs of recent tribal activity",
+        "abandoned campsites with cold ashes",
+        "fresh water sources vital for survival",
+        "dangerous predator tracks in the mud",
+        "ancient ruins hinting at lost civilizations",
+        "strategic vantage points perfect for ambushes",
+        "resource deposits glinting in the sunlight",
+        "hidden paths known only to the wise",
+        "territorial markings of hostile tribes",
+        "evidence of recent battles and bloodshed"
+    ];
+
+    // Get terrain type from map data if available
+    let terrainType = 'plains'; // default
+    if (state?.mapData) {
+        const hexData = state.mapData.find((hex: any) => hex.coordinates === location);
+        if (hexData?.terrain) {
+            terrainType = hexData.terrain.toLowerCase();
+        }
     }
 
-    // Scout-specific results
-    const findings = ['enemy movements', 'safe passage', 'resource deposits', 'tribal settlements', 'dangerous wildlife'];
-    const finding = findings[Math.floor(Math.random() * findings.length)];
+    // Select appropriate narrative based on terrain
+    const terrainOptions = terrainNarratives[terrainType as keyof typeof terrainNarratives] || terrainNarratives.plains;
+    const terrainDesc = terrainOptions[Math.floor(Math.random() * terrainOptions.length)];
+    const discovery = discoveries[Math.floor(Math.random() * discoveries.length)];
 
-    return `Scouted ${location} and observed ${finding}. Intelligence gathered for tribal planning.`;
+    return `🔍 Scouts ventured into ${location} and discovered ${terrainDesc}. Among the landscape, they observed ${discovery}. The surrounding area has been mapped and added to tribal knowledge.`;
 }
 
 function processScavengeAction(tribe: any, action: any): string {

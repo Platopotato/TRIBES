@@ -27,7 +27,7 @@ interface MapViewProps {
 const MAP_RADIUS = 40;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 5;
-const VISIBILITY_RANGE = 2;
+const VISIBILITY_RANGE = 1;
 const HEX_SIZE = 12;
 
 const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlayer: boolean; hexSize: number }> = ({ journey, tribe, isPlayer, hexSize }) => {

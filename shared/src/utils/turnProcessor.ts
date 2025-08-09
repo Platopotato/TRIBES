@@ -86,7 +86,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     result = processScoutAction(tribe, action, state);
                     break;
                 case ActionType.Scavenge:
-                    result = processScavengeAction(tribe, action);
+                    result = processScavengeAction(tribe, action, state);
                     break;
                 case ActionType.Attack:
                     result = processAttackAction(tribe, action, state);
@@ -541,7 +541,7 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
     return `🔍 Scouts ventured into ${location} and discovered ${terrainDesc}. Among the landscape, they observed ${discovery}. The surrounding area has been mapped and added to tribal knowledge.`;
 }
 
-function processScavengeAction(tribe: any, action: any): string {
+function processScavengeAction(tribe: any, action: any, state?: any): string {
     // Handle both old and new field names
     const locationRaw = action.actionData.location || action.actionData.target_location;
     const resourceType = action.actionData.resource_type || 'food';
@@ -558,34 +558,129 @@ function processScavengeAction(tribe: any, action: any): string {
         tribe.exploredHexes.push(location);
     }
 
-    // Enhanced scavenging results - better rewards for POI locations
+    // POI DETECTION AND ENHANCED REWARDS
+    let poi = null;
+    let terrain = 'plains';
+    if (state?.mapData) {
+        const { q, r } = parseHexCoords(location);
+        const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+        if (hexData) {
+            terrain = hexData.terrain?.toLowerCase() || 'plains';
+            // Check for POI - handle both direct poi object and separate poi fields
+            if (hexData.poi) {
+                poi = hexData.poi;
+            } else if (hexData.poiType) {
+                poi = {
+                    type: hexData.poiType,
+                    rarity: hexData.poiRarity || 'Common',
+                    difficulty: hexData.poiDifficulty || 5
+                };
+            }
+        }
+    }
+
+    // Calculate base scavenging amounts
     let resourceGained = 0;
     let resourceName = '';
+    let poiBonus = 1; // Base multiplier
+    let poiMessage = '';
 
-    // Base scavenging amounts (will be enhanced if POI detected)
+    // POI-SPECIFIC BONUSES
+    if (poi) {
+        switch (poi.type) {
+            case 'Food Source':
+                if (resourceType.toLowerCase() === 'food') {
+                    poiBonus = 3; // Triple food from Food Sources
+                    poiMessage = ' 🍎 The Food Source provides abundant sustenance!';
+                } else {
+                    poiBonus = 1.5; // Still better than normal for other resources
+                    poiMessage = ' 🌿 The fertile area yields some additional resources.';
+                }
+                break;
+            case 'Scrapyard':
+                if (resourceType.toLowerCase() === 'scrap') {
+                    poiBonus = 3; // Triple scrap from Scrapyards
+                    poiMessage = ' ⚙️ The Scrapyard is a treasure trove of salvageable materials!';
+                } else {
+                    poiBonus = 1.5;
+                    poiMessage = ' 🔧 The scrapyard yields some useful materials.';
+                }
+                break;
+            case 'WeaponsCache':
+                if (resourceType.toLowerCase() === 'weapons') {
+                    poiBonus = 4; // Quadruple weapons from Weapons Caches
+                    poiMessage = ' 🗡️ The Weapons Cache contains military-grade equipment!';
+                } else {
+                    poiBonus = 1.2;
+                    poiMessage = ' 🛡️ The cache contains some useful gear.';
+                }
+                break;
+            case 'Ruins':
+            case 'Ruins POI':
+                poiBonus = 2; // Double resources from Ruins
+                poiMessage = ' 🏛️ The ancient ruins hide valuable pre-war artifacts!';
+                break;
+            case 'Battlefield':
+                if (resourceType.toLowerCase() === 'weapons') {
+                    poiBonus = 2.5;
+                    poiMessage = ' ⚔️ The battlefield is littered with abandoned weapons!';
+                } else {
+                    poiBonus = 1.3;
+                    poiMessage = ' 💀 The battlefield yields some salvageable equipment.';
+                }
+                break;
+            case 'Factory':
+                if (resourceType.toLowerCase() === 'scrap') {
+                    poiBonus = 2.5;
+                    poiMessage = ' 🏭 The factory contains valuable industrial components!';
+                } else {
+                    poiBonus = 1.4;
+                    poiMessage = ' 🔩 The factory yields some useful materials.';
+                }
+                break;
+            default:
+                poiBonus = 1.5; // Generic POI bonus
+                poiMessage = ` 📍 The ${poi.type} provides additional scavenging opportunities.`;
+        }
+
+        // Rarity bonus
+        switch (poi.rarity) {
+            case 'Very Rare':
+                poiBonus *= 1.5;
+                break;
+            case 'Rare':
+                poiBonus *= 1.3;
+                break;
+            case 'Uncommon':
+                poiBonus *= 1.2;
+                break;
+        }
+    }
+
+    // Base scavenging amounts (will be multiplied by POI bonus)
     switch (resourceType.toLowerCase()) {
         case 'food':
-            resourceGained = Math.floor(Math.random() * 3) + 2; // 2-4 food (improved)
+            resourceGained = Math.floor((Math.floor(Math.random() * 3) + 2) * poiBonus); // 2-4 base * bonus
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
             break;
         case 'scrap':
-            resourceGained = Math.floor(Math.random() * 2) + 2; // 2-3 scrap (improved)
+            resourceGained = Math.floor((Math.floor(Math.random() * 2) + 2) * poiBonus); // 2-3 base * bonus
             tribe.globalResources.scrap += resourceGained;
             resourceName = 'scrap';
             break;
         case 'weapons':
-            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 weapons (improved)
+            resourceGained = Math.floor((Math.floor(Math.random() * 2) + 1) * poiBonus); // 1-2 base * bonus
             tribe.globalResources.weapons += resourceGained;
             resourceName = 'weapons';
             break;
         default:
-            resourceGained = Math.floor(Math.random() * 3) + 2; // 2-4 food as default
+            resourceGained = Math.floor((Math.floor(Math.random() * 3) + 2) * poiBonus); // 2-4 base * bonus
             tribe.globalResources.food += resourceGained;
             resourceName = 'food';
     }
 
-    return `✅ Successfully scavenged ${location} and found ${resourceGained} ${resourceName}! Area explored and resources gathered.`;
+    return `✅ Successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage} Area explored and resources gathered.`;
 }
 
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---

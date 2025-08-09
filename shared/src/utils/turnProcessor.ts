@@ -111,7 +111,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
         }
 
         // Basic upkeep
-        processBasicUpkeep(tribe);
+        processBasicUpkeep(tribe, state);
 
         // CRITICAL: Complete turn state reset (same as Force Refresh admin function)
         tribe.actions = [];
@@ -842,7 +842,7 @@ function processExploreAction(tribe: any, action: any): string {
     return `Explored ${location} and discovered ${discovery}. Area added to tribal knowledge.`;
 }
 
-function processBasicUpkeep(tribe: any): void {
+function processBasicUpkeep(tribe: any, state?: any): void {
     // Basic food consumption
     const totalTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
     const foodConsumption = Math.floor(totalTroops / 2);
@@ -851,6 +851,12 @@ function processBasicUpkeep(tribe: any): void {
     tribe.globalResources.food = Math.max(0, tribe.globalResources.food - foodConsumption);
 
     let upkeepMessage = `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food. Remaining food: ${tribe.globalResources.food}.`;
+
+    // POI PASSIVE INCOME SYSTEM
+    const poiIncome = processPOIPassiveIncome(tribe, state);
+    if (poiIncome.message) {
+        upkeepMessage += ` ${poiIncome.message}`;
+    }
 
     // MORALE SYSTEM: Handle starvation and morale effects
     const moraleEffects = processMoraleSystem(tribe, initialFood, foodConsumption, totalTroops);
@@ -947,4 +953,105 @@ function processMoraleSystem(tribe: any, initialFood: number, foodConsumption: n
     moraleMessages.push(`${moraleStatus} (${tribe.globalResources.morale}/100)`);
 
     return { message: moraleMessages.join(' ') };
+}
+
+function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
+    if (!state?.mapData) {
+        return { message: '' };
+    }
+
+    let incomeMessages: string[] = [];
+    let totalFoodIncome = 0;
+    let totalScrapIncome = 0;
+
+    // Check each garrison for POI passive income
+    for (const [location, garrison] of Object.entries(tribe.garrisons)) {
+        const garrisonData = garrison as any;
+        if (garrisonData.troops <= 0) continue; // No troops = no income
+
+        // Find the hex data for this garrison location
+        const { q, r } = parseHexCoords(location);
+        const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+
+        if (!hexData) continue;
+
+        // Check for POI - handle both direct poi object and separate poi fields
+        let poi = null;
+        if (hexData.poi) {
+            poi = hexData.poi;
+        } else if (hexData.poiType) {
+            poi = {
+                type: hexData.poiType,
+                rarity: hexData.poiRarity || 'Common',
+                difficulty: hexData.poiDifficulty || 5
+            };
+        }
+
+        if (!poi) continue;
+
+        // Calculate passive income based on POI type and troop count
+        const troopCount = garrisonData.troops;
+
+        switch (poi.type) {
+            case 'Factory':
+                // Factories produce food at 5x troop count
+                const foodProduced = troopCount * 5;
+                tribe.globalResources.food += foodProduced;
+                totalFoodIncome += foodProduced;
+                incomeMessages.push(`🏭 Factory at ${location}: ${troopCount} troops produced ${foodProduced} food`);
+                break;
+
+            case 'Mine':
+                // Mines produce scrap at 5x troop count
+                const scrapProduced = troopCount * 5;
+                tribe.globalResources.scrap += scrapProduced;
+                totalScrapIncome += scrapProduced;
+                incomeMessages.push(`⛏️ Mine at ${location}: ${troopCount} troops produced ${scrapProduced} scrap`);
+                break;
+
+            case 'Food Source':
+                // Food Sources produce food at 3x troop count (less than factories but still good)
+                const foodFromSource = troopCount * 3;
+                tribe.globalResources.food += foodFromSource;
+                totalFoodIncome += foodFromSource;
+                incomeMessages.push(`🍎 Food Source at ${location}: ${troopCount} troops harvested ${foodFromSource} food`);
+                break;
+
+            case 'Scrapyard':
+                // Scrapyards produce scrap at 3x troop count (less than mines but still good)
+                const scrapFromYard = troopCount * 3;
+                tribe.globalResources.scrap += scrapFromYard;
+                totalScrapIncome += scrapFromYard;
+                incomeMessages.push(`⚙️ Scrapyard at ${location}: ${troopCount} troops salvaged ${scrapFromYard} scrap`);
+                break;
+
+            case 'Research Lab':
+                // Research Labs could provide small scrap income (representing tech salvage)
+                const techScrap = Math.floor(troopCount * 1.5);
+                if (techScrap > 0) {
+                    tribe.globalResources.scrap += techScrap;
+                    totalScrapIncome += techScrap;
+                    incomeMessages.push(`🔬 Research Lab at ${location}: ${troopCount} troops salvaged ${techScrap} tech components`);
+                }
+                break;
+        }
+    }
+
+    // Create summary message
+    let summaryMessage = '';
+    if (totalFoodIncome > 0 || totalScrapIncome > 0) {
+        const parts = [];
+        if (totalFoodIncome > 0) parts.push(`+${totalFoodIncome} food`);
+        if (totalScrapIncome > 0) parts.push(`+${totalScrapIncome} scrap`);
+        summaryMessage = `💰 POI Income: ${parts.join(', ')} from controlled facilities.`;
+
+        // Add detailed breakdown if there are multiple sources
+        if (incomeMessages.length > 1) {
+            summaryMessage += ` Details: ${incomeMessages.join('; ')}.`;
+        } else if (incomeMessages.length === 1) {
+            summaryMessage += ` ${incomeMessages[0]}.`;
+        }
+    }
+
+    return { message: summaryMessage };
 }

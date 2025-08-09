@@ -26,16 +26,8 @@ export function processGlobalTurn(gameState: GameState): GameState {
         for (const action of tribe.actions || []) {
             let result = '';
 
-            // DEBUG: Log what action we're processing (will be visible in backend logs)
-            // Note: Using try-catch to avoid console errors in shared package
-            try {
-                if (typeof console !== 'undefined') {
-                    console.log(`🎯 PROCESSING ACTION: ${action.actionType} for ${tribe.tribeName}`);
-                    console.log(`🎯 ACTION DATA:`, JSON.stringify(action.actionData, null, 2));
-                }
-            } catch (e) {
-                // Ignore console errors in shared package
-            }
+            // DEBUG: Action processing debugging removed for shared package compatibility
+            // The backend GameService will log action processing details
 
             // Validate action data
             if (!action.actionData) {

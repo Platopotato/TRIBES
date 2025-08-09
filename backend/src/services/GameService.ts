@@ -162,11 +162,19 @@ export class GameService {
       newGameState = processGlobalTurn(gameState);
       console.log('✅ GAMESERVICE: processGlobalTurn completed successfully');
 
-      // DEBUG: Check if Force Refresh was applied
+      // DEBUG: Check if Force Refresh was applied and what actions were processed
       const humanTribes = newGameState.tribes.filter(t => !t.isAI);
       console.log('🚨 GAMESERVICE: Checking Force Refresh results:');
       humanTribes.forEach(tribe => {
         console.log(`  - ${tribe.tribeName}: lastTurnResults.length = ${tribe.lastTurnResults?.length}, turnSubmitted = ${tribe.turnSubmitted}`);
+
+        // DEBUG: Show what actions were processed
+        if (tribe.lastTurnResults && tribe.lastTurnResults.length > 0) {
+          console.log(`    Actions processed for ${tribe.tribeName}:`);
+          tribe.lastTurnResults.forEach((result, index) => {
+            console.log(`      ${index + 1}. ${result.actionType}: ${result.result}`);
+          });
+        }
       });
     } catch (error) {
       console.error('❌ CRITICAL ERROR in processGlobalTurn:', error);

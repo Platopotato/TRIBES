@@ -294,7 +294,18 @@ export class GameService {
     });
 
     gameState.tribes.push(aiTribe);
+    console.log(`🤖 AI TRIBE DEBUG: Added AI tribe to gameState. Total tribes now: ${gameState.tribes.length}`);
+    console.log(`🤖 AI TRIBE DEBUG: Tribe names: ${gameState.tribes.map(t => t.tribeName).join(', ')}`);
+    console.log(`🤖 AI TRIBE DEBUG: AI tribe data:`, {
+      id: aiTribe.id,
+      tribeName: aiTribe.tribeName,
+      isAI: aiTribe.isAI,
+      location: aiTribe.location,
+      garrisons: Object.keys(aiTribe.garrisons)
+    });
+
     await this.updateGameState(gameState);
+    console.log(`🤖 AI TRIBE DEBUG: Game state updated successfully`);
     return true;
   }
 

@@ -39,6 +39,8 @@ export class SocketHandler {
       if (gameState) {
         console.log('📡 Emitting game state with', gameState.tribes.length, 'tribes');
         console.log('🏘️ Tribe names:', gameState.tribes.map(t => t.tribeName));
+        console.log('🤖 AI tribes:', gameState.tribes.filter(t => t.isAI).map(t => `${t.tribeName} (${t.aiType})`));
+        console.log('👥 Human tribes:', gameState.tribes.filter(t => !t.isAI).map(t => t.tribeName));
         this.io.emit('gamestate_updated', gameState);
       } else {
         console.log('❌ No game state to emit');

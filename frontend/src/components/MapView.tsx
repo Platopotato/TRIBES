@@ -34,6 +34,99 @@ const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlay
     const { q, r } = parseHexCoords(journey.currentLocation);
     const { x, y } = hexToPixel(q, r, hexSize);
 
+    // Enhanced journey icon with tribe identity and caravan symbol for trade
+    let iconColor = isPlayer ? 'text-green-400' : 'text-red-500';
+    let circleFill = isPlayer ? 'fill-green-900/70' : 'fill-red-900/70';
+    let circleStroke = isPlayer ? "stroke-green-400" : "stroke-red-500";
+
+    // Default journey icon (movement arrow)
+    let iconPath = <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />;
+
+    // TRADE CARAVAN: Special caravan icon for trade journeys
+    if (journey.type === 'Trade') {
+        iconPath = (
+            <g>
+                {/* Caravan wagon */}
+                <rect x="4" y="10" width="16" height="8" rx="2" strokeWidth="1.5" fill="none" stroke="currentColor"/>
+                {/* Wheels */}
+                <circle cx="8" cy="18" r="2" strokeWidth="1.5" fill="none" stroke="currentColor"/>
+                <circle cx="16" cy="18" r="2" strokeWidth="1.5" fill="none" stroke="currentColor"/>
+                {/* Cargo/goods indicator */}
+                <rect x="6" y="12" width="3" height="3" fill="currentColor"/>
+                <rect x="10.5" y="12" width="3" height="3" fill="currentColor"/>
+                <rect x="15" y="12" width="3" height="3" fill="currentColor"/>
+                {/* Movement indicator */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 14h4m0 0l-2-2m2 2l-2 2" stroke="currentColor" fill="none"/>
+            </g>
+        );
+    }
+
+    return (
+        <g transform={`translate(${x}, ${y})`}>
+            {/* Main journey circle */}
+            <circle cx="0" cy="0" r={hexSize * 0.45} className={circleFill} stroke={circleStroke} strokeWidth="0.5" />
+
+            {/* Journey type icon */}
+            <svg x={-hexSize * 0.25} y={-hexSize * 0.25} width={hexSize * 0.5} height={hexSize * 0.5} viewBox="0 0 24 24" className={`fill-current ${iconColor}`}>
+               {iconPath}
+            </svg>
+
+            {/* TRIBE IDENTITY: Show tribe icon in corner */}
+            {tribe && (
+                <g transform={`translate(${hexSize * 0.25}, ${-hexSize * 0.35})`}>
+                    <circle
+                        cx="0"
+                        cy="0"
+                        r={hexSize * 0.15}
+                        fill={tribe.color}
+                        stroke="rgba(0,0,0,0.5)"
+                        strokeWidth="0.5"
+                        style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}
+                    />
+                    <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        className="select-none"
+                        fontSize={hexSize * 0.2}
+                        fill="white"
+                        dy="0.1em"
+                        style={{ fontWeight: 'bold' }}
+                    >
+                        {tribe.icon}
+                    </text>
+                </g>
+            )}
+
+            {/* CARAVAN INDICATOR: Extra symbol for trade journeys */}
+            {journey.type === 'Trade' && (
+                <g transform={`translate(${-hexSize * 0.35}, ${hexSize * 0.25})`}>
+                    <circle
+                        cx="0"
+                        cy="0"
+                        r={hexSize * 0.12}
+                        fill="gold"
+                        stroke="rgba(0,0,0,0.5)"
+                        strokeWidth="0.5"
+                        style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}
+                    />
+                    <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        className="select-none"
+                        fontSize={hexSize * 0.15}
+                        fill="black"
+                        dy="0.05em"
+                        style={{ fontWeight: 'bold' }}
+                    >
+                        🚛
+                    </text>
+                </g>
+            )}
+        </g>
+    );
+
     if (!tribe) {
         // Fallback to generic icon if tribe not found
         const iconColor = isPlayer ? 'text-green-400' : 'text-red-500';

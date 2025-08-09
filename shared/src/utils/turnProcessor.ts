@@ -453,24 +453,115 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 }
 
 function processTradeAction(tribe: any, action: any, state: any): string {
-    const destination = action.actionData.destination;
-    const offer = action.actionData.offer || 'resources';
+    const startLocation = action.actionData.start_location;
+    const targetLocationAndTribe = action.actionData.target_location_and_tribe;
+    const troops = action.actionData.troops || 0;
+    const weapons = action.actionData.weapons || 0;
+    const chiefsToMove = action.actionData.chiefsToMove || [];
 
-    // Create a simple trade journey
+    const offerFood = action.actionData.offer_food || 0;
+    const offerScrap = action.actionData.offer_scrap || 0;
+    const offerWeapons = action.actionData.offer_weapons || 0;
+    const requestFood = action.actionData.request_food || 0;
+    const requestScrap = action.actionData.request_scrap || 0;
+    const requestWeapons = action.actionData.request_weapons || 0;
+
+    if (!startLocation || !targetLocationAndTribe) {
+        return `❌ Trade action failed: Missing start location or destination.`;
+    }
+
+    // Parse target location and tribe ID
+    const [targetLocation, targetTribeId] = targetLocationAndTribe.split(':');
+    if (!targetLocation || !targetTribeId) {
+        return `❌ Trade action failed: Invalid target format.`;
+    }
+
+    const sourceGarrison = tribe.garrisons[startLocation];
+    if (!sourceGarrison) {
+        return `❌ Trade action failed: No garrison at ${startLocation}.`;
+    }
+
+    // Validate resources
+    if (sourceGarrison.troops < troops) {
+        return `❌ Trade action failed: Insufficient troops at ${startLocation}. Need ${troops}, have ${sourceGarrison.troops}.`;
+    }
+    if (sourceGarrison.weapons < weapons) {
+        return `❌ Trade action failed: Insufficient weapons at ${startLocation}. Need ${weapons}, have ${sourceGarrison.weapons}.`;
+    }
+    if (tribe.globalResources.food < offerFood) {
+        return `❌ Trade action failed: Insufficient food. Need ${offerFood}, have ${tribe.globalResources.food}.`;
+    }
+    if (tribe.globalResources.scrap < offerScrap) {
+        return `❌ Trade action failed: Insufficient scrap. Need ${offerScrap}, have ${tribe.globalResources.scrap}.`;
+    }
+    if (tribe.globalResources.weapons < offerWeapons) {
+        return `❌ Trade action failed: Insufficient weapons. Need ${offerWeapons}, have ${tribe.globalResources.weapons}.`;
+    }
+
+    // Validate chiefs
+    const availableChiefs = sourceGarrison.chiefs || [];
+    const invalidChiefs = chiefsToMove.filter((chiefName: string) =>
+        !availableChiefs.some((chief: any) => chief.name === chiefName)
+    );
+    if (invalidChiefs.length > 0) {
+        return `❌ Trade action failed: Chiefs not available: ${invalidChiefs.join(', ')}.`;
+    }
+
+    // Remove resources from tribe and garrison
+    sourceGarrison.troops -= troops;
+    sourceGarrison.weapons -= weapons;
+    tribe.globalResources.food -= offerFood;
+    tribe.globalResources.scrap -= offerScrap;
+    tribe.globalResources.weapons -= offerWeapons;
+
+    // Remove chiefs from garrison
+    const movingChiefs = availableChiefs.filter((chief: any) => chiefsToMove.includes(chief.name));
+    sourceGarrison.chiefs = availableChiefs.filter((chief: any) => !chiefsToMove.includes(chief.name));
+
+    // Create proper journey object
     const journey = {
         id: `trade-${Date.now()}-${tribe.id}`,
-        fromTribeId: tribe.id,
-        toTribeId: action.actionData.toTribeId || null,
-        destination: destination,
-        purpose: 'trade',
-        status: 'active',
-        turnsRemaining: 2,
-        message: action.actionData.message || `Trade mission to ${destination} offering ${offer}`
+        ownerTribeId: tribe.id,
+        type: 'Trade',
+        origin: startLocation,
+        destination: targetLocation,
+        path: [startLocation, targetLocation], // Simple path for now
+        currentLocation: startLocation,
+        force: {
+            troops: troops,
+            weapons: weapons,
+            chiefs: movingChiefs
+        },
+        payload: {
+            food: offerFood,
+            scrap: offerScrap,
+            weapons: offerWeapons
+        },
+        arrivalTurn: 2, // 2 turns to arrive
+        tradeOffer: {
+            request: { food: requestFood, scrap: requestScrap, weapons: requestWeapons },
+            fromTribeName: tribe.tribeName
+        },
+        status: 'en_route'
     };
 
+    // Initialize journeys array if it doesn't exist
+    if (!state.journeys) {
+        state.journeys = [];
+    }
     state.journeys.push(journey);
 
-    return `Trade mission initiated to ${destination} offering ${offer}. Expected arrival in 2 turns.`;
+    const offerItems = [];
+    if (offerFood > 0) offerItems.push(`${offerFood} food`);
+    if (offerScrap > 0) offerItems.push(`${offerScrap} scrap`);
+    if (offerWeapons > 0) offerItems.push(`${offerWeapons} weapons`);
+
+    const requestItems = [];
+    if (requestFood > 0) requestItems.push(`${requestFood} food`);
+    if (requestScrap > 0) requestItems.push(`${requestScrap} scrap`);
+    if (requestWeapons > 0) requestItems.push(`${requestWeapons} weapons`);
+
+    return `🚛 Trade caravan dispatched from ${startLocation} to ${targetLocation}! Offering: ${offerItems.join(', ')} | Requesting: ${requestItems.join(', ')} | Guards: ${troops} troops${weapons > 0 ? `, ${weapons} weapons` : ''}${movingChiefs.length > 0 ? `, ${movingChiefs.length} chiefs` : ''}. Arrival in 2 turns.`;
 }
 
 function processScoutAction(tribe: any, action: any, state?: any): string {

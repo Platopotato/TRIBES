@@ -63,6 +63,14 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // Clear actions and reset turn submission
         tribe.actions = [];
         tribe.turnSubmitted = false;
+
+        // Add turn completion result to ensure players know they can submit again
+        tribe.lastTurnResults.push({
+            id: `turn-complete-${tribe.id}`,
+            actionType: ActionType.Upkeep,
+            actionData: {},
+            result: `🎯 Turn ${state.turn - 1} completed for ${tribe.tribeName}. You may now plan and submit actions for Turn ${state.turn}.`
+        });
     }
 
     // Process active journeys

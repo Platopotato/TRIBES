@@ -503,7 +503,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
 
       {/* Responsive Content */}
-      <main className={`flex-1 p-4 ${shouldUseMobileUI ? (activeTab === 'map' ? 'overflow-hidden' : 'overflow-y-auto mobile-scroll-container') : 'grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 overflow-hidden'}`}>
+      <main className={`flex-1 p-4 ${shouldUseMobileUI ? (activeTab === 'map' ? 'overflow-hidden' : 'overflow-y-auto mobile-scroll-container') : 'grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 overflow-y-auto'}`}>
 
         {/* Desktop: Show map and content side by side */}
         {!shouldUseMobileUI && (

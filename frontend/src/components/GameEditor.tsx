@@ -125,10 +125,11 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       const updatedTribe: Tribe = {
         ...tribe,
         turnSubmitted: false,
-        actions: [] // Clear any stuck actions
+        actions: [], // Clear any stuck actions
+        lastTurnResults: [] // CRITICAL FIX: Clear results to force planning phase (same as Force Refresh)
       };
       onUpdateTribe(updatedTribe);
-      alert(`Turn submission ${action}ed for ${tribe.tribeName}. ${tribe.playerName} should refresh their browser and try submitting again.`);
+      alert(`Turn submission ${action}ed for ${tribe.tribeName}. ${tribe.playerName} should now be able to add actions normally without refreshing.`);
     }
   };
 

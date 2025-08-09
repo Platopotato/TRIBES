@@ -628,11 +628,13 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
               </div>
             </div>
           ) : (
-            <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded mb-4">
-              <div className="text-blue-800 font-medium text-center">
-                {currentFieldName ? `Tap a hex on the map to select location for ${currentFieldName}` : 'Select a location field to choose coordinates'}
+            currentFieldName ? (
+              <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded mb-4">
+                <div className="text-blue-800 font-medium text-center">
+                  {`Tap a hex on the map to select location for ${currentFieldName}`}
+                </div>
               </div>
-            </div>
+            ) : null
           )}
 
           {selectedActionType === ActionType.Trade ? renderTradeForm() :

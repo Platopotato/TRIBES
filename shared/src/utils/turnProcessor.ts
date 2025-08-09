@@ -862,15 +862,56 @@ function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe
 
 // --- MAIN PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {
-    // TEMPORARY FIX: Use simple deep clone to get turn processing working
-    // The complex shallow copy was causing crashes during object copying
+    // CRITICAL FIX: Safe copying that avoids circular references and large objects
     let state: GameState;
     let resultsByTribe: Record<string, GameAction[]>;
     let tribeMap: Map<string, Tribe>;
 
     try {
-        // Simple deep clone - slower but more reliable
-        state = JSON.parse(JSON.stringify(gameState)) as GameState;
+        // Safe copying approach - copy only what we need to modify
+        state = {
+            turn: gameState.turn,
+            startingLocations: gameState.startingLocations,
+            chiefRequests: gameState.chiefRequests,
+            assetRequests: gameState.assetRequests,
+            tribes: gameState.tribes.map(tribe => ({
+                id: tribe.id,
+                playerId: tribe.playerId,
+                isAI: tribe.isAI,
+                aiType: tribe.aiType,
+                playerName: tribe.playerName,
+                tribeName: tribe.tribeName,
+                icon: tribe.icon,
+                color: tribe.color,
+                stats: { ...tribe.stats },
+                location: tribe.location,
+                turnSubmitted: tribe.turnSubmitted,
+                garrisons: { ...tribe.garrisons },
+                globalResources: { ...tribe.globalResources },
+                diplomacy: { ...tribe.diplomacy },
+                actions: [...(tribe.actions || [])],
+                lastTurnResults: [...(tribe.lastTurnResults || [])],
+                journeyResponses: [...(tribe.journeyResponses || [])],
+                assets: [...(tribe.assets || [])],
+                exploredHexes: [...(tribe.exploredHexes || [])],
+                rationLevel: tribe.rationLevel,
+                completedTechs: [...(tribe.completedTechs || [])],
+                currentResearch: tribe.currentResearch ? { ...tribe.currentResearch } : null
+            })),
+            journeys: gameState.journeys.map(journey => ({ ...journey })),
+            diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
+            mapData: gameState.mapData, // Reference only - map data doesn't change during processing
+            history: gameState.history || [],
+            ticker: gameState.ticker,
+            loginAnnouncements: gameState.loginAnnouncements,
+            turnDeadline: gameState.turnDeadline,
+            newsletter: gameState.newsletter,
+            suspended: gameState.suspended,
+            suspensionMessage: gameState.suspensionMessage,
+            mapSeed: gameState.mapSeed,
+            mapSettings: gameState.mapSettings
+        };
+
         resultsByTribe = Object.fromEntries(state.tribes.map(t => [t.id, []]));
         tribeMap = new Map(state.tribes.map(t => [t.id, t]));
 

@@ -109,31 +109,40 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     setIsCodexOpen(false);
   }, [activeTab]);
 
-  // Initialize turn submission state from server data
+  // CRITICAL FIX: Always sync local state with server state
   useEffect(() => {
     if (playerTribe && playerTribe.turnSubmitted !== undefined) {
+      console.log('🔄 FRONTEND: Syncing turnSubmitted state:', playerTribe.turnSubmitted);
       setTurnSubmitted(playerTribe.turnSubmitted);
     }
   }, [playerTribe?.turnSubmitted]);
 
   useEffect(() => {
     if (playerTribe) {
-        if (turnSubmitted || playerTribe.turnSubmitted) {
+        // CRITICAL FIX: Trust server state over local state
+        const serverTurnSubmitted = playerTribe.turnSubmitted;
+        console.log('🔄 FRONTEND: View logic - serverTurnSubmitted:', serverTurnSubmitted, 'localTurnSubmitted:', turnSubmitted);
+
+        if (serverTurnSubmitted) {
+            console.log('🔄 FRONTEND: Setting view to waiting');
             setView('waiting');
         } else if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
+            console.log('🔄 FRONTEND: Setting view to results');
             setView('results');
         } else {
+            console.log('🔄 FRONTEND: Setting view to planning');
             setView('planning');
         }
     }
-  }, [playerTribe, turnSubmitted]);
+  }, [playerTribe, playerTribe?.turnSubmitted]);
 
   const gamePhase: GamePhase = useMemo(() => {
     if (!playerTribe) return 'planning';
-    if (turnSubmitted || playerTribe.turnSubmitted) return 'waiting';
+    // CRITICAL FIX: Trust server state only
+    if (playerTribe.turnSubmitted) return 'waiting';
     if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) return 'results';
     return 'planning';
-  }, [playerTribe, turnSubmitted]);
+  }, [playerTribe, playerTribe?.turnSubmitted]);
 
   // Calculate total chiefs across all garrisons
   const totalChiefs = useMemo(() => {
@@ -801,12 +810,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           <div className="space-y-4">
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-2">
-                {turnSubmitted ?
+                {playerTribe?.turnSubmitted ?
                   `⚡ Turn Actions (${playerTribe?.actions?.length || 0}/${maxActions}) TURN SUBMITTED` :
                   '⚡ Actions'}
               </h2>
               <p className="text-slate-300">
-                {turnSubmitted ?
+                {playerTribe?.turnSubmitted ?
                   'Your actions are locked in and waiting for admin to process the turn.' :
                   'Plan your tribe\'s actions for this turn.'}
               </p>
@@ -841,14 +850,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     // Open regular action modal first
                     setIsModalOpen(true);
                   }}
-                  disabled={turnSubmitted || plannedActions.length >= maxActions}
+                  disabled={playerTribe?.turnSubmitted || plannedActions.length >= maxActions}
                   className={`w-full p-3 rounded-lg font-bold transition-colors ${
-                    turnSubmitted
+                    playerTribe?.turnSubmitted
                       ? 'bg-green-700 text-green-100 cursor-not-allowed'
                       : 'bg-amber-600 hover:bg-amber-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white'
                   }`}
                 >
-                  {turnSubmitted ?
+                  {playerTribe?.turnSubmitted ?
                     `✅ TURN SUBMITTED (${playerTribe?.actions?.length || 0}/${maxActions})` :
                    plannedActions.length >= maxActions ? `Max Actions Reached (${maxActions})` : '+ Add New Action'}
                 </button>

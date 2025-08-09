@@ -368,16 +368,28 @@ function applyForceRefreshToAllTribes(state: any): void {
 
 // --- BASIC ACTION PROCESSORS ---
 function processRecruitAction(tribe: any, action: any): string {
-    const location = action.actionData?.location;
+    // Accept both 'location' and 'start_location' from clients/UI
+    let locationRaw = action.actionData?.location || action.actionData?.start_location;
     const foodOffered = action.actionData?.food_offered || action.actionData?.food || 2; // Allow variable food offers
 
-    if (!location) {
+    if (!locationRaw) {
         return `❌ Recruit action failed: No location specified.`;
+    }
+
+    // Resolve to an existing garrison key (supports both "q,r" and "NNN.NNN")
+    let location = locationRaw;
+    if (!tribe.garrisons[location]) {
+        try {
+            const standard = convertToStandardFormat(locationRaw);
+            if (tribe.garrisons[standard]) {
+                location = standard;
+            }
+        } catch {}
     }
 
     const garrison = tribe.garrisons[location];
     if (!garrison) {
-        return `❌ No garrison found at ${location} to recruit troops. You must have troops at a location to recruit more.`;
+        return `❌ No garrison found at ${locationRaw} to recruit troops. You must have troops at a location to recruit more.`;
     }
 
     // ENHANCED RECRUITMENT: Check food availability in stores

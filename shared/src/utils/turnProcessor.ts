@@ -360,6 +360,8 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     const fromLocationRaw = action.actionData?.fromLocation || action.actionData?.start_location;
     const toLocationRaw = action.actionData?.toLocation || action.actionData?.finish_location;
     const troopsToMove = action.actionData?.troops || 1;
+    const weaponsToMove = action.actionData?.weapons || 0;
+    const chiefsToMove = action.actionData?.chiefsToMove || [];
 
     if (!fromLocationRaw) {
         return `❌ Move action failed: No source location specified.`;
@@ -379,24 +381,58 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     }
 
     if (fromGarrison.troops < troopsToMove) {
-        return `Insufficient troops at ${fromLocation}. Need ${troopsToMove}, have ${fromGarrison.troops}.`;
+        return `❌ Insufficient troops at ${fromLocation}. Need ${troopsToMove}, have ${fromGarrison.troops}.`;
     }
 
-    // Move troops
+    if (fromGarrison.weapons < weaponsToMove) {
+        return `❌ Insufficient weapons at ${fromLocation}. Need ${weaponsToMove}, have ${fromGarrison.weapons}.`;
+    }
+
+    // Validate chiefs to move
+    const availableChiefs = fromGarrison.chiefs || [];
+    const invalidChiefs = chiefsToMove.filter((chiefName: string) =>
+        !availableChiefs.some(chief => chief.name === chiefName)
+    );
+
+    if (invalidChiefs.length > 0) {
+        return `❌ Chiefs not available at ${fromLocation}: ${invalidChiefs.join(', ')}.`;
+    }
+
+    // MOVE TROOPS
     fromGarrison.troops -= troopsToMove;
+
+    // MOVE WEAPONS
+    fromGarrison.weapons -= weaponsToMove;
+
+    // MOVE CHIEFS
+    const movingChiefs = availableChiefs.filter(chief => chiefsToMove.includes(chief.name));
+    fromGarrison.chiefs = availableChiefs.filter(chief => !chiefsToMove.includes(chief.name));
 
     // Create or update destination garrison
     if (!tribe.garrisons[toLocation]) {
         tribe.garrisons[toLocation] = { troops: 0, weapons: 0, chiefs: [] };
     }
-    tribe.garrisons[toLocation].troops += troopsToMove;
+
+    const toGarrison = tribe.garrisons[toLocation];
+    toGarrison.troops += troopsToMove;
+    toGarrison.weapons += weaponsToMove;
+
+    // Add moved chiefs to destination
+    if (!toGarrison.chiefs) toGarrison.chiefs = [];
+    toGarrison.chiefs.push(...movingChiefs);
 
     // Add to explored hexes (only if valid location)
     if (toLocation && !tribe.exploredHexes.includes(toLocation)) {
         tribe.exploredHexes.push(toLocation);
     }
 
-    return `✅ Successfully moved ${troopsToMove} troops from ${fromLocation} to ${toLocation}! Destination garrison now has ${tribe.garrisons[toLocation].troops} troops.`;
+    // Create detailed result message
+    const moveDetails = [];
+    if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);
+    if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
+    if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map(c => c.name).join(', ')})`);
+
+    return `✅ Successfully moved ${moveDetails.join(', ')} from ${fromLocation} to ${toLocation}! Destination garrison now has ${toGarrison.troops} troops, ${toGarrison.weapons} weapons, and ${toGarrison.chiefs.length} chiefs.`;
 }
 
 function processTradeAction(tribe: any, action: any, state: any): string {

@@ -77,6 +77,32 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                 <text x="0" y={-size * 0.1} textAnchor="middle" className="select-none" fontSize={size * 0.6} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                     {icon}
                 </text>
+                {/* CHIEF INDICATOR: Small star when chiefs are present */}
+                {garrison.chiefs && garrison.chiefs.length > 0 && (
+                    <g transform={`translate(${size * 0.35}, ${-size * 0.35})`}>
+                        <circle
+                            cx="0"
+                            cy="0"
+                            r={size * 0.15}
+                            fill="gold"
+                            stroke="rgba(0,0,0,0.5)"
+                            strokeWidth="0.5"
+                            style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}
+                        />
+                        <text
+                            x="0"
+                            y="0"
+                            textAnchor="middle"
+                            className="select-none"
+                            fontSize={size * 0.2}
+                            fill="black"
+                            dy="0.1em"
+                            style={{ fontWeight: 'bold' }}
+                        >
+                            ⭐
+                        </text>
+                    </g>
+                )}
                 {troops > 0 && (
                      <g transform={`translate(0, ${size * 0.5})`}>
                         <rect x={-size*0.4} y="0" width={size*0.8} height={size*0.4} rx="2" className={`${getTroopBoxStyle(tribe)} stroke-black/50`} strokeWidth="0.5" />

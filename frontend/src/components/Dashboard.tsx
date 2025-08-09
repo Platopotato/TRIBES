@@ -129,60 +129,33 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         }, 100);
       }
 
-      // TURN PROCESSOR FIX: Detect forceUIReset flag from turn processing
-      if ((playerTribe as any).forceUIReset) {
-        console.log('🚨 FRONTEND: TURN PROCESSOR FORCE RESET DETECTED');
-        setTurnSubmitted(false);
-        setPlannedActions([]);
-        if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
-          setView('results');
-        } else {
-          setView('planning');
-        }
-        // Clear the flag (we'll need to update the server to clear it too)
-        console.log('🔄 FRONTEND: UI state forcibly reset after turn processing');
-      }
-
-      // FORCE REFRESH APPLIED: Detect when Force Refresh logic was applied by turn processor
-      if ((playerTribe as any).forceRefreshApplied) {
-        console.log('🚨 FRONTEND: FORCE REFRESH APPLIED BY TURN PROCESSOR - ENABLING PLANNING MODE');
-        setTurnSubmitted(false);
-        setPlannedActions([]);
-        setView('planning'); // Force planning mode (same as Force Refresh admin button)
-        console.log('🔄 FRONTEND: Planning mode enabled after Force Refresh logic');
-      }
+      // NOTE: Complex detection logic removed - backend now automatically clears
+      // lastTurnResults after turn processing, ensuring clean state transitions
     }
-  }, [playerTribe?.turnSubmitted, playerTribe?.lastStateUpdate, turnSubmitted]);
+  }, [playerTribe?.turnSubmitted, turnSubmitted]);
 
   useEffect(() => {
     if (playerTribe) {
-        // CRITICAL FIX: Trust server state over local state
+        // SIMPLE LOGIC: Trust server state completely
+        // Backend automatically clears lastTurnResults after turn processing
         const serverTurnSubmitted = playerTribe.turnSubmitted;
-        console.log('🔄 FRONTEND: View logic - serverTurnSubmitted:', serverTurnSubmitted, 'localTurnSubmitted:', turnSubmitted);
-
-        // AGGRESSIVE FIX: Detect turn completion message and force reset
-        const hasTurnCompletedMessage = playerTribe.lastTurnResults?.some(result =>
-            result.result?.includes('TURN') && result.result?.includes('COMPLETED')
-        );
-
-        if (hasTurnCompletedMessage && !serverTurnSubmitted) {
-            console.log('🚨 FRONTEND: TURN COMPLETED MESSAGE DETECTED - FORCING PLANNING MODE');
-            setTurnSubmitted(false);
-            setView('results'); // Show results first, then allow planning
-            setPlannedActions([]);
-            return;
-        }
+        console.log('🔄 FRONTEND: View logic - serverTurnSubmitted:', serverTurnSubmitted);
 
         if (serverTurnSubmitted) {
             console.log('🔄 FRONTEND: Setting view to waiting');
             setView('waiting');
+            setTurnSubmitted(true);
         } else if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
             console.log('🔄 FRONTEND: Setting view to results');
             setView('results');
+            setTurnSubmitted(false);
         } else {
             console.log('🔄 FRONTEND: Setting view to planning');
             setView('planning');
+            setTurnSubmitted(false);
         }
+        setPlannedActions([]); // Always clear local planned actions on tribe data change
+        setJourneyResponses([]); // Clear journey responses as well
     }
   }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
 
@@ -191,7 +164,17 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       console.log('🔍 DASHBOARD: gamePhase = planning (no playerTribe)');
       return 'planning';
     }
-    // CRITICAL FIX: Trust server state only
+
+    // DEBUGGING: Log the exact state we're receiving
+    console.log('🚨 DEBUGGING GAME PHASE CALCULATION:');
+    console.log('  - playerTribe.turnSubmitted:', playerTribe.turnSubmitted);
+    console.log('  - playerTribe.lastTurnResults:', playerTribe.lastTurnResults);
+    console.log('  - lastTurnResults length:', playerTribe.lastTurnResults?.length);
+    console.log('  - lastTurnResults content:', JSON.stringify(playerTribe.lastTurnResults, null, 2));
+
+    // SIMPLE LOGIC: Trust server state completely
+    // After turn processing, backend automatically clears lastTurnResults for all players
+    // This ensures immediate transition to planning mode
     if (playerTribe.turnSubmitted) {
       console.log('🔍 DASHBOARD: gamePhase = waiting (turnSubmitted = true)');
       return 'waiting';
@@ -202,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     }
     console.log('🔍 DASHBOARD: gamePhase = planning (default)');
     return 'planning';
-  }, [playerTribe, playerTribe?.turnSubmitted]);
+  }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
 
   // Calculate total chiefs across all garrisons
   const totalChiefs = useMemo(() => {

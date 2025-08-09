@@ -81,18 +81,8 @@ export function processGlobalTurn(gameState: GameState): GameState {
         tribe.actions = [];
         tribe.turnSubmitted = false;
 
-        // FORCE CLEAN STATE: Ensure frontend can transition properly
-        // Add markers to help frontend detect state change and force reset
-        tribe.lastStateUpdate = Date.now();
-        tribe.forceUIReset = true; // Special flag for frontend to detect
-
-        // Add prominent turn completion message
-        tribe.lastTurnResults.unshift({
-            id: `turn-complete-${tribe.id}`,
-            actionType: ActionType.Upkeep,
-            actionData: {},
-            result: `🎯 TURN ${state.turn - 1} COMPLETED! 🎯\n\n✅ ${tribe.tribeName} may now plan and submit actions for Turn ${state.turn}.\n\n📋 Review your results below and plan your next moves!`
-        });
+        // CLEAN STATE: Ready for next turn
+        // Backend will automatically clear lastTurnResults via applyForceRefreshToAllTribes
 
         // DEBUGGING: State reset completed for tribe
         // Note: Logging removed for backend compatibility
@@ -176,34 +166,31 @@ function applyForceRefreshToAllTribes(state: any): void {
     // Apply the same logic as the "Force Refresh" admin button to all tribes
     // This ensures players can add actions for the next turn
 
+    console.log('🚨 BACKEND: applyForceRefreshToAllTribes() called');
+    console.log('🚨 BACKEND: Processing', state.tribes.length, 'tribes');
+
     for (const tribe of state.tribes) {
         // Only apply to human players (not AI)
         if (!tribe.isAI) {
+            console.log('🚨 BACKEND: Clearing results for tribe:', tribe.tribeName);
+            console.log('🚨 BACKEND: Before clear - lastTurnResults length:', tribe.lastTurnResults?.length);
+
             // CRITICAL: This is exactly what the "Force Refresh" admin button does
-            // Clear lastTurnResults to force frontend into planning mode
-            // Keep turnSubmitted = false and actions = [] (already set above)
+            // Clear lastTurnResults COMPLETELY to force frontend into planning mode
+            // This is the key fix - no results means frontend goes to planning mode
 
-            // Store results temporarily so players can see them first
-            const completionMessage = tribe.lastTurnResults.find((result: any) =>
-                result.result?.includes('TURN') && result.result?.includes('COMPLETED')
-            );
-
-            // Clear results to force planning mode (same as Force Refresh)
+            // COMPLETE CLEAR: No results at all (same as Force Refresh admin button)
             tribe.lastTurnResults = [];
-
-            // Add back just the completion message so players know what happened
-            if (completionMessage) {
-                tribe.lastTurnResults = [completionMessage];
-            }
 
             // Ensure clean state for next turn
             tribe.turnSubmitted = false;
             tribe.actions = [];
 
-            // Add force refresh marker for frontend detection
-            tribe.forceRefreshApplied = true;
+            console.log('🚨 BACKEND: After clear - lastTurnResults length:', tribe.lastTurnResults.length);
+            console.log('🚨 BACKEND: turnSubmitted set to:', tribe.turnSubmitted);
         }
     }
+    console.log('🚨 BACKEND: applyForceRefreshToAllTribes() completed');
 }
 
 // --- BASIC ACTION PROCESSORS ---

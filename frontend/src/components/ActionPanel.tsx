@@ -16,6 +16,12 @@ interface ActionPanelProps {
 
 const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenModal, onDeleteAction, onFinalize, phase }) => {
   const isPlanning = phase === 'planning';
+
+  // DEBUGGING: Log what phase we're receiving
+  console.log('🚨 ACTION PANEL DEBUG:');
+  console.log('  - Received phase:', phase);
+  console.log('  - isPlanning:', isPlanning);
+  console.log('  - Will show:', isPlanning ? 'Add Action button' : 'Processing...');
   
   const renderActionDetails = (action: GameAction) => {
     const { actionType, actionData } = action;

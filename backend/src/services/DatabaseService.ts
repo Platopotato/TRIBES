@@ -833,9 +833,33 @@ export class DatabaseService {
           }
           
           try {
-            await tx.tribe.create({
-              data: {
+            // Use upsert to handle existing tribes gracefully
+            await tx.tribe.upsert({
+              where: { id: tribe.id },
+              create: {
                 id: tribe.id,
+                playerId: tribe.playerId,
+                isAI: tribe.isAI || false,
+                aiType: tribe.aiType || null,
+                playerName: tribe.playerName,
+                tribeName: tribe.tribeName,
+                icon: tribe.icon,
+                color: tribe.color,
+                stats: tribe.stats as any,
+                location: tribe.location,
+                globalResources: tribe.globalResources as any,
+                turnSubmitted: tribe.turnSubmitted,
+                actions: tribe.actions as any,
+                lastTurnResults: tribe.lastTurnResults as any,
+                exploredHexes: tribe.exploredHexes as any,
+                rationLevel: tribe.rationLevel,
+                completedTechs: tribe.completedTechs as any,
+                assets: tribe.assets as any,
+                currentResearch: tribe.currentResearch as any,
+                journeyResponses: tribe.journeyResponses as any,
+                gameStateId: currentGameState.id
+              },
+              update: {
                 playerId: tribe.playerId,
                 isAI: tribe.isAI || false,
                 aiType: tribe.aiType || null,
@@ -861,7 +885,7 @@ export class DatabaseService {
 
             createdTribes++;
           } catch (error) {
-            console.log(`❌ Error creating tribe ${tribe.tribeName}:`, error);
+            console.log(`❌ Error upserting tribe ${tribe.tribeName}:`, error);
             skippedTribes++;
           }
         }

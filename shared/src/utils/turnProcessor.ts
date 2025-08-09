@@ -33,6 +33,18 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.BuildWeapons:
                     result = processBuildWeaponsAction(tribe, action);
                     break;
+                case ActionType.Move:
+                    result = processMoveAction(tribe, action, state);
+                    break;
+                case ActionType.Trade:
+                    result = processTradeAction(tribe, action, state);
+                    break;
+                case ActionType.Explore:
+                    result = processExploreAction(tribe, action);
+                    break;
+                case ActionType.Scout:
+                    result = processScoutAction(tribe, action);
+                    break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
             }
@@ -53,7 +65,35 @@ export function processGlobalTurn(gameState: GameState): GameState {
         tribe.turnSubmitted = false;
     }
 
+    // Process active journeys
+    processActiveJourneys(state);
+
     return state;
+}
+
+// --- JOURNEY PROCESSING ---
+function processActiveJourneys(state: any): void {
+    const completedJourneys: any[] = [];
+
+    state.journeys = state.journeys.filter((journey: any) => {
+        journey.turnsRemaining -= 1;
+
+        if (journey.turnsRemaining <= 0) {
+            // Journey completed
+            const tribe = state.tribes.find((t: any) => t.id === journey.fromTribeId);
+            if (tribe) {
+                tribe.journeyResponses.push({
+                    id: journey.id,
+                    message: `Journey to ${journey.destination} completed successfully. ${journey.purpose} mission accomplished.`,
+                    fromTribeId: journey.toTribeId || 'unknown',
+                    success: true
+                });
+            }
+            return false; // Remove from active journeys
+        }
+
+        return true; // Keep active
+    });
 }
 
 // --- BASIC ACTION PROCESSORS ---
@@ -102,6 +142,89 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
     garrison.weapons += 1;
 
     return `Successfully built 1 weapon at ${location}. Cost: ${scrapCost} scrap.`;
+}
+
+// --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
+function processMoveAction(tribe: any, action: any, state: any): string {
+    const fromLocation = action.actionData.fromLocation;
+    const toLocation = action.actionData.toLocation;
+    const troopsToMove = action.actionData.troops || 1;
+
+    const fromGarrison = tribe.garrisons[fromLocation];
+    if (!fromGarrison) {
+        return `No garrison found at ${fromLocation} to move troops from.`;
+    }
+
+    if (fromGarrison.troops < troopsToMove) {
+        return `Insufficient troops at ${fromLocation}. Need ${troopsToMove}, have ${fromGarrison.troops}.`;
+    }
+
+    // Move troops
+    fromGarrison.troops -= troopsToMove;
+
+    // Create or update destination garrison
+    if (!tribe.garrisons[toLocation]) {
+        tribe.garrisons[toLocation] = { troops: 0, weapons: 0 };
+    }
+    tribe.garrisons[toLocation].troops += troopsToMove;
+
+    // Add to explored hexes
+    if (!tribe.exploredHexes.includes(toLocation)) {
+        tribe.exploredHexes.push(toLocation);
+    }
+
+    return `Successfully moved ${troopsToMove} troops from ${fromLocation} to ${toLocation}.`;
+}
+
+function processTradeAction(tribe: any, action: any, state: any): string {
+    const destination = action.actionData.destination;
+    const offer = action.actionData.offer || 'resources';
+
+    // Create a simple trade journey
+    const journey = {
+        id: `trade-${Date.now()}-${tribe.id}`,
+        fromTribeId: tribe.id,
+        toTribeId: action.actionData.toTribeId || null,
+        destination: destination,
+        purpose: 'trade',
+        status: 'active',
+        turnsRemaining: 2,
+        message: action.actionData.message || `Trade mission to ${destination} offering ${offer}`
+    };
+
+    state.journeys.push(journey);
+
+    return `Trade mission initiated to ${destination} offering ${offer}. Expected arrival in 2 turns.`;
+}
+
+function processScoutAction(tribe: any, action: any): string {
+    const location = action.actionData.location;
+
+    // Add to explored hexes
+    if (!tribe.exploredHexes.includes(location)) {
+        tribe.exploredHexes.push(location);
+    }
+
+    // Scout-specific results
+    const findings = ['enemy movements', 'safe passage', 'resource deposits', 'tribal settlements', 'dangerous wildlife'];
+    const finding = findings[Math.floor(Math.random() * findings.length)];
+
+    return `Scouted ${location} and observed ${finding}. Intelligence gathered for tribal planning.`;
+}
+
+function processExploreAction(tribe: any, action: any): string {
+    const location = action.actionData.location;
+
+    // Add to explored hexes
+    if (!tribe.exploredHexes.includes(location)) {
+        tribe.exploredHexes.push(location);
+    }
+
+    // Simple exploration results
+    const discoveries = ['ancient ruins', 'fertile land', 'mineral deposits', 'fresh water', 'wildlife'];
+    const discovery = discoveries[Math.floor(Math.random() * discoveries.length)];
+
+    return `Explored ${location} and discovered ${discovery}. Area added to tribal knowledge.`;
 }
 
 function processBasicUpkeep(tribe: any): void {

@@ -136,7 +136,7 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
       { name: 'start_location', label: 'Build From', type: 'garrison_select' },
       { name: 'target_location', label: 'Target Hex', type: 'targetLocation' },
       { name: 'troops', label: 'Builders', type: 'number', defaultValue: 5, max: 'troops' },
-      { name: 'info', label: 'Info', type: 'info', info: 'Costs 25 Scrap. Requires at least 5 builders. The builders will garrison the new outpost.' }
+      { name: 'info', label: 'Info', type: 'info', info: 'Costs 20 Scrap. Requires at least 5 builders. Hex must be visible.' }
     ],
   },
   [ActionType.Trade]: {

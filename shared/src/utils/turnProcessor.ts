@@ -868,48 +868,48 @@ export function processGlobalTurn(gameState: GameState): GameState {
     let tribeMap: Map<string, Tribe>;
 
     try {
-        // Safe copying approach - copy only what we need to modify
+        // ULTRA-SAFE copying with null/undefined protection
         state = {
-            turn: gameState.turn,
-            startingLocations: gameState.startingLocations,
-            chiefRequests: gameState.chiefRequests,
-            assetRequests: gameState.assetRequests,
-            tribes: gameState.tribes.map(tribe => ({
-                id: tribe.id,
-                playerId: tribe.playerId,
-                isAI: tribe.isAI,
-                aiType: tribe.aiType,
-                playerName: tribe.playerName,
-                tribeName: tribe.tribeName,
-                icon: tribe.icon,
-                color: tribe.color,
-                stats: { ...tribe.stats },
-                location: tribe.location,
-                turnSubmitted: tribe.turnSubmitted,
-                garrisons: { ...tribe.garrisons },
-                globalResources: { ...tribe.globalResources },
-                diplomacy: { ...tribe.diplomacy },
-                actions: [...(tribe.actions || [])],
-                lastTurnResults: [...(tribe.lastTurnResults || [])],
-                journeyResponses: [...(tribe.journeyResponses || [])],
-                assets: [...(tribe.assets || [])],
-                exploredHexes: [...(tribe.exploredHexes || [])],
-                rationLevel: tribe.rationLevel,
-                completedTechs: [...(tribe.completedTechs || [])],
+            turn: gameState.turn || 1,
+            startingLocations: gameState.startingLocations || [],
+            chiefRequests: gameState.chiefRequests || [],
+            assetRequests: gameState.assetRequests || [],
+            tribes: (gameState.tribes || []).map(tribe => ({
+                id: tribe.id || '',
+                playerId: tribe.playerId || '',
+                isAI: tribe.isAI || false,
+                aiType: tribe.aiType || null,
+                playerName: tribe.playerName || '',
+                tribeName: tribe.tribeName || '',
+                icon: tribe.icon || '',
+                color: tribe.color || '',
+                stats: tribe.stats ? { ...tribe.stats } : { charisma: 0, intelligence: 0, leadership: 0, strength: 0 },
+                location: tribe.location || '',
+                turnSubmitted: tribe.turnSubmitted || false,
+                garrisons: tribe.garrisons ? { ...tribe.garrisons } : {},
+                globalResources: tribe.globalResources ? { ...tribe.globalResources } : { food: 0, scrap: 0, morale: 50 },
+                diplomacy: tribe.diplomacy ? { ...tribe.diplomacy } : {},
+                actions: tribe.actions ? [...tribe.actions] : [],
+                lastTurnResults: tribe.lastTurnResults ? [...tribe.lastTurnResults] : [],
+                journeyResponses: tribe.journeyResponses ? [...tribe.journeyResponses] : [],
+                assets: tribe.assets ? [...tribe.assets] : [],
+                exploredHexes: tribe.exploredHexes ? [...tribe.exploredHexes] : [],
+                rationLevel: tribe.rationLevel || 'Normal',
+                completedTechs: tribe.completedTechs ? [...tribe.completedTechs] : [],
                 currentResearch: tribe.currentResearch ? { ...tribe.currentResearch } : null
             })),
-            journeys: gameState.journeys.map(journey => ({ ...journey })),
-            diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
-            mapData: gameState.mapData, // Reference only - map data doesn't change during processing
+            journeys: (gameState.journeys || []).filter(journey => journey).map(journey => ({ ...journey })),
+            diplomaticProposals: (gameState.diplomaticProposals || []).filter(proposal => proposal).map(proposal => ({ ...proposal })),
+            mapData: gameState.mapData || [], // Reference only - map data doesn't change during processing
             history: gameState.history || [],
-            ticker: gameState.ticker,
-            loginAnnouncements: gameState.loginAnnouncements,
-            turnDeadline: gameState.turnDeadline,
-            newsletter: gameState.newsletter,
-            suspended: gameState.suspended,
-            suspensionMessage: gameState.suspensionMessage,
-            mapSeed: gameState.mapSeed,
-            mapSettings: gameState.mapSettings
+            ticker: gameState.ticker || undefined,
+            loginAnnouncements: gameState.loginAnnouncements || undefined,
+            turnDeadline: gameState.turnDeadline || undefined,
+            newsletter: gameState.newsletter || undefined,
+            suspended: gameState.suspended || false,
+            suspensionMessage: gameState.suspensionMessage || undefined,
+            mapSeed: gameState.mapSeed || undefined,
+            mapSettings: gameState.mapSettings || undefined
         };
 
         resultsByTribe = Object.fromEntries(state.tribes.map(t => [t.id, []]));

@@ -228,6 +228,7 @@ function applyForceRefreshToAllTribes(state: any): void {
 // --- BASIC ACTION PROCESSORS ---
 function processRecruitAction(tribe: any, action: any): string {
     const location = action.actionData?.location;
+    const foodOffered = action.actionData?.food_offered || action.actionData?.food || 2; // Allow variable food offers
 
     if (!location) {
         return `❌ Recruit action failed: No location specified.`;
@@ -238,16 +239,38 @@ function processRecruitAction(tribe: any, action: any): string {
         return `❌ No garrison found at ${location} to recruit troops. You must have troops at a location to recruit more.`;
     }
 
-    const foodCost = 2;
-    if (tribe.globalResources.food < foodCost) {
-        return `Insufficient food to recruit troops. Need ${foodCost} food, have ${tribe.globalResources.food}.`;
+    // ENHANCED RECRUITMENT: Check food availability in stores
+    if (tribe.globalResources.food < foodOffered) {
+        return `❌ Insufficient food in stores. Need ${foodOffered} food, have ${tribe.globalResources.food} available.`;
+    }
+
+    // ENHANCED RECRUITMENT: Check for starvation prevention
+    if (tribe.globalResources.morale <= 20) {
+        return `❌ Recruitment failed: Tribe morale too low (${tribe.globalResources.morale}/100). Improve conditions first.`;
+    }
+
+    // Apply recruitment efficiency from rations
+    const recruitmentEfficiency = tribe.rationEffects?.recruitmentEfficiency || 1.0;
+    const baseTroopsRecruited = Math.floor(foodOffered / 2); // 2 food per troop base
+    let troopsRecruited = Math.max(1, Math.floor(baseTroopsRecruited * recruitmentEfficiency));
+
+    // Generous rations bonus: 20% chance of extra recruit
+    if (recruitmentEfficiency > 1.1 && Math.random() < 0.2) {
+        troopsRecruited += 1;
     }
 
     // Recruit troops
-    tribe.globalResources.food -= foodCost;
-    garrison.troops += 1;
+    tribe.globalResources.food -= foodOffered;
+    garrison.troops += troopsRecruited;
 
-    return `✅ Successfully recruited 1 troop at ${location}! Cost: ${foodCost} food. Garrison now has ${garrison.troops} troops.`;
+    let efficiencyMessage = '';
+    if (recruitmentEfficiency > 1.0) {
+        efficiencyMessage = ` (Generous rations: +${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency${troopsRecruited > baseTroopsRecruited ? ', bonus recruit!' : ''})`;
+    } else if (recruitmentEfficiency < 1.0) {
+        efficiencyMessage = ` (Poor conditions: ${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency)`;
+    }
+
+    return `✅ Successfully recruited ${troopsRecruited} troop${troopsRecruited > 1 ? 's' : ''} at ${location}! Cost: ${foodOffered} food${efficiencyMessage}. Garrison now has ${garrison.troops} troops.`;
 }
 
 function processRestAction(tribe: any, action: any): string {
@@ -888,35 +911,63 @@ function processExploreAction(tribe: any, action: any): string {
 }
 
 function processBasicUpkeep(tribe: any, state?: any): void {
-    // Calculate food consumption based on ration level
+    // Calculate total troops and chiefs
     const totalTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
-    let baseFoodConsumption = Math.floor(totalTroops / 2);
+    const totalChiefs = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + (garrison.chiefs?.length || 0), 0);
 
-    // Apply ration level modifiers
-    let rationMultiplier = 1.0;
+    // ENHANCED RATION SYSTEM: Calculate food consumption based on ration level
+    let troopConsumption = 0;
+    let chiefConsumption = 0;
     let rationMessage = '';
+    let moraleChange = 0;
+    let combatModifier = 0;
+    let recruitmentEfficiency = 1.0;
+    let actionEfficiency = 1.0;
 
     switch (tribe.rationLevel) {
         case 'Hard':
-            rationMultiplier = 0.7; // 30% less food consumption
-            rationMessage = ' (Hard rations: -30% food consumption)';
+            troopConsumption = totalTroops * 0.5;
+            chiefConsumption = totalChiefs * 0.25;
+            rationMessage = ' (Hard rations: 0.5 food per troop, 0.25 per chief)';
+            moraleChange = -3;
+            combatModifier = -10;
+            actionEfficiency = 0.8; // -20% action efficiency
             break;
         case 'Generous':
-            rationMultiplier = 1.4; // 40% more food consumption
-            rationMessage = ' (Generous rations: +40% food consumption)';
+            troopConsumption = totalTroops * 1.5;
+            chiefConsumption = totalChiefs * 0.75;
+            rationMessage = ' (Generous rations: 1.5 food per troop, 0.75 per chief)';
+            moraleChange = 5; // Will be applied only if full consumption met
+            combatModifier = 10;
+            recruitmentEfficiency = 1.2; // +20% recruitment efficiency
             break;
         case 'Normal':
         default:
-            rationMultiplier = 1.0;
-            rationMessage = '';
+            troopConsumption = totalTroops * 1.0;
+            chiefConsumption = totalChiefs * 0.5;
+            rationMessage = ' (Normal rations: 1.0 food per troop, 0.5 per chief)';
+            moraleChange = 0;
+            combatModifier = 0;
+            recruitmentEfficiency = 1.0;
+            actionEfficiency = 1.0;
             break;
     }
 
-    const foodConsumption = Math.floor(baseFoodConsumption * rationMultiplier);
+    const totalFoodConsumption = Math.ceil(troopConsumption + chiefConsumption);
     const initialFood = tribe.globalResources.food;
-    tribe.globalResources.food = Math.max(0, tribe.globalResources.food - foodConsumption);
+    const foodShortage = Math.max(0, totalFoodConsumption - initialFood);
 
-    let upkeepMessage = `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
+    // Apply food consumption
+    tribe.globalResources.food = Math.max(0, tribe.globalResources.food - totalFoodConsumption);
+
+    // Store ration effects for other systems to use
+    tribe.rationEffects = {
+        combatModifier,
+        recruitmentEfficiency,
+        actionEfficiency
+    };
+
+    let upkeepMessage = `Upkeep: ${totalTroops} troops + ${totalChiefs} chiefs consumed ${totalFoodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
 
     // POI PASSIVE INCOME SYSTEM
     const poiIncome = processPOIPassiveIncome(tribe, state);
@@ -924,8 +975,8 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         upkeepMessage += ` ${poiIncome.message}`;
     }
 
-    // MORALE SYSTEM: Handle starvation and morale effects
-    const moraleEffects = processMoraleSystem(tribe, initialFood, foodConsumption, totalTroops);
+    // ENHANCED MORALE SYSTEM: Handle ration and starvation effects
+    const moraleEffects = processEnhancedMoraleSystem(tribe, initialFood, totalFoodConsumption, foodShortage, moraleChange, totalTroops);
     if (moraleEffects.message) {
         upkeepMessage += ` ${moraleEffects.message}`;
     }
@@ -1017,6 +1068,93 @@ function processMoraleSystem(tribe: any, initialFood: number, foodConsumption: n
     }
 
     moraleMessages.push(`${moraleStatus} (${tribe.globalResources.morale}/100)`);
+
+    return { message: moraleMessages.join(' ') };
+}
+
+function processEnhancedMoraleSystem(tribe: any, initialFood: number, foodConsumption: number, foodShortage: number, rationMoraleChange: number, totalTroops: number): { message: string } {
+    let moraleMessages: string[] = [];
+
+    // Initialize morale if not set
+    if (tribe.globalResources.morale === undefined) {
+        tribe.globalResources.morale = 50; // Default starting morale
+    }
+
+    // ENHANCED STARVATION EFFECTS
+    if (foodShortage > 0) {
+        const starvationPenalty = 5 + (foodShortage * 2); // -5 base + 2 per missing food
+        tribe.globalResources.morale = Math.max(0, tribe.globalResources.morale - starvationPenalty);
+        moraleMessages.push(`💀 STARVATION! Morale dropped by ${starvationPenalty} (5 base + ${foodShortage * 2} for shortage).`);
+    } else {
+        // RATION LEVEL EFFECTS (only when not starving)
+        if (rationMoraleChange !== 0) {
+            // For Generous rations, only apply bonus if we could afford the full consumption
+            if (rationMoraleChange > 0 && initialFood >= foodConsumption) {
+                tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + rationMoraleChange);
+                moraleMessages.push(`😊 Generous rations boosted morale by ${rationMoraleChange}.`);
+            } else if (rationMoraleChange < 0) {
+                tribe.globalResources.morale = Math.max(0, tribe.globalResources.morale + rationMoraleChange);
+                moraleMessages.push(`😞 Hard rations lowered morale by ${Math.abs(rationMoraleChange)}.`);
+            }
+        }
+    }
+
+    // LOW MORALE CONSEQUENCES (same as before but with enhanced messaging)
+    if (tribe.globalResources.morale <= 20) {
+        // CRITICAL MORALE: Troops start deserting
+        const desertionRate = Math.max(1, Math.floor(totalTroops * 0.1)); // 10% desertion rate
+        let troopsLost = 0;
+
+        // Remove troops from garrisons (starting with smallest garrisons)
+        const garrisons = Object.entries(tribe.garrisons).sort(([,a]: any, [,b]: any) => a.troops - b.troops);
+        for (const [location, garrison] of garrisons) {
+            if (troopsLost >= desertionRate) break;
+            const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
+            (garrison as any).troops -= toRemove;
+            troopsLost += toRemove;
+        }
+
+        if (troopsLost > 0) {
+            moraleMessages.push(`🏃‍♂️ MASS DESERTION! ${troopsLost} troops abandoned the tribe due to critically low morale!`);
+        }
+    } else if (tribe.globalResources.morale <= 35) {
+        // LOW MORALE: Troops complain
+        const complaints = [
+            "😠 Troops are grumbling about poor conditions and leadership.",
+            "😤 Soldiers openly question orders and express dissatisfaction.",
+            "😡 Warriors threaten to leave if conditions don't improve soon.",
+            "🗣️ Discontent spreads through the ranks like wildfire.",
+            "😔 Morale is dangerously low - troops speak of abandoning the tribe."
+        ];
+        const complaint = complaints[Math.floor(Math.random() * complaints.length)];
+        moraleMessages.push(complaint);
+    }
+
+    // MORALE STATUS INDICATOR WITH RATION EFFECTS
+    let moraleStatus = "";
+    const effects = [];
+
+    if (tribe.rationEffects?.combatModifier > 0) effects.push(`+${tribe.rationEffects.combatModifier}% combat`);
+    if (tribe.rationEffects?.combatModifier < 0) effects.push(`${tribe.rationEffects.combatModifier}% combat`);
+    if (tribe.rationEffects?.recruitmentEfficiency > 1) effects.push(`+${Math.round((tribe.rationEffects.recruitmentEfficiency - 1) * 100)}% recruitment`);
+    if (tribe.rationEffects?.actionEfficiency < 1) effects.push(`${Math.round((tribe.rationEffects.actionEfficiency - 1) * 100)}% efficiency`);
+
+    const effectsText = effects.length > 0 ? ` (${effects.join(', ')})` : '';
+
+    if (tribe.globalResources.morale >= 80) {
+        moraleStatus = `🎉 Tribe morale is EXCELLENT!${effectsText}`;
+    } else if (tribe.globalResources.morale >= 60) {
+        moraleStatus = `😊 Tribe morale is good.${effectsText}`;
+    } else if (tribe.globalResources.morale >= 40) {
+        moraleStatus = `😐 Tribe morale is average.${effectsText}`;
+    } else if (tribe.globalResources.morale >= 20) {
+        moraleStatus = `😟 Tribe morale is low.${effectsText}`;
+    } else {
+        moraleStatus = `💀 Tribe morale is CRITICAL!${effectsText}`;
+    }
+
+    moraleStatus += ` (${tribe.globalResources.morale}/100)`;
+    moraleMessages.push(moraleStatus);
 
     return { message: moraleMessages.join(' ') };
 }

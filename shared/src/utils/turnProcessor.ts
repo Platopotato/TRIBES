@@ -862,48 +862,73 @@ function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe
 
 // --- MAIN PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {
+    console.log('🔍 TURN PROCESSOR: Starting processGlobalTurn');
+
     // CRITICAL FIX: Proper deep copy of nested objects to prevent reference issues
-    let state: GameState = {
-        ...gameState,
-        tribes: gameState.tribes.map(tribe => ({
-            ...tribe,
-            garrisons: { ...tribe.garrisons },
-            globalResources: { ...tribe.globalResources },
-            diplomacy: { ...tribe.diplomacy },
-            actions: [...(tribe.actions || [])],
-            lastTurnResults: [...(tribe.lastTurnResults || [])],
-            journeyResponses: [...(tribe.journeyResponses || [])],
-            assets: [...(tribe.assets || [])]
-        })),
-        journeys: gameState.journeys.map(journey => ({ ...journey })),
-        diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
-        mapData: gameState.mapData // Map data doesn't change during turn processing
-    };
-    const resultsByTribe: Record<string, GameAction[]> = Object.fromEntries(state.tribes.map(t => [t.id, []]));
-    let tribeMap = new Map(state.tribes.map(t => [t.id, t]));
+    console.log('🔍 TURN PROCESSOR: Creating state copy...');
+    let state: GameState;
+    let resultsByTribe: Record<string, GameAction[]>;
+    let tribeMap: Map<string, Tribe>;
+
+    try {
+        state = {
+            ...gameState,
+            tribes: gameState.tribes.map(tribe => ({
+                ...tribe,
+                garrisons: { ...tribe.garrisons },
+                globalResources: { ...tribe.globalResources },
+                diplomacy: { ...tribe.diplomacy },
+                actions: [...(tribe.actions || [])],
+                lastTurnResults: [...(tribe.lastTurnResults || [])],
+                journeyResponses: [...(tribe.journeyResponses || [])],
+                assets: [...(tribe.assets || [])]
+            })),
+            journeys: gameState.journeys.map(journey => ({ ...journey })),
+            diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
+            mapData: gameState.mapData // Map data doesn't change during turn processing
+        };
+        console.log('✅ TURN PROCESSOR: State copy created successfully');
+
+        console.log('🔍 TURN PROCESSOR: Initializing tracking...');
+        resultsByTribe = Object.fromEntries(state.tribes.map(t => [t.id, []]));
+        tribeMap = new Map(state.tribes.map(t => [t.id, t]));
+        console.log('✅ TURN PROCESSOR: Tracking initialized successfully');
+
+    } catch (error) {
+        console.error('❌ CRITICAL ERROR in processGlobalTurn initialization:', error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        throw error;
+    }
 
     // ===================================================================
     // --- PHASE 1: DIPLOMACY (EXPIRATION CHECK) ---
     // ===================================================================
-    const stillActiveProposals: DiplomaticProposal[] = [];
-    for (const proposal of state.diplomaticProposals) {
-        if (state.turn >= proposal.expiresOnTurn) {
-            // Expired
-            const toTribe = tribeMap.get(proposal.toTribeId);
-            const fromTribe = tribeMap.get(proposal.fromTribeId);
-            const proposalType = proposal.statusChangeTo === DiplomaticStatus.Alliance ? 'alliance' : 'peace';
-            
-            if (fromTribe) {
-                 resultsByTribe[fromTribe.id].push({ id: `diplomacy-expire-${proposal.id}`, actionType: ActionType.Technology, actionData: {}, result: `Your ${proposalType} proposal to ${toTribe?.tribeName || 'an unknown tribe'} has expired.`});
+    try {
+        console.log('🔍 TURN PROCESSOR: Processing diplomacy...');
+        const stillActiveProposals: DiplomaticProposal[] = [];
+        for (const proposal of state.diplomaticProposals) {
+            if (state.turn >= proposal.expiresOnTurn) {
+                // Expired
+                const toTribe = tribeMap.get(proposal.toTribeId);
+                const fromTribe = tribeMap.get(proposal.fromTribeId);
+                const proposalType = proposal.statusChangeTo === DiplomaticStatus.Alliance ? 'alliance' : 'peace';
+
+                if (fromTribe) {
+                     resultsByTribe[fromTribe.id].push({ id: `diplomacy-expire-${proposal.id}`, actionType: ActionType.Technology, actionData: {}, result: `Your ${proposalType} proposal to ${toTribe?.tribeName || 'an unknown tribe'} has expired.`});
+                }
+                if (toTribe) {
+                     resultsByTribe[toTribe.id].push({ id: `diplomacy-expire-${proposal.id}`, actionType: ActionType.Technology, actionData: {}, result: `The ${proposalType} proposal from ${fromTribe?.tribeName || 'an unknown tribe'} has expired.`});
+                }
+            } else {
+                stillActiveProposals.push(proposal);
             }
-            if (toTribe) {
-                 resultsByTribe[toTribe.id].push({ id: `diplomacy-expire-${proposal.id}`, actionType: ActionType.Technology, actionData: {}, result: `The ${proposalType} proposal from ${fromTribe?.tribeName || 'an unknown tribe'} has expired.`});
-            }
-        } else {
-            stillActiveProposals.push(proposal);
         }
+        state.diplomaticProposals = stillActiveProposals;
+        console.log('✅ TURN PROCESSOR: Diplomacy processed successfully');
+    } catch (error) {
+        console.error('❌ CRITICAL ERROR in diplomacy processing:', error);
+        throw error;
     }
-    state.diplomaticProposals = stillActiveProposals;
 
     // ===================================================================
     // --- PHASE 2: PROCESS TRADE RESPONSES & EXPIRATIONS ---

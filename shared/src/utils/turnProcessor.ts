@@ -26,6 +26,17 @@ export function processGlobalTurn(gameState: GameState): GameState {
         for (const action of tribe.actions || []) {
             let result = '';
 
+            // DEBUG: Log what action we're processing (will be visible in backend logs)
+            // Note: Using try-catch to avoid console errors in shared package
+            try {
+                if (typeof console !== 'undefined') {
+                    console.log(`🎯 PROCESSING ACTION: ${action.actionType} for ${tribe.tribeName}`);
+                    console.log(`🎯 ACTION DATA:`, JSON.stringify(action.actionData, null, 2));
+                }
+            } catch (e) {
+                // Ignore console errors in shared package
+            }
+
             // Validate action data
             if (!action.actionData) {
                 result = `❌ Invalid action: ${action.actionType} - missing action data.`;
@@ -51,6 +62,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     break;
                 case ActionType.Scout:
                     result = processScoutAction(tribe, action);
+                    break;
+                case ActionType.Scavenge:
+                    result = processScavengeAction(tribe, action);
                     break;
                 case ActionType.Attack:
                     result = processAttackAction(tribe, action, state);
@@ -312,6 +326,52 @@ function processScoutAction(tribe: any, action: any): string {
     const finding = findings[Math.floor(Math.random() * findings.length)];
 
     return `Scouted ${location} and observed ${finding}. Intelligence gathered for tribal planning.`;
+}
+
+function processScavengeAction(tribe: any, action: any): string {
+    const location = action.actionData.location;
+    const resourceType = action.actionData.resource_type || 'food';
+
+    if (!location) {
+        return `❌ Scavenge action failed: No location specified.`;
+    }
+
+    // Add to explored hexes
+    if (!tribe.exploredHexes.includes(location)) {
+        tribe.exploredHexes.push(location);
+    }
+
+    // Scavenging results based on resource type
+    let resourceGained = 0;
+    let resourceName = '';
+
+    switch (resourceType) {
+        case 'food':
+            resourceGained = Math.floor(Math.random() * 3) + 1; // 1-3 food
+            tribe.globalResources.food += resourceGained;
+            resourceName = 'food';
+            break;
+        case 'scrap':
+            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 scrap
+            tribe.globalResources.scrap += resourceGained;
+            resourceName = 'scrap';
+            break;
+        case 'weapons':
+            resourceGained = Math.floor(Math.random() * 2); // 0-1 weapons
+            if (resourceGained > 0) {
+                tribe.globalResources.weapons += resourceGained;
+                resourceName = 'weapons';
+            } else {
+                return `Scavenged ${location} for weapons but found nothing useful. The area has been picked clean.`;
+            }
+            break;
+        default:
+            resourceGained = Math.floor(Math.random() * 2) + 1; // 1-2 food as default
+            tribe.globalResources.food += resourceGained;
+            resourceName = 'food';
+    }
+
+    return `✅ Successfully scavenged ${location} and found ${resourceGained} ${resourceName}! Area explored and resources gathered.`;
 }
 
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---

@@ -158,8 +158,16 @@ export class GameService {
 
     let newGameState: GameState;
     try {
+      console.log('🚨 GAMESERVICE: About to call processGlobalTurn - this will apply Force Refresh to all tribes');
       newGameState = processGlobalTurn(gameState);
       console.log('✅ GAMESERVICE: processGlobalTurn completed successfully');
+
+      // DEBUG: Check if Force Refresh was applied
+      const humanTribes = newGameState.tribes.filter(t => !t.isAI);
+      console.log('🚨 GAMESERVICE: Checking Force Refresh results:');
+      humanTribes.forEach(tribe => {
+        console.log(`  - ${tribe.tribeName}: lastTurnResults.length = ${tribe.lastTurnResults?.length}, turnSubmitted = ${tribe.turnSubmitted}`);
+      });
     } catch (error) {
       console.error('❌ CRITICAL ERROR in processGlobalTurn:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');

@@ -166,15 +166,12 @@ function applyForceRefreshToAllTribes(state: any): void {
     // Apply the same logic as the "Force Refresh" admin button to all tribes
     // This ensures players can add actions for the next turn
 
-    console.log('🚨 BACKEND: applyForceRefreshToAllTribes() called');
-    console.log('🚨 BACKEND: Processing', state.tribes.length, 'tribes');
+    // NOTE: Debugging removed for shared package compatibility
+    // The backend will log when this function is called
 
     for (const tribe of state.tribes) {
         // Only apply to human players (not AI)
         if (!tribe.isAI) {
-            console.log('🚨 BACKEND: Clearing results for tribe:', tribe.tribeName);
-            console.log('🚨 BACKEND: Before clear - lastTurnResults length:', tribe.lastTurnResults?.length);
-
             // CRITICAL: This is exactly what the "Force Refresh" admin button does
             // Clear lastTurnResults COMPLETELY to force frontend into planning mode
             // This is the key fix - no results means frontend goes to planning mode
@@ -185,12 +182,8 @@ function applyForceRefreshToAllTribes(state: any): void {
             // Ensure clean state for next turn
             tribe.turnSubmitted = false;
             tribe.actions = [];
-
-            console.log('🚨 BACKEND: After clear - lastTurnResults length:', tribe.lastTurnResults.length);
-            console.log('🚨 BACKEND: turnSubmitted set to:', tribe.turnSubmitted);
         }
     }
-    console.log('🚨 BACKEND: applyForceRefreshToAllTribes() completed');
 }
 
 // --- BASIC ACTION PROCESSORS ---

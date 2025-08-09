@@ -276,6 +276,20 @@ export class GameService {
       gameState.mapData
     );
 
+    // Create a user record for the AI tribe to satisfy foreign key constraints
+    console.log(`🤖 Creating user record for AI tribe: ${aiTribe.playerId}`);
+    try {
+      await this.databaseService.createAIUser({
+        id: aiTribe.playerId,
+        username: `AI_${aiTribe.tribeName.replace(/\s+/g, '_')}`,
+        role: 'player'
+      });
+      console.log(`✅ AI user record created successfully`);
+    } catch (error) {
+      console.log(`⚠️ AI user record creation failed (may already exist):`, error);
+      // Continue anyway - user might already exist
+    }
+
     // Set up diplomacy based on AI type
     gameState.tribes.forEach(t => {
       let initialStatus = DiplomaticStatus.War;

@@ -339,6 +339,27 @@ export class DatabaseService {
     }
   }
 
+  async createAIUser(userData: { id: string; username: string; role: string }): Promise<void> {
+    if (this.useDatabase && this.prisma) {
+      await this.prisma.user.upsert({
+        where: { id: userData.id },
+        create: {
+          id: userData.id,
+          username: userData.username,
+          passwordHash: 'AI_NO_PASSWORD', // AI users don't need real passwords
+          role: userData.role,
+          securityQuestion: 'AI',
+          securityAnswerHash: 'AI_NO_ANSWER'
+        },
+        update: {
+          username: userData.username,
+          role: userData.role
+        }
+      });
+    }
+    // For file storage, we don't need to create user records
+  }
+
   async createUser(user: User): Promise<void> {
     if (this.useDatabase && this.prisma) {
       await this.prisma.user.create({

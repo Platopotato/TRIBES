@@ -318,15 +318,14 @@ export class GameService {
     // TEMPORARY WORKAROUND: Force file storage for AI tribe creation to avoid database constraints
     console.log(`🤖 Using file storage workaround to avoid database constraint issues`);
     try {
-      // Temporarily force file storage mode
-      const originalUseDatabase = this.databaseService.useDatabase;
-      (this.databaseService as any).useDatabase = false;
+      // Temporarily switch to file storage mode
+      const originalMode = this.databaseService.temporarilyUseFileStorage();
 
       await this.updateGameState(gameState);
       console.log(`🤖 AI TRIBE DEBUG: Game state saved to file storage successfully`);
 
-      // Restore original database mode
-      (this.databaseService as any).useDatabase = originalUseDatabase;
+      // Restore original storage mode
+      this.databaseService.restoreStorageMode(originalMode);
 
     } catch (error) {
       console.error(`❌ File storage fallback failed:`, error);

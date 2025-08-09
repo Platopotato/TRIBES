@@ -374,6 +374,19 @@ export class DatabaseService {
     }
   }
 
+  // Temporary storage mode switching for AI tribe workaround
+  temporarilyUseFileStorage(): boolean {
+    const originalMode = this.useDatabase;
+    this.useDatabase = false;
+    console.log(`🔄 Temporarily switched to file storage mode`);
+    return originalMode;
+  }
+
+  restoreStorageMode(originalMode: boolean): void {
+    this.useDatabase = originalMode;
+    console.log(`🔄 Restored storage mode to: ${originalMode ? 'database' : 'file'}`);
+  }
+
   async createUser(user: User): Promise<void> {
     if (this.useDatabase && this.prisma) {
       await this.prisma.user.create({

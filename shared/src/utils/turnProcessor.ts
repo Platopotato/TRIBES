@@ -1,4 +1,4 @@
-import { GameState, ActionType } from '../types';
+import { GameState, ActionType } from '../types.js';
 
 // --- EMERGENCY MINIMAL PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {

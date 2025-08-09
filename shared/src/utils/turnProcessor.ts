@@ -536,11 +536,38 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         return `❌ Chiefs not available at ${startLocation}: ${invalidChiefs.join(', ')}.`;
     }
 
+    // COORDINATE NORMALIZATION: Handle different coordinate formats
+    const normalizeCoords = (coords: string): { q: number, r: number } => {
+        if (coords.includes('.')) {
+            // Format: "066.046" - use parseHexCoords
+            return parseHexCoords(coords);
+        } else if (coords.includes(',')) {
+            // Format: "13,1" - parse q,r directly
+            const [qStr, rStr] = coords.split(',');
+            return { q: parseInt(qStr), r: parseInt(rStr) };
+        } else {
+            throw new Error(`Invalid coordinate format: ${coords}`);
+        }
+    };
+
     // PATHFINDING: Calculate route and travel time
-    const pathInfo = findPath(parseHexCoords(startLocation), parseHexCoords(destination), state.mapData);
+    let startCoords, destCoords;
+    try {
+        startCoords = normalizeCoords(startLocation);
+        destCoords = normalizeCoords(destination);
+        console.log(`🗺️ MOVEMENT: ${startLocation} (${startCoords.q},${startCoords.r}) → ${destination} (${destCoords.q},${destCoords.r})`);
+    } catch (error) {
+        return `❌ Invalid coordinate format: ${startLocation} → ${destination}. Error: ${error}`;
+    }
+
+    const pathInfo = findPath(startCoords, destCoords, state.mapData);
     if (!pathInfo) {
+        console.log(`❌ PATHFINDING FAILED: No path found from (${startCoords.q},${startCoords.r}) to (${destCoords.q},${destCoords.r})`);
         return `❌ Could not find a path from ${startLocation} to ${destination}. Route may be blocked by impassable terrain.`;
     }
+
+    console.log(`🗺️ PATHFINDING SUCCESS: Found path with cost ${pathInfo.cost.toFixed(1)} through ${pathInfo.path.length} hexes`);
+    console.log(`🗺️ PATH: ${pathInfo.path.slice(0, 3).join(' → ')}${pathInfo.path.length > 3 ? ` ... → ${pathInfo.path[pathInfo.path.length - 1]}` : ''}`);
 
     // Calculate movement speed with bonuses
     const combinedEffects = getCombinedEffects(tribe);

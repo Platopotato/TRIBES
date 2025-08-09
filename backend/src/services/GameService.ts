@@ -276,35 +276,6 @@ export class GameService {
       gameState.mapData
     );
 
-    // CRITICAL: Create user record FIRST in separate transaction to satisfy foreign key constraints
-    console.log(`🤖 Creating user record for AI tribe: ${aiTribe.playerId}`);
-    try {
-      await this.databaseService.createAIUser({
-        id: aiTribe.playerId,
-        username: `AI_${aiTribe.tribeName.replace(/\s+/g, '_')}`,
-        role: 'player'
-      });
-      console.log(`✅ AI user record created successfully`);
-    } catch (error) {
-      console.error(`❌ CRITICAL: AI user record creation failed:`, error);
-      console.error(`❌ Cannot proceed with AI tribe creation without valid user record`);
-      return false;
-    }
-
-    // Verify user was created by checking if it exists
-    try {
-      const allUsers = await this.getAllUsers();
-      const userExists = allUsers.some(u => u.id === aiTribe.playerId);
-      if (!userExists) {
-        console.error(`❌ CRITICAL: AI user ${aiTribe.playerId} was not found after creation`);
-        return false;
-      }
-      console.log(`✅ Verified AI user exists in database`);
-    } catch (error) {
-      console.error(`❌ Error verifying AI user existence:`, error);
-      return false;
-    }
-
     // Set up diplomacy based on AI type
     gameState.tribes.forEach(t => {
       let initialStatus = DiplomaticStatus.War;
@@ -333,6 +304,35 @@ export class GameService {
       playerId: aiTribe.playerId,
       garrisons: Object.keys(aiTribe.garrisons)
     });
+
+    // CRITICAL: Create user record FIRST in separate transaction BEFORE updating game state
+    console.log(`🤖 Creating user record for AI tribe: ${aiTribe.playerId}`);
+    try {
+      await this.databaseService.createAIUser({
+        id: aiTribe.playerId,
+        username: `AI_${aiTribe.tribeName.replace(/\s+/g, '_')}`,
+        role: 'player'
+      });
+      console.log(`✅ AI user record created successfully`);
+    } catch (error) {
+      console.error(`❌ CRITICAL: AI user record creation failed:`, error);
+      console.error(`❌ Cannot proceed with AI tribe creation without valid user record`);
+      return false;
+    }
+
+    // Verify user was created by checking if it exists
+    try {
+      const allUsers = await this.getAllUsers();
+      const userExists = allUsers.some(u => u.id === aiTribe.playerId);
+      if (!userExists) {
+        console.error(`❌ CRITICAL: AI user ${aiTribe.playerId} was not found after creation`);
+        return false;
+      }
+      console.log(`✅ Verified AI user exists in database`);
+    } catch (error) {
+      console.error(`❌ Error verifying AI user existence:`, error);
+      return false;
+    }
 
     console.log(`🤖 About to save game state with AI tribe...`);
     await this.updateGameState(gameState);

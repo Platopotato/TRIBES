@@ -194,6 +194,7 @@ export interface Tribe {
   diplomacy: Record<string, DiplomaticRelation>; // Key is other tribe's ID
   lastStateUpdate?: number; // Timestamp for frontend state synchronization
   forceUIReset?: boolean; // Flag to force frontend UI reset after turn processing
+  forceRefreshApplied?: boolean; // Flag indicating Force Refresh logic was applied
 }
 
 export enum ActionType {

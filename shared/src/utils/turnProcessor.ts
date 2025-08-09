@@ -104,6 +104,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
     // Process diplomatic proposals
     processDiplomaticProposals(state);
 
+    // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
+    // This ensures players can add actions for the next turn
+    applyForceRefreshToAllTribes(state);
+
     return state;
 }
 
@@ -165,6 +169,41 @@ function processDiplomaticProposals(state: any): void {
 
         return true; // Keep active proposal
     });
+}
+
+// --- FORCE REFRESH LOGIC (SAME AS ADMIN FUNCTION) ---
+function applyForceRefreshToAllTribes(state: any): void {
+    // Apply the same logic as the "Force Refresh" admin button to all tribes
+    // This ensures players can add actions for the next turn
+
+    for (const tribe of state.tribes) {
+        // Only apply to human players (not AI)
+        if (!tribe.isAI) {
+            // CRITICAL: This is exactly what the "Force Refresh" admin button does
+            // Clear lastTurnResults to force frontend into planning mode
+            // Keep turnSubmitted = false and actions = [] (already set above)
+
+            // Store results temporarily so players can see them first
+            const completionMessage = tribe.lastTurnResults.find((result: any) =>
+                result.result?.includes('TURN') && result.result?.includes('COMPLETED')
+            );
+
+            // Clear results to force planning mode (same as Force Refresh)
+            tribe.lastTurnResults = [];
+
+            // Add back just the completion message so players know what happened
+            if (completionMessage) {
+                tribe.lastTurnResults = [completionMessage];
+            }
+
+            // Ensure clean state for next turn
+            tribe.turnSubmitted = false;
+            tribe.actions = [];
+
+            // Add force refresh marker for frontend detection
+            tribe.forceRefreshApplied = true;
+        }
+    }
 }
 
 // --- BASIC ACTION PROCESSORS ---

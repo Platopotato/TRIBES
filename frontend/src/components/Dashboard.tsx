@@ -142,6 +142,15 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         // Clear the flag (we'll need to update the server to clear it too)
         console.log('🔄 FRONTEND: UI state forcibly reset after turn processing');
       }
+
+      // FORCE REFRESH APPLIED: Detect when Force Refresh logic was applied by turn processor
+      if ((playerTribe as any).forceRefreshApplied) {
+        console.log('🚨 FRONTEND: FORCE REFRESH APPLIED BY TURN PROCESSOR - ENABLING PLANNING MODE');
+        setTurnSubmitted(false);
+        setPlannedActions([]);
+        setView('planning'); // Force planning mode (same as Force Refresh admin button)
+        console.log('🔄 FRONTEND: Planning mode enabled after Force Refresh logic');
+      }
     }
   }, [playerTribe?.turnSubmitted, playerTribe?.lastStateUpdate, turnSubmitted]);
 

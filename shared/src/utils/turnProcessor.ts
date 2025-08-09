@@ -248,10 +248,31 @@ function processRecruitAction(tribe: any, action: any): string {
 }
 
 function processRestAction(tribe: any, action: any): string {
-    const moraleGain = 5;
-    tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + moraleGain);
+    // Initialize morale if not set
+    if (tribe.globalResources.morale === undefined) {
+        tribe.globalResources.morale = 50;
+    }
 
-    return `${tribe.tribeName} rested and gained ${moraleGain} morale. Current morale: ${tribe.globalResources.morale}.`;
+    // Enhanced morale gain based on leadership and current morale
+    const baseMoraleGain = 8;
+    const leadershipBonus = Math.floor((tribe.stats?.leadership || 1) * 0.5); // Leadership provides bonus
+    const lowMoraleBonus = tribe.globalResources.morale < 30 ? 5 : 0; // Extra boost when morale is very low
+
+    const totalMoraleGain = baseMoraleGain + leadershipBonus + lowMoraleBonus;
+    const oldMorale = tribe.globalResources.morale;
+    tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + totalMoraleGain);
+
+    const restNarratives = [
+        "troops gathered around campfires, sharing stories and strengthening bonds",
+        "warriors took time to maintain their equipment and reflect on recent victories",
+        "the tribe enjoyed a period of peace, with games and celebrations lifting spirits",
+        "soldiers rested in comfortable quarters, their confidence restored",
+        "tribal leaders inspired the troops with rousing speeches about their destiny"
+    ];
+
+    const narrative = restNarratives[Math.floor(Math.random() * restNarratives.length)];
+
+    return `😌 ${tribe.tribeName} rested as ${narrative}. Morale increased by ${totalMoraleGain} (${oldMorale} → ${tribe.globalResources.morale}).`;
 }
 
 function processBuildWeaponsAction(tribe: any, action: any): string {
@@ -638,13 +659,104 @@ function processBasicUpkeep(tribe: any): void {
     const totalTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
     const foodConsumption = Math.floor(totalTroops / 2);
 
+    const initialFood = tribe.globalResources.food;
     tribe.globalResources.food = Math.max(0, tribe.globalResources.food - foodConsumption);
+
+    let upkeepMessage = `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food. Remaining food: ${tribe.globalResources.food}.`;
+
+    // MORALE SYSTEM: Handle starvation and morale effects
+    const moraleEffects = processMoraleSystem(tribe, initialFood, foodConsumption, totalTroops);
+    if (moraleEffects.message) {
+        upkeepMessage += ` ${moraleEffects.message}`;
+    }
 
     // Add upkeep result
     tribe.lastTurnResults.push({
         id: `upkeep-${tribe.id}`,
         actionType: ActionType.Upkeep,
         actionData: {},
-        result: `Upkeep: ${totalTroops} troops consumed ${foodConsumption} food. Remaining food: ${tribe.globalResources.food}.`
+        result: upkeepMessage
     });
+}
+
+function processMoraleSystem(tribe: any, initialFood: number, foodConsumption: number, totalTroops: number): { message: string } {
+    let moraleMessages: string[] = [];
+
+    // Initialize morale if not set
+    if (tribe.globalResources.morale === undefined) {
+        tribe.globalResources.morale = 50; // Default starting morale
+    }
+
+    // STARVATION EFFECTS
+    if (initialFood < foodConsumption) {
+        const shortfall = foodConsumption - initialFood;
+        const starvationPenalty = Math.min(15, shortfall * 2); // 2 morale per missing food, max 15
+        tribe.globalResources.morale = Math.max(0, tribe.globalResources.morale - starvationPenalty);
+        moraleMessages.push(`💀 STARVATION! Morale dropped by ${starvationPenalty} due to food shortage.`);
+    }
+
+    // LOW MORALE CONSEQUENCES
+    if (tribe.globalResources.morale <= 20) {
+        // CRITICAL MORALE: Troops start deserting
+        const desertionRate = Math.max(1, Math.floor(totalTroops * 0.1)); // 10% desertion rate
+        let troopsLost = 0;
+
+        // Remove troops from garrisons (starting with smallest garrisons)
+        const garrisons = Object.entries(tribe.garrisons).sort(([,a]: any, [,b]: any) => a.troops - b.troops);
+        for (const [location, garrison] of garrisons) {
+            if (troopsLost >= desertionRate) break;
+            const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
+            (garrison as any).troops -= toRemove;
+            troopsLost += toRemove;
+        }
+
+        if (troopsLost > 0) {
+            moraleMessages.push(`🏃‍♂️ MASS DESERTION! ${troopsLost} troops abandoned the tribe due to critically low morale!`);
+        }
+    } else if (tribe.globalResources.morale <= 35) {
+        // LOW MORALE: Troops complain
+        const complaints = [
+            "😠 Troops are grumbling about poor conditions and leadership.",
+            "😤 Soldiers openly question orders and express dissatisfaction.",
+            "😡 Warriors threaten to leave if conditions don't improve soon.",
+            "🗣️ Discontent spreads through the ranks like wildfire.",
+            "😔 Morale is dangerously low - troops speak of abandoning the tribe."
+        ];
+        const complaint = complaints[Math.floor(Math.random() * complaints.length)];
+        moraleMessages.push(complaint);
+    }
+
+    // RATION LEVEL EFFECTS (if implemented)
+    if (tribe.rationLevel) {
+        switch (tribe.rationLevel) {
+            case 'Hard':
+                tribe.globalResources.morale = Math.max(0, tribe.globalResources.morale - 2);
+                moraleMessages.push("😞 Hard rations lowered morale by 2.");
+                break;
+            case 'Generous':
+                if (initialFood >= foodConsumption) {
+                    tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + 2);
+                    moraleMessages.push("😊 Generous rations boosted morale by 2.");
+                }
+                break;
+        }
+    }
+
+    // MORALE STATUS INDICATOR
+    let moraleStatus = "";
+    if (tribe.globalResources.morale >= 80) {
+        moraleStatus = "🎉 Tribe morale is EXCELLENT!";
+    } else if (tribe.globalResources.morale >= 60) {
+        moraleStatus = "😊 Tribe morale is good.";
+    } else if (tribe.globalResources.morale >= 40) {
+        moraleStatus = "😐 Tribe morale is average.";
+    } else if (tribe.globalResources.morale >= 20) {
+        moraleStatus = "😟 Tribe morale is low.";
+    } else {
+        moraleStatus = "💀 Tribe morale is CRITICAL!";
+    }
+
+    moraleMessages.push(`${moraleStatus} (${tribe.globalResources.morale}/100)`);
+
+    return { message: moraleMessages.join(' ') };
 }

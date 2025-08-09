@@ -140,6 +140,22 @@ export class GameService {
     console.log('🔍 TURN PROCESSOR: Starting processGlobalTurn');
     console.log('🔍 TURN PROCESSOR: Creating state copy...');
 
+    // CRITICAL DEBUG: Check game state structure before processing
+    console.log('🔍 GAMESTATE DEBUG: Checking structure...');
+    console.log(`🔍 Tribes count: ${gameState.tribes.length}`);
+    console.log(`🔍 Journeys count: ${gameState.journeys.length}`);
+    console.log(`🔍 Diplomatic proposals count: ${gameState.diplomaticProposals.length}`);
+    console.log(`🔍 Map data count: ${gameState.mapData.length}`);
+
+    gameState.tribes.forEach((tribe, index) => {
+      console.log(`🔍 Tribe ${index}: ${tribe.tribeName}`);
+      console.log(`  - Garrisons: ${Object.keys(tribe.garrisons || {}).length}`);
+      console.log(`  - Actions: ${(tribe.actions || []).length}`);
+      console.log(`  - Assets: ${(tribe.assets || []).length}`);
+      console.log(`  - Global resources: ${tribe.globalResources ? 'OK' : 'MISSING'}`);
+      console.log(`  - Diplomacy: ${tribe.diplomacy ? Object.keys(tribe.diplomacy).length : 'MISSING'}`);
+    });
+
     let newGameState: GameState;
     try {
       newGameState = processGlobalTurn(gameState);
@@ -147,6 +163,7 @@ export class GameService {
     } catch (error) {
       console.error('❌ CRITICAL ERROR in processGlobalTurn:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
       throw error;
     }
 

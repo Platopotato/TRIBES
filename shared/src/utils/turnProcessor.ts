@@ -862,29 +862,15 @@ function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe
 
 // --- MAIN PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {
-    // CRITICAL FIX: Proper deep copy of nested objects to prevent reference issues
+    // TEMPORARY FIX: Use simple deep clone to get turn processing working
+    // The complex shallow copy was causing crashes during object copying
     let state: GameState;
     let resultsByTribe: Record<string, GameAction[]>;
     let tribeMap: Map<string, Tribe>;
 
     try {
-        state = {
-            ...gameState,
-            tribes: gameState.tribes.map(tribe => ({
-                ...tribe,
-                garrisons: { ...tribe.garrisons },
-                globalResources: { ...tribe.globalResources },
-                diplomacy: { ...tribe.diplomacy },
-                actions: [...(tribe.actions || [])],
-                lastTurnResults: [...(tribe.lastTurnResults || [])],
-                journeyResponses: [...(tribe.journeyResponses || [])],
-                assets: [...(tribe.assets || [])]
-            })),
-            journeys: gameState.journeys.map(journey => ({ ...journey })),
-            diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
-            mapData: gameState.mapData // Map data doesn't change during turn processing
-        };
-
+        // Simple deep clone - slower but more reliable
+        state = JSON.parse(JSON.stringify(gameState)) as GameState;
         resultsByTribe = Object.fromEntries(state.tribes.map(t => [t.id, []]));
         tribeMap = new Map(state.tribes.map(t => [t.id, t]));
 

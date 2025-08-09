@@ -97,7 +97,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.RespondToTrade:
                     result = processTradeResponseAction(tribe, action, state);
                     break;
-                case ActionType.SetRation:
+                case ActionType.SetRations:
                     result = processSetRationAction(tribe, action);
                     break;
                 default:

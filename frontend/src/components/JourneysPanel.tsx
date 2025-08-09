@@ -26,10 +26,11 @@ const JourneysPanel: React.FC<JourneysPanelProps> = ({ allJourneys, playerTribeI
 
   return (
     <Card title="Active Journeys">
+        <div id="player-journeys" className="-mt-12 pt-12"></div>
         <ul className="space-y-3 max-h-64 overflow-y-auto pr-2">
             {playerJourneys.map(journey => {
                 const turnsLeft = journey.arrivalTurn;
-                
+
                 return (
                     <li key={journey.id} className="text-sm p-3 bg-slate-900/50 rounded-md">
                         <div className="flex justify-between items-start">

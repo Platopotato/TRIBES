@@ -35,6 +35,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     console.log('🔥 ActionModal pendingHexSelection:', pendingHexSelection);
     console.log('🔥 ActionModal setPendingHexSelection:', !!setPendingHexSelection);
     const [travelTime, setTravelTime] = useState<number | null>(null);
+    const [pathPreview, setPathPreview] = useState<string[] | null>(null);
     const [selectedHexForDisplay, setSelectedHexForDisplay] = useState<string | null>(null);
 
     console.log('📊 Props extracted at:', Date.now() - renderStartTime, 'ms');
@@ -64,13 +65,16 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         const end = parseHexCoords(draftAction.actionData.finish_location);
         const pathInfo = findPath(start, end, mapData);
         setTravelTime(pathInfo?.cost ?? null);
+        setPathPreview(pathInfo ? pathInfo.path : null);
     } else if (draftAction?.actionData?.start_location && draftAction?.actionData?.target_location) {
         const start = parseHexCoords(draftAction.actionData.start_location);
         const end = parseHexCoords(draftAction.actionData.target_location);
         const pathInfo = findPath(start, end, mapData);
         setTravelTime(pathInfo?.cost ?? null);
+        setPathPreview(pathInfo ? pathInfo.path : null);
     } else {
         setTravelTime(null);
+        setPathPreview(null);
     }
   }, [draftAction, mapData]);
 
@@ -159,6 +163,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           if (start) {
               const pathInfo = findPath(parseHexCoords(start), parseHexCoords(location), mapData);
               setTravelTime(pathInfo?.cost ?? null);
+              setPathPreview(pathInfo ? pathInfo.path : null);
           }
       }
 
@@ -515,8 +520,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         </div>
 
         {travelTime !== null && (
-            <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30">
-                <div className="font-bold text-amber-400 mb-1">
+            <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30 space-y-1">
+                <div className="font-bold text-amber-400">
                     🚶‍♂️ Estimated Travel Time: {Math.ceil(travelTime)} turn{Math.ceil(travelTime) > 1 ? 's' : ''}
                 </div>
                 <div className="text-xs text-slate-300">
@@ -525,9 +530,19 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                         `🗺️ Multi-turn journey - visible on map during travel`
                     }
                 </div>
-                <div className="text-xs text-slate-400 mt-1">
+                <div className="text-xs text-slate-400">
                     Movement cost: {travelTime.toFixed(1)} • Based on terrain difficulty
                 </div>
+                {pathPreview && pathPreview.length > 0 && (
+                  <div className="text-xs text-slate-400">
+                    Path: {pathPreview.slice(0, 3).join(' → ')}{pathPreview.length > 3 ? ` → … → ${pathPreview[pathPreview.length - 1]}` : ''}
+                  </div>
+                )}
+                {pathPreview && pathPreview.length > 0 && (
+                  <div className="text-xs text-slate-400">
+                    Hexes: {pathPreview.length - 1} • Round trip: {Math.ceil((travelTime || 0) * 2)} turns
+                  </div>
+                )}
             </div>
         )}
 
@@ -707,8 +722,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 )}
 
                 {travelTime !== null && (
-                    <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30">
-                        <div className="font-bold text-amber-400 mb-1">
+                    <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30 space-y-1">
+                        <div className="font-bold text-amber-400">
                             🚶‍♂️ Estimated Travel Time: {Math.ceil(travelTime)} turn{Math.ceil(travelTime) > 1 ? 's' : ''}
                         </div>
                         <div className="text-xs text-slate-300">
@@ -717,9 +732,19 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                                 `🗺️ Multi-turn journey - visible on map during travel`
                             }
                         </div>
-                        <div className="text-xs text-slate-400 mt-1">
+                        <div className="text-xs text-slate-400">
                             Movement cost: {travelTime.toFixed(1)} • Based on terrain difficulty
                         </div>
+                        {pathPreview && pathPreview.length > 0 && (
+                          <div className="text-xs text-slate-400">
+                            Path: {pathPreview.slice(0, 3).join(' → ')}{pathPreview.length > 3 ? ` → … → ${pathPreview[pathPreview.length - 1]}` : ''}
+                          </div>
+                        )}
+                        {pathPreview && pathPreview.length > 0 && (
+                          <div className="text-xs text-slate-400">
+                            Hexes: {pathPreview.length - 1} • Round trip: {Math.ceil((travelTime || 0) * 2)} turns
+                          </div>
+                        )}
                     </div>
                 )}
 

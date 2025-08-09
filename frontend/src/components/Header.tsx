@@ -80,6 +80,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
         )}
       </div>
       <div className="text-center sm:text-right mt-4 sm:mt-0 flex items-center space-x-4">
+        {/* Journeys button/badge */}
+        {playerTribe && (
+          <a href="#player-journeys" className="relative inline-flex items-center px-3 py-1 rounded-md bg-amber-600/20 text-amber-300 border border-amber-600/40 hover:bg-amber-600/30 transition">
+            <span className="mr-2">Journeys</span>
+            {/* Optional badge can be filled by consumer */}
+            <span id="journeys-badge" className="ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/30 border border-amber-500/40">•</span>
+          </a>
+        )}
         <div className="flex flex-col items-end space-y-2">
           <div>
             <h2 className="text-lg font-semibold text-slate-300">Turn {turn}</h2>

@@ -725,6 +725,8 @@ export class DatabaseService {
 
     console.log('🔄 Updating game state in database...');
     console.log(`📊 Game state has ${gameState.tribes.length} tribes`);
+    console.log(`📊 Tribe names: ${gameState.tribes.map(t => t.tribeName).join(', ')}`);
+    console.log(`📊 AI tribes: ${gameState.tribes.filter(t => t.isAI).map(t => `${t.tribeName} (${t.aiType})`).join(', ')}`);
     console.log(`📊 Game state has ${gameState.mapData?.length || 0} map hexes`);
     console.log(`📊 Game state turn: ${gameState.turn}`);
     console.log(`📊 Database mode: ${this.useDatabase ? 'PostgreSQL' : 'File Storage'}`);
@@ -825,11 +827,16 @@ export class DatabaseService {
         let skippedTribes = 0;
         
         for (const tribe of gameState.tribes) {
-          // Check if the playerId exists in the database
-          if (!existingUserIds.has(tribe.playerId)) {
-            console.log(`⚠️ Skipping tribe ${tribe.tribeName} - user ${tribe.playerId} not found`);
+          // Check if the playerId exists in the database (skip this check for AI tribes)
+          if (!tribe.isAI && !existingUserIds.has(tribe.playerId)) {
+            console.log(`⚠️ Skipping human tribe ${tribe.tribeName} - user ${tribe.playerId} not found`);
             skippedTribes++;
             continue;
+          }
+
+          // AI tribes are allowed even if their playerId doesn't exist in users table
+          if (tribe.isAI) {
+            console.log(`🤖 Processing AI tribe: ${tribe.tribeName} (${tribe.aiType}) with playerId: ${tribe.playerId}`);
           }
           
           try {

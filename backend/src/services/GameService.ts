@@ -151,9 +151,18 @@ export class GameService {
       console.log(`🔍 Tribe ${index}: ${tribe.tribeName}`);
       console.log(`  - Garrisons: ${Object.keys(tribe.garrisons || {}).length}`);
       console.log(`  - Actions: ${(tribe.actions || []).length}`);
+      console.log(`  - turnSubmitted: ${tribe.turnSubmitted}`);
       console.log(`  - Assets: ${(tribe.assets || []).length}`);
       console.log(`  - Global resources: ${tribe.globalResources ? 'OK' : 'MISSING'}`);
       console.log(`  - Diplomacy: ${tribe.diplomacy ? Object.keys(tribe.diplomacy).length : 'MISSING'}`);
+
+      // DEBUG: Show the actual actions
+      if (tribe.actions && tribe.actions.length > 0) {
+        console.log(`  - Action details for ${tribe.tribeName}:`);
+        tribe.actions.forEach((action, actionIndex) => {
+          console.log(`    ${actionIndex + 1}. ${action.actionType}: ${JSON.stringify(action.actionData)}`);
+        });
+      }
     });
 
     let newGameState: GameState;

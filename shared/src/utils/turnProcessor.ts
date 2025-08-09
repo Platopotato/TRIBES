@@ -1,5 +1,6 @@
 import { GameState, ActionType } from '../types.js';
 import { getHexesInRange, parseHexCoords } from './mapUtils.js';
+import { generateAIActions } from '../ai/aiActions.js';
 
 // --- COORDINATE CONVERSION UTILITIES ---
 function convertToStandardFormat(coords: string): string {
@@ -31,6 +32,26 @@ export function processGlobalTurn(gameState: GameState): GameState {
     };
 
     const resultsByTribe: Record<string, any[]> = Object.fromEntries(state.tribes.map(t => [t.id, []]));
+
+    // GENERATE AI ACTIONS: Add AI actions for tribes that haven't submitted
+    console.log('🤖 TURN PROCESSOR: Generating AI actions...');
+    let aiTribesProcessed = 0;
+    state.tribes.forEach(tribe => {
+        if (tribe.isAI && !tribe.turnSubmitted) {
+            console.log(`🤖 TURN PROCESSOR: Generating AI actions for tribe ${tribe.tribeName} (${tribe.aiType})`);
+            try {
+                tribe.actions = generateAIActions(tribe, state.tribes, state.mapData);
+                tribe.turnSubmitted = true;
+                aiTribesProcessed++;
+                console.log(`🤖 TURN PROCESSOR: Generated ${tribe.actions.length} actions for ${tribe.tribeName}`);
+            } catch (error) {
+                console.error(`❌ TURN PROCESSOR: Failed to generate AI actions for ${tribe.tribeName}:`, error);
+                tribe.actions = []; // Fallback to empty actions
+                tribe.turnSubmitted = true;
+            }
+        }
+    });
+    console.log(`🤖 TURN PROCESSOR: Processed ${aiTribesProcessed} AI tribes`);
 
     // Process each tribe's actions
     for (const tribe of state.tribes) {

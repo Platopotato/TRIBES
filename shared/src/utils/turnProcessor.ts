@@ -19,6 +19,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
         tribe.lastTurnResults = [];
         tribe.journeyResponses = [];
 
+        // CRITICAL FIX: Filter out any undefined values from exploredHexes
+        tribe.exploredHexes = (tribe.exploredHexes || []).filter(hex => hex !== undefined && hex !== null);
+
         // Process each action
         for (const action of tribe.actions || []) {
             let result = '';
@@ -176,8 +179,8 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     }
     tribe.garrisons[toLocation].troops += troopsToMove;
 
-    // Add to explored hexes
-    if (!tribe.exploredHexes.includes(toLocation)) {
+    // Add to explored hexes (only if valid location)
+    if (toLocation && !tribe.exploredHexes.includes(toLocation)) {
         tribe.exploredHexes.push(toLocation);
     }
 
@@ -208,8 +211,8 @@ function processTradeAction(tribe: any, action: any, state: any): string {
 function processScoutAction(tribe: any, action: any): string {
     const location = action.actionData.location;
 
-    // Add to explored hexes
-    if (!tribe.exploredHexes.includes(location)) {
+    // Add to explored hexes (only if valid location)
+    if (location && !tribe.exploredHexes.includes(location)) {
         tribe.exploredHexes.push(location);
     }
 
@@ -223,8 +226,8 @@ function processScoutAction(tribe: any, action: any): string {
 function processExploreAction(tribe: any, action: any): string {
     const location = action.actionData.location;
 
-    // Add to explored hexes
-    if (!tribe.exploredHexes.includes(location)) {
+    // Add to explored hexes (only if valid location)
+    if (location && !tribe.exploredHexes.includes(location)) {
         tribe.exploredHexes.push(location);
     }
 

@@ -576,6 +576,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     onFinalize={() => setIsConfirmationOpen(true)}
                     phase={gamePhase}
                   />
+                  <JourneysPanel
+                    allJourneys={journeys}
+                    playerTribeId={playerTribe.id}
+                    turn={turn}
+                  />
                   <ResultsPanel results={playerTribe.lastTurnResults} />
                 </>
               )}

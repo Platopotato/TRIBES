@@ -515,8 +515,19 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         </div>
 
         {travelTime !== null && (
-            <div className="text-center font-bold text-amber-400 bg-slate-800/50 p-2 rounded-md">
-                Estimated Travel Time: {travelTime} turn(s)
+            <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30">
+                <div className="font-bold text-amber-400 mb-1">
+                    🚶‍♂️ Estimated Travel Time: {Math.ceil(travelTime)} turn{Math.ceil(travelTime) > 1 ? 's' : ''}
+                </div>
+                <div className="text-xs text-slate-300">
+                    {travelTime <= 1 ?
+                        "⚡ Fast movement - arrives instantly!" :
+                        `🗺️ Multi-turn journey - visible on map during travel`
+                    }
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                    Movement cost: {travelTime.toFixed(1)} • Based on terrain difficulty
+                </div>
             </div>
         )}
 
@@ -696,8 +707,19 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 )}
 
                 {travelTime !== null && (
-                    <div className="text-center font-bold text-amber-400 bg-slate-800/50 p-2 rounded-md">
-                        Estimated Travel Time: {travelTime} turn(s)
+                    <div className="text-center bg-slate-800/50 p-3 rounded-md border border-amber-500/30">
+                        <div className="font-bold text-amber-400 mb-1">
+                            🚶‍♂️ Estimated Travel Time: {Math.ceil(travelTime)} turn{Math.ceil(travelTime) > 1 ? 's' : ''}
+                        </div>
+                        <div className="text-xs text-slate-300">
+                            {travelTime <= 1 ?
+                                "⚡ Fast movement - arrives instantly!" :
+                                `🗺️ Multi-turn journey - visible on map during travel`
+                            }
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">
+                            Movement cost: {travelTime.toFixed(1)} • Based on terrain difficulty
+                        </div>
                     </div>
                 )}
 

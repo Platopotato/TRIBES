@@ -391,7 +391,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     // Validate chiefs to move
     const availableChiefs = fromGarrison.chiefs || [];
     const invalidChiefs = chiefsToMove.filter((chiefName: string) =>
-        !availableChiefs.some(chief => chief.name === chiefName)
+        !availableChiefs.some((chief: any) => chief.name === chiefName)
     );
 
     if (invalidChiefs.length > 0) {
@@ -405,8 +405,8 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     fromGarrison.weapons -= weaponsToMove;
 
     // MOVE CHIEFS
-    const movingChiefs = availableChiefs.filter(chief => chiefsToMove.includes(chief.name));
-    fromGarrison.chiefs = availableChiefs.filter(chief => !chiefsToMove.includes(chief.name));
+    const movingChiefs = availableChiefs.filter((chief: any) => chiefsToMove.includes(chief.name));
+    fromGarrison.chiefs = availableChiefs.filter((chief: any) => !chiefsToMove.includes(chief.name));
 
     // Create or update destination garrison
     if (!tribe.garrisons[toLocation]) {
@@ -430,7 +430,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     const moveDetails = [];
     if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);
     if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
-    if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map(c => c.name).join(', ')})`);
+    if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map((c: any) => c.name).join(', ')})`);
 
     return `✅ Successfully moved ${moveDetails.join(', ')} from ${fromLocation} to ${toLocation}! Destination garrison now has ${toGarrison.troops} troops, ${toGarrison.weapons} weapons, and ${toGarrison.chiefs.length} chiefs.`;
 }

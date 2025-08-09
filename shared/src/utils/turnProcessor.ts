@@ -94,8 +94,8 @@ export function processGlobalTurn(gameState: GameState): GameState {
             result: `🎯 TURN ${state.turn - 1} COMPLETED! 🎯\n\n✅ ${tribe.tribeName} may now plan and submit actions for Turn ${state.turn}.\n\n📋 Review your results below and plan your next moves!`
         });
 
-        // DEBUGGING: Add explicit state markers for frontend
-        console.log(`🔄 TURN PROCESSOR: Reset tribe ${tribe.tribeName} - turnSubmitted: ${tribe.turnSubmitted}, actions: ${tribe.actions.length}, results: ${tribe.lastTurnResults.length}`);
+        // DEBUGGING: State reset completed for tribe
+        // Note: Logging removed for backend compatibility
     }
 
     // Process active journeys

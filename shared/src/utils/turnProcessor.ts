@@ -299,9 +299,17 @@ function handleSettlementRandomEvent(tribe: Tribe, location: string): { tribe: T
         // POSITIVE EVENTS
         { weight: 4, run: (tribe, location, garrison) => {
             const newRecruit = Math.floor(Math.random() * 2) + 1;
-            // PERFORMANCE FIX: Shallow copy instead of deep clone
-            const updatedTribe = { ...tribe, garrisons: { ...tribe.garrisons } };
-            updatedTribe.garrisons[location] = { ...updatedTribe.garrisons[location], troops: updatedTribe.garrisons[location].troops + newRecruit };
+            // CRITICAL FIX: Proper garrison copying to prevent reference issues
+            const updatedTribe = {
+                ...tribe,
+                garrisons: {
+                    ...tribe.garrisons,
+                    [location]: {
+                        ...tribe.garrisons[location],
+                        troops: tribe.garrisons[location].troops + newRecruit
+                    }
+                }
+            };
             const narratives = [
                 `Word of ${tribe.tribeName}'s strength spreads through the wasteland! ${newRecruit} skilled wanderers arrive at ${location}, seeking to join your cause.`,
                 `A group of refugees fleeing from raiders finds sanctuary at ${location}. Grateful for protection, ${newRecruit} of them pledge to fight for your tribe.`,
@@ -811,8 +819,12 @@ function applyPassiveEffects(tribe: Tribe, mapData: HexData[]): { tribe: Tribe, 
 
 
 function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe, result: GameAction | null } {
-    // PERFORMANCE FIX: Shallow copy instead of deep clone
-    let updatedTribe = { ...tribe, globalResources: { ...tribe.globalResources } };
+    // CRITICAL FIX: Proper copying of nested objects
+    let updatedTribe = {
+        ...tribe,
+        globalResources: { ...tribe.globalResources },
+        garrisons: { ...tribe.garrisons }
+    };
     const troopsInGarrisons = Object.values(updatedTribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
     const totalTroops = troopsInGarrisons + troopsOnJourneys;
 
@@ -850,10 +862,19 @@ function endOfTurnUpkeep(tribe: Tribe, troopsOnJourneys: number): { tribe: Tribe
 
 // --- MAIN PROCESSOR ---
 export function processGlobalTurn(gameState: GameState): GameState {
-    // PERFORMANCE FIX: Shallow copy instead of deep clone to prevent timeouts
+    // CRITICAL FIX: Proper deep copy of nested objects to prevent reference issues
     let state: GameState = {
         ...gameState,
-        tribes: gameState.tribes.map(tribe => ({ ...tribe })),
+        tribes: gameState.tribes.map(tribe => ({
+            ...tribe,
+            garrisons: { ...tribe.garrisons },
+            globalResources: { ...tribe.globalResources },
+            diplomacy: { ...tribe.diplomacy },
+            actions: [...(tribe.actions || [])],
+            lastTurnResults: [...(tribe.lastTurnResults || [])],
+            journeyResponses: [...(tribe.journeyResponses || [])],
+            assets: [...(tribe.assets || [])]
+        })),
         journeys: gameState.journeys.map(journey => ({ ...journey })),
         diplomaticProposals: gameState.diplomaticProposals.map(proposal => ({ ...proposal })),
         mapData: gameState.mapData // Map data doesn't change during turn processing

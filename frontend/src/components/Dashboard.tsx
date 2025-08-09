@@ -137,10 +137,20 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   }, [playerTribe, playerTribe?.turnSubmitted]);
 
   const gamePhase: GamePhase = useMemo(() => {
-    if (!playerTribe) return 'planning';
+    if (!playerTribe) {
+      console.log('🔍 DASHBOARD: gamePhase = planning (no playerTribe)');
+      return 'planning';
+    }
     // CRITICAL FIX: Trust server state only
-    if (playerTribe.turnSubmitted) return 'waiting';
-    if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) return 'results';
+    if (playerTribe.turnSubmitted) {
+      console.log('🔍 DASHBOARD: gamePhase = waiting (turnSubmitted = true)');
+      return 'waiting';
+    }
+    if (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
+      console.log('🔍 DASHBOARD: gamePhase = results (has lastTurnResults)');
+      return 'results';
+    }
+    console.log('🔍 DASHBOARD: gamePhase = planning (default)');
     return 'planning';
   }, [playerTribe, playerTribe?.turnSubmitted]);
 

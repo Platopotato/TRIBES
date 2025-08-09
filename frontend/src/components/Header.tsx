@@ -20,6 +20,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onOpenHelp, onOpenCodex, onChangePassword, onOpenNewspaper, turn, gamePhase, turnDeadline }) => {
+  // CRITICAL DEBUG: Log what gamePhase we're receiving
+  console.log('🔍 HEADER: Received gamePhase:', gamePhase, 'turnSubmitted:', playerTribe?.turnSubmitted);
+
   const phaseText: {[key in typeof gamePhase]: string} = {
       planning: 'Action Planning',
       processing: 'Processing...',
@@ -27,6 +30,17 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
       observing: 'Observing',
       waiting: 'Waiting for Admin',
   }
+
+  // CRITICAL FIX: Override text based on actual server state
+  const getPhaseText = () => {
+    if (playerTribe?.turnSubmitted) {
+      return 'Waiting for Admin';
+    }
+    if (playerTribe?.lastTurnResults && playerTribe.lastTurnResults.length > 0) {
+      return 'Turn Results';
+    }
+    return phaseText[gamePhase] || 'Action Planning';
+  };
 
   const getPhaseColor = () => {
       switch(gamePhase) {
@@ -69,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
         <div className="flex flex-col items-end space-y-2">
           <div>
             <h2 className="text-lg font-semibold text-slate-300">Turn {turn}</h2>
-            <p className={`text-sm ${getPhaseColor()}`}>{phaseText[gamePhase]}</p>
+            <p className={`text-sm ${getPhaseColor()}`}>{getPhaseText()}</p>
           </div>
           <TurnDeadline turnDeadline={turnDeadline} currentTurn={turn} />
         </div>

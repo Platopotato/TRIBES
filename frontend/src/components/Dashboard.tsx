@@ -155,7 +155,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             setTurnSubmitted(false);
         }
         setPlannedActions([]); // Always clear local planned actions on tribe data change
-        setJourneyResponses([]); // Clear journey responses as well
     }
   }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
 

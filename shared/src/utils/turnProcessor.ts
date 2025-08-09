@@ -392,7 +392,7 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
             "shadowy groves where danger lurks behind every trunk",
             "verdant canopy concealing both bounty and peril"
         ],
-        mountain: [
+        mountains: [
             "towering peaks that scrape the very heavens",
             "treacherous cliffs hiding caves filled with echoing mysteries",
             "windswept ridges offering commanding views of distant lands",
@@ -402,7 +402,7 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
             "endless dunes shifting like the sands of time itself",
             "scorching wasteland where mirages dance with deadly beauty",
             "sun-bleached bones marking the graves of the unwary",
-            "oasis dreams shimmering just beyond the horizon"
+            "barren expanse where only the hardiest creatures survive"
         ],
         plains: [
             "rolling grasslands stretching to infinity's edge",
@@ -415,18 +415,106 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
             "treacherous bogs that swallow the unwary whole",
             "mist-shrouded wetlands echoing with croaks and screams",
             "poisonous vapors rising from ancient, rotting secrets"
+        ],
+        wasteland: [
+            "desolate badlands scarred by ancient catastrophes",
+            "barren terrain where nothing grows and hope dies",
+            "twisted metal and rubble telling tales of destruction",
+            "lifeless expanse under a perpetually gray sky"
+        ],
+        ruins: [
+            "crumbling structures from a bygone civilization",
+            "ancient stonework covered in mysterious symbols",
+            "collapsed buildings hiding treasures and dangers",
+            "weathered monuments to forgotten glory"
+        ],
+        water: [
+            "vast waters stretching beyond the horizon",
+            "crystal-clear depths hiding unknown mysteries",
+            "choppy waves that could conceal friend or foe",
+            "serene surface masking treacherous currents below"
+        ],
+        radiation: [
+            "poisoned ground where the very air shimmers with danger",
+            "contaminated wasteland where mutations thrive",
+            "glowing terrain that warns of invisible death",
+            "toxic landscape where few dare to tread"
+        ],
+        crater: [
+            "massive impact site from some ancient cataclysm",
+            "circular depression filled with strange formations",
+            "blast crater where the earth itself was torn asunder",
+            "mysterious hollow that defies natural explanation"
         ]
     };
 
-    const discoveries = [
+    // Terrain-specific discoveries
+    const terrainDiscoveries = {
+        forest: [
+            "game trails leading to abundant hunting grounds",
+            "hidden groves where medicinal herbs grow wild",
+            "ancient tree markings left by previous travelers",
+            "fresh water springs bubbling from the earth"
+        ],
+        mountains: [
+            "mineral veins glinting in exposed rock faces",
+            "cave systems perfect for shelter or storage",
+            "strategic overlooks commanding the surrounding area",
+            "evidence of avalanche paths and unstable slopes"
+        ],
+        desert: [
+            "rare oasis locations marked by palm fronds",
+            "buried ruins partially exposed by shifting sands",
+            "camel tracks leading to distant water sources",
+            "salt deposits valuable for trade and preservation"
+        ],
+        plains: [
+            "fertile soil perfect for future cultivation",
+            "herds of wild animals grazing in the distance",
+            "ancient roads worn smooth by countless travelers",
+            "strategic positions ideal for defensive structures"
+        ],
+        swamp: [
+            "rare medicinal plants growing in the murky waters",
+            "hidden channels navigable only by small boats",
+            "dangerous quicksand areas to be avoided",
+            "signs of large predators lurking in the depths"
+        ],
+        wasteland: [
+            "salvageable scrap metal scattered across the terrain",
+            "evidence of ancient battles and lost technology",
+            "radiation-free pockets suitable for temporary shelter",
+            "mutated creatures adapted to the harsh environment"
+        ],
+        ruins: [
+            "intact chambers containing pre-war artifacts",
+            "ancient texts written in forgotten languages",
+            "hidden passages leading to underground complexes",
+            "valuable technology waiting to be recovered"
+        ],
+        water: [
+            "schools of fish indicating clean, healthy waters",
+            "small islands suitable for outpost construction",
+            "shipping routes used by other tribes",
+            "dangerous currents and underwater obstacles"
+        ],
+        radiation: [
+            "strange mutations that defy natural law",
+            "pockets of valuable radioactive materials",
+            "abandoned research facilities from before the war",
+            "warning signs in multiple ancient languages"
+        ],
+        crater: [
+            "unusual crystal formations with unknown properties",
+            "impact debris containing rare metals",
+            "strange energy readings from the crater's center",
+            "evidence of the catastrophic event that created this scar"
+        ]
+    };
+
+    const genericDiscoveries = [
         "signs of recent tribal activity",
         "abandoned campsites with cold ashes",
-        "fresh water sources vital for survival",
-        "dangerous predator tracks in the mud",
-        "ancient ruins hinting at lost civilizations",
-        "strategic vantage points perfect for ambushes",
-        "resource deposits glinting in the sunlight",
-        "hidden paths known only to the wise",
         "territorial markings of hostile tribes",
         "evidence of recent battles and bloodshed"
     ];
@@ -434,7 +522,9 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
     // Get terrain type from map data if available
     let terrainType = 'plains'; // default
     if (state?.mapData) {
-        const hexData = state.mapData.find((hex: any) => hex.coordinates === location);
+        // Convert location back to q,r coordinates for lookup
+        const { q, r } = parseHexCoords(location);
+        const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
         if (hexData?.terrain) {
             terrainType = hexData.terrain.toLowerCase();
         }
@@ -443,7 +533,10 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
     // Select appropriate narrative based on terrain
     const terrainOptions = terrainNarratives[terrainType as keyof typeof terrainNarratives] || terrainNarratives.plains;
     const terrainDesc = terrainOptions[Math.floor(Math.random() * terrainOptions.length)];
-    const discovery = discoveries[Math.floor(Math.random() * discoveries.length)];
+
+    // Select terrain-specific discovery or fall back to generic
+    const discoveryOptions = terrainDiscoveries[terrainType as keyof typeof terrainDiscoveries] || genericDiscoveries;
+    const discovery = discoveryOptions[Math.floor(Math.random() * discoveryOptions.length)];
 
     return `🔍 Scouts ventured into ${location} and discovered ${terrainDesc}. Among the landscape, they observed ${discovery}. The surrounding area has been mapped and added to tribal knowledge.`;
 }

@@ -659,21 +659,41 @@ export class SocketHandler {
     });
 
     // Test handler to verify admin connection
-    socket.on('admin:test', (data: any) => {
+    socket.on('admin:test', async (data: any) => {
+      const userId = (socket as any).userId;
+      const username = (socket as any).username;
       console.log(`🧪 ADMIN TEST EVENT RECEIVED:`, data);
-      console.log(`🧪 Socket ID: ${socket.id}, User: ${user?.username || 'unknown'}`);
+      console.log(`🧪 Socket ID: ${socket.id}, User: ${username || 'unknown'}`);
     });
 
     // AI Management handlers
     socket.on('admin:addAITribe', async (aiData: any) => {
+      const userId = (socket as any).userId;
+      const username = (socket as any).username;
+
       console.log(`🤖 SOCKET HANDLER: Received admin:addAITribe event`);
-      console.log(`🤖 Socket ID: ${socket.id}, User: ${user?.username || 'unknown'}`);
+      console.log(`🤖 Socket ID: ${socket.id}, User: ${username || 'unknown'}`);
       console.log(`🤖 AI Data:`, aiData);
-      console.log(`🤖 User role: ${user?.role || 'unknown'}`);
+
+      // Get user object to check role
+      if (!userId) {
+        console.log(`❌ AI tribe creation failed: Not authenticated - no userId on socket ${socket.id}`);
+        return;
+      }
+
+      const allUsers = await this.gameService.getAllUsers();
+      const user = allUsers.find(u => u.id === userId);
+
+      if (!user) {
+        console.log(`❌ AI tribe creation failed: User not found for userId: ${userId}`);
+        return;
+      }
+
+      console.log(`🤖 User role: ${user.role || 'unknown'}`);
 
       // Check if user is admin
-      if (user?.role !== 'admin') {
-        console.log(`❌ Non-admin user attempted AI tribe creation: ${user?.username}`);
+      if (user.role !== 'admin') {
+        console.log(`❌ Non-admin user attempted AI tribe creation: ${user.username}`);
         return;
       }
 

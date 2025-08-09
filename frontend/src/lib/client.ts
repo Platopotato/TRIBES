@@ -407,7 +407,12 @@ export const addAITribeAdvanced = (aiData: {
     backstory?: string;
 }) => {
     console.log('🤖 CLIENT: Sending addAITribe request:', aiData);
+    console.log('🔌 CLIENT: Socket connected:', socket.connected);
+    console.log('🔌 CLIENT: Socket ID:', socket.id);
     socket.emit('admin:addAITribe', aiData);
+
+    // Add a test event to verify connection
+    socket.emit('admin:test', { message: 'Testing admin connection' });
 };
 
 export const addAITribeSimple = (aiType?: string) => {

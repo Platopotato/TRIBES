@@ -658,16 +658,34 @@ export class SocketHandler {
       }
     });
 
+    // Test handler to verify admin connection
+    socket.on('admin:test', (data: any) => {
+      console.log(`🧪 ADMIN TEST EVENT RECEIVED:`, data);
+      console.log(`🧪 Socket ID: ${socket.id}, User: ${user?.username || 'unknown'}`);
+    });
+
     // AI Management handlers
     socket.on('admin:addAITribe', async (aiData: any) => {
-      console.log(`🤖 Admin adding AI tribe:`, aiData);
+      console.log(`🤖 SOCKET HANDLER: Received admin:addAITribe event`);
+      console.log(`🤖 Socket ID: ${socket.id}, User: ${user?.username || 'unknown'}`);
+      console.log(`🤖 AI Data:`, aiData);
+      console.log(`🤖 User role: ${user?.role || 'unknown'}`);
+
+      // Check if user is admin
+      if (user?.role !== 'admin') {
+        console.log(`❌ Non-admin user attempted AI tribe creation: ${user?.username}`);
+        return;
+      }
+
       try {
+        console.log(`🤖 Calling gameService.addAITribeAdvanced...`);
         const success = await this.gameService.addAITribeAdvanced(aiData);
         if (success) {
+          console.log(`✅ AI tribe added successfully, emitting game state...`);
           await emitGameState();
-          console.log(`✅ AI tribe added successfully`);
+          console.log(`✅ Game state emitted`);
         } else {
-          console.log(`❌ Failed to add AI tribe - no suitable location`);
+          console.log(`❌ Failed to add AI tribe - no suitable location or validation failed`);
         }
       } catch (error) {
         console.error(`❌ Error adding AI tribe:`, error);

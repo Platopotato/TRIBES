@@ -257,8 +257,9 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
 
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
 function processMoveAction(tribe: any, action: any, state: any): string {
-    const fromLocation = action.actionData?.fromLocation;
-    const toLocation = action.actionData?.toLocation;
+    // Handle both old and new field names
+    const fromLocation = action.actionData?.fromLocation || action.actionData?.start_location;
+    const toLocation = action.actionData?.toLocation || action.actionData?.finish_location;
     const troopsToMove = action.actionData?.troops || 1;
 
     if (!fromLocation) {
@@ -317,7 +318,8 @@ function processTradeAction(tribe: any, action: any, state: any): string {
 }
 
 function processScoutAction(tribe: any, action: any): string {
-    const location = action.actionData.location;
+    // Handle both old and new field names
+    const location = action.actionData.location || action.actionData.target_location;
 
     // Add to explored hexes (only if valid location)
     if (location && !tribe.exploredHexes.includes(location)) {
@@ -332,7 +334,8 @@ function processScoutAction(tribe: any, action: any): string {
 }
 
 function processScavengeAction(tribe: any, action: any): string {
-    const location = action.actionData.location;
+    // Handle both old and new field names
+    const location = action.actionData.location || action.actionData.target_location;
     const resourceType = action.actionData.resource_type || 'food';
 
     if (!location) {
@@ -514,7 +517,8 @@ function processTradeResponseAction(tribe: any, action: any, state: any): string
 }
 
 function processExploreAction(tribe: any, action: any): string {
-    const location = action.actionData.location;
+    // Handle both old and new field names
+    const location = action.actionData.location || action.actionData.target_location;
 
     // Add to explored hexes (only if valid location)
     if (location && !tribe.exploredHexes.includes(location)) {

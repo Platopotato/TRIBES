@@ -14,18 +14,18 @@ export interface Journey {
     id: string;
     ownerTribeId: string;
     type: JourneyType;
-    
+
     origin: string;
     destination: string;
     path: string[];
     currentLocation: string;
-    
+
     force: {
         troops: number;
         weapons: number;
         chiefs: Chief[];
     };
-    
+
     payload: {
         food: number;
         scrap: number;

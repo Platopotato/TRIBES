@@ -404,7 +404,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
             id: `combat-arrival-win-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: {},
-            result: `🏴‍☠️ Assault success at ${destKey}! You lost ${atkLosses} troops, defenders lost ${defLosses}. Hex captured.`
+            result: `🏴‍☠️ Assault on ${destKey} succeeded! Casualties — You: ${atkLosses}, Enemy: ${defLosses}. Hex captured and secured.`
         });
         defenderTribe.lastTurnResults.push({
             id: `combat-arrival-defeat-${Date.now()}`,
@@ -426,7 +426,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
             id: `combat-arrival-loss-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: {},
-            result: `🛑 Assault repelled at ${destKey}. You lost ${atkLosses} troops; defenders lost ${defLosses}.`
+            result: `🛑 Assault on ${destKey} was repelled. Casualties — You: ${atkLosses}, Enemy: ${defLosses}.`
         });
         defenderTribe.lastTurnResults.push({
             id: `combat-arrival-defend-${Date.now()}`,
@@ -436,6 +436,52 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         });
         // No capture; journey effectively spent.
     }
+
+    // Chief injury/capture resolution on arrival battles
+    // If attackers win and defender has chiefs, 30% to capture one; if attackers lose and had chiefs, 20% to injure one
+    const attackerChiefs = (journey.force.chiefs || []);
+    const defenderChiefs = (defenderGarrison?.chiefs || []);
+
+    if (attackerRoll > defenderRoll) {
+        if (defenderChiefs.length > 0 && Math.random() < 0.3) {
+            const captured = defenderChiefs.splice(Math.floor(Math.random() * defenderChiefs.length), 1)[0];
+            defenderTribe.lastTurnResults.push({
+                id: `chief-captured-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `🎗️ Chief ${captured.name} was captured at ${destKey} and is now a prisoner!`
+            });
+            attackerTribe.lastTurnResults.push({
+                id: `chief-prize-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `🏅 You captured enemy chief ${captured.name} at ${destKey}!`
+            });
+            // TODO: Persist prisoner in a new prisoners list if we formalize it on Tribe
+        }
+    } else {
+        if (attackerChiefs.length > 0 && Math.random() < 0.2) {
+            const injured = attackerChiefs.splice(Math.floor(Math.random() * attackerChiefs.length), 1)[0];
+            // Send injured chief back to home hex (tribe.location) and mark out until returnTurn
+            if (!attackerTribe.garrisons[attackerTribe.location]) attackerTribe.garrisons[attackerTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+            const homeGarrison = attackerTribe.garrisons[attackerTribe.location];
+            homeGarrison.chiefs.push(injured);
+            const returnTurn = state.turn + 3; // out for 3 turns
+            attackerTribe.lastTurnResults.push({
+                id: `chief-injured-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `🩹 Chief ${injured.name} was injured in battle and returns to ${attackerTribe.location} to recover (back on turn ${returnTurn}).`
+            });
+            // Note: we can later add a tribe.injuredChiefs array to track timers formally
+        }
+    }
+
+    // Clean up empty defender garrison
+    if (defenderGarrison && defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0 && (defenderGarrison.chiefs?.length || 0) === 0) {
+        delete defenderTribe.garrisons[destKey];
+    }
+
 }
 
     tribe.lastTurnResults.push({

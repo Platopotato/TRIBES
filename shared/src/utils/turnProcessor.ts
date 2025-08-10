@@ -1327,8 +1327,9 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
 
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---
 function processAttackAction(tribe: any, action: any, state: any): string {
-    const targetLocation = action.actionData.targetLocation;
-    const attackerLocation = action.actionData.fromLocation;
+    // Accept both camelCase and snake_case inputs from UI/AI
+    const targetLocation = action.actionData.targetLocation || action.actionData.target_location;
+    const attackerLocation = action.actionData.fromLocation || action.actionData.start_location;
     const troopsToAttack = action.actionData.troops || 1;
 
     const attackerGarrison = tribe.garrisons[attackerLocation];
@@ -1393,8 +1394,12 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         }
     }
 
-    const attackerRoll = Math.random() * (attackerStrength * atkMult);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * (1 + terrainDefBonus));
+    // Apply ration-based combat modifiers if present (percentages)
+    const attackerRationMod = tribe.rationEffects?.combatModifier ? (1 + (tribe.rationEffects.combatModifier / 100)) : 1;
+    const defenderRationMod = defendingTribe.rationEffects?.combatModifier ? (1 + (defendingTribe.rationEffects.combatModifier / 100)) : 1;
+
+    const attackerRoll = Math.random() * (attackerStrength * atkMult * attackerRationMod);
+    const defenderRoll = Math.random() * (defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus));
 
     if (attackerRoll > defenderRoll) {
         // Attacker wins

@@ -399,6 +399,20 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
 
         // Clear journey (done by caller via early return)
 
+
+        attackerTribe.lastTurnResults.push({
+            id: `battle-header-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `⚔️ Battle occurred at ${destKey}`
+        });
+        defenderTribe.lastTurnResults.push({
+            id: `battle-header-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `⚔️ Battle occurred at ${destKey}`
+        });
+
         // Notify both tribes
         attackerTribe.lastTurnResults.push({
             id: `combat-arrival-win-${Date.now()}`,
@@ -1570,6 +1584,20 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const defenderRoll = Math.random() * (defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus));
 
     if (attackerRoll > defenderRoll) {
+
+        tribe.lastTurnResults.push({
+          id: `battle-header-${Date.now()}`,
+          actionType: ActionType.Attack,
+          actionData: action.actionData,
+          result: `⚔️ Battle occurred at ${targetLocation}`
+        });
+        defendingTribe.lastTurnResults.push({
+          id: `battle-header-${Date.now()}`,
+          actionType: ActionType.Attack,
+          actionData: {},
+          result: `⚔️ Battle occurred at ${targetLocation}`
+        });
+
         // Attacker wins
         const troopsLost = Math.min(troopsToAttack, Math.floor(Math.random() * 3) + 1);
         const defenderLosses = Math.min(defenderGarrison.troops, Math.floor(Math.random() * 4) + 2);

@@ -173,6 +173,7 @@ export interface Tribe {
   id: string;
   playerId: string; // The ID of the user who owns this tribe
   isAI?: boolean;
+
   aiType?: AIType | null;
   playerName: string;
   tribeName: string;
@@ -231,6 +232,17 @@ export enum ActionType {
   Upkeep = 'Upkeep', // Not user-selectable, for results only
   Technology = 'Technology', // Not user-selectable, for results only
   RespondToTrade = 'Respond to Trade',
+  ReleasePrisoner = 'Release Prisoner',
+  ExchangePrisoners = 'Exchange Prisoners',
+}
+
+export interface PrisonerExchangeProposal {
+  id: string;
+  fromTribeId: string;
+  toTribeId: string;
+  offeredChiefNames: string[];
+  requestedChiefNames: string[];
+  expiresOnTurn: number;
 }
 
 export type GamePhase = 'planning' | 'processing' | 'results' | 'waiting';

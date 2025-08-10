@@ -19,6 +19,16 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ results }) => {
                     <li key={action.id} className="text-sm p-3 bg-slate-900/50 rounded-md border border-slate-700/50">
                         <span className="font-bold text-amber-400 block mb-1">{action.actionType}</span>
                         <p className="text-slate-300 leading-relaxed">{action.result || "Action processed."}</p>
+                        {action.meta?.assetBadges && action.meta.assetBadges.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {action.meta.assetBadges.map((b, idx) => (
+                              <span key={idx} className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-slate-800/70 border border-slate-600/50 text-slate-200">
+                                <span className="mr-1">{b.emoji}</span>
+                                <span className="font-semibold">{b.label}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                     </li>
                 ))}
               </ul>

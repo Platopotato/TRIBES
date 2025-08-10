@@ -223,11 +223,14 @@ export type GamePhase = 'planning' | 'processing' | 'results' | 'waiting';
 export interface GameAction {
   id: string;
   actionType: ActionType;
-  actionData: { 
+  actionData: {
     chiefsToMove?: string[];
-    [key: string]: any 
+    [key: string]: any
   };
   result?: string; // Optional: To store the outcome of the action
+  meta?: {
+    assetBadges?: { name?: string; label: string; emoji?: string }[];
+  };
 }
 
 export enum TerrainType {

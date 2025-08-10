@@ -1,31 +1,58 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType } from '../types.js';
+import { getAsset } from '../data/assetData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 import { generateAIActions } from '../ai/aiActions.js';
 
-// Combined effects system for movement speed bonuses
-type CombinedEffects = {
-    movementSpeedBonus: number;
-    // Add other effects as needed
-};
+// Combined effects system pulling from assets and ration effects
+interface CombinedEffects {
+    movementSpeedBonus: number; // multiplier
+    scavengeBonuses: { Food: number; Scrap: number; Weapons: number }; // additive percentages
+    globalCombatAttackBonus: number; // additive percentage
+    globalCombatDefenseBonus: number; // additive percentage
+    terrainDefenseBonus: Partial<Record<TerrainType, number>>; // additive percentage by terrain
+}
 
 function getCombinedEffects(tribe: any): CombinedEffects {
-    // Base movement speed
-    let movementSpeedBonus = 1.0;
+    const effects: CombinedEffects = {
+        movementSpeedBonus: 1.0,
+        scavengeBonuses: { Food: 0, Scrap: 0, Weapons: 0 },
+        globalCombatAttackBonus: 0,
+        globalCombatDefenseBonus: 0,
+        terrainDefenseBonus: {},
+    };
 
-    // Technology effects (if implemented)
-    // TODO: Add technology-based movement bonuses
-
-    // Asset effects (if implemented)
-    // TODO: Add asset-based movement bonuses
-
-    // Ration effects
-    if (tribe.rationEffects?.actionEfficiency) {
-        movementSpeedBonus *= tribe.rationEffects.actionEfficiency;
+    // Assets
+    for (const assetName of tribe.assets || []) {
+        const asset = getAsset(assetName);
+        if (!asset) continue;
+        for (const e of asset.effects) {
+            switch (e.type) {
+                case TechnologyEffectType.MovementSpeedBonus:
+                    effects.movementSpeedBonus *= (1 + e.value);
+                    break;
+                case TechnologyEffectType.ScavengeYieldBonus:
+                    if (e.resource) effects.scavengeBonuses[e.resource] += e.value;
+                    break;
+                case TechnologyEffectType.CombatBonusAttack:
+                    effects.globalCombatAttackBonus += e.value;
+                    break;
+                case TechnologyEffectType.CombatBonusDefense:
+                    if (e.terrain) {
+                        effects.terrainDefenseBonus[e.terrain] = (effects.terrainDefenseBonus[e.terrain] || 0) + e.value;
+                    } else {
+                        effects.globalCombatDefenseBonus += e.value;
+                    }
+                    break;
+            }
+        }
     }
 
-    return {
-        movementSpeedBonus
-    };
+    // Rations influence general efficiency (already used elsewhere) — keep movement coupling minimal
+    if (tribe?.rationEffects?.actionEfficiency) {
+        effects.movementSpeedBonus *= tribe.rationEffects.actionEfficiency;
+    }
+
+    return effects;
 }
 
 // --- COORDINATE CONVERSION UTILITIES ---
@@ -61,6 +88,27 @@ export function processGlobalTurn(gameState: GameState): GameState {
 
     // GENERATE AI ACTIONS: Add AI actions for tribes that haven't submitted
     let aiTribesProcessed = 0;
+
+	// Create asset badges for UI from combined effects and present assets
+	function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'combat', resource?: string, terrain?: TerrainType }): { name?: string; label: string; emoji?: string }[] {
+	  const badges: { name?: string; label: string; emoji?: string }[] = [];
+	  const assets = tribe.assets || [];
+	  if (context.phase === 'move') {
+	    // Movement-speed assets
+	    if (assets.includes('Dune_Buggy')) badges.push({ name: 'Dune_Buggy', label: '+20% speed', emoji: '🏎️' });
+	  }
+	  if (context.phase === 'scavenge') {
+	    if (context.resource?.toLowerCase() === 'scrap' && assets.includes('Ratchet_Set')) badges.push({ name: 'Ratchet_Set', label: '+15% scrap', emoji: '🔧' });
+	  }
+	  if (context.phase === 'combat') {
+	    // Global attack/defense placeholders; terrain-specific sample
+	    if (assets.includes('Dune_Buggy') && (context.terrain === TerrainType.Plains || context.terrain === TerrainType.Desert)) {
+	      badges.push({ name: 'Dune_Buggy', label: '-10% defense (terrain)', emoji: '🛡️' });
+	    }
+	  }
+	  return badges;
+	}
+
     state.tribes.forEach(tribe => {
         if (tribe.isAI && !tribe.turnSubmitted) {
             try {
@@ -696,11 +744,12 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         return `❌ Could not find a path from ${startLocation} to ${destination}. Route may be blocked by impassable terrain.`;
     }
 
-    // debug: pathfinding success
-
-    // Calculate movement speed with bonuses
+    // Calculate movement speed with bonuses (assets like Dune_Buggy etc.)
     const combinedEffects = getCombinedEffects(tribe);
     const arrivalTurn = Math.ceil(pathInfo.cost / combinedEffects.movementSpeedBonus);
+
+    // Attach asset badges to result later
+    const moveBadges = buildAssetBadges(tribe, { phase: 'move' });
 
     // FAST-TRACK LOGIC: Short moves (≤1 turn) are instant
     const FAST_TRACK_THRESHOLD = 1;
@@ -769,6 +818,18 @@ function processMoveAction(tribe: any, action: any, state: any): string {
             journey.path.shift(); // Remove origin
             journey.currentLocation = journey.path[0]; // Move to first step
         }
+
+	        const badgesText = moveBadges.length > 0 ? ` ${moveBadges.map(b => `${b.emoji || ''} ${b.label}`).join(' ')}` : '';
+
+	        // Add a narrative entry immediately so the player sees the modifiers
+	        tribe.lastTurnResults.push({
+	            id: `move-dispatched-${journey.id}`,
+	            actionType: ActionType.Move,
+	            actionData: action.actionData,
+	            result: `🚶 Dispatched movement from ${startLocation} to ${destination}. ETA: ${arrivalTurn} turn(s).${badgesText}`,
+	            meta: { assetBadges: moveBadges }
+	        });
+
 
         state.journeys.push(journey);
 
@@ -1197,6 +1258,14 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     let baseAmount = 0;
     switch (resourceType.toLowerCase()) {
         case 'food':
+
+	    // Add badges to message
+	    const scavBadges = buildAssetBadges(tribe, { phase: 'scavenge', resource: resourceName });
+	    const scavBadgesText = scavBadges.length > 0 ? ` ${scavBadges.map(b => `${b.emoji || ''} ${b.label}`).join(' ')}` : '';
+
+	    return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage}${scavBadgesText} Area explored and resources gathered.`;
+	}
+
             baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
             resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.food += resourceGained;
@@ -1221,7 +1290,25 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
             resourceName = 'food';
     }
 
-    return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage} Area explored and resources gathered.`;
+    // Apply asset scavenge bonuses (e.g., Ratchet_Set)
+    const combinedEffects = getCombinedEffects(tribe);
+    const bonusMap: Record<string, number> = {
+        'food': combinedEffects.scavengeBonuses.Food,
+        'scrap': combinedEffects.scavengeBonuses.Scrap,
+        'weapons': combinedEffects.scavengeBonuses.Weapons,
+    };
+    const resKey = resourceName.toLowerCase();
+    const resBonus = bonusMap[resKey] || 0;
+    if (resBonus !== 0) {
+        const bonusAmount = Math.floor(resourceGained * resBonus);
+        resourceGained += bonusAmount;
+        if (resKey === 'food') tribe.globalResources.food += bonusAmount;
+        if (resKey === 'scrap') tribe.globalResources.scrap += bonusAmount;
+        if (resKey === 'weapons') tribe.globalResources.weapons += bonusAmount;
+    }
+
+
+    return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage}${scavBadgesText} Area explored and resources gathered.`;
 }
 
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---
@@ -1231,6 +1318,21 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const troopsToAttack = action.actionData.troops || 1;
 
     const attackerGarrison = tribe.garrisons[attackerLocation];
+
+	    // Add combat badge line to attacker (defender gets its separate message already)
+	    const defCoords2 = parseHexCoords(defKey);
+	    const defHex2 = state.mapData.find((h: any) => h.q === defCoords2.q && h.r === defCoords2.r) || null;
+	    const combatBadges = buildAssetBadges(tribe, { phase: 'combat', terrain: defHex2?.terrain });
+	    if (combatBadges.length > 0) {
+	        tribe.lastTurnResults.push({
+	            id: `combat-mods-${Date.now()}`,
+	            actionType: ActionType.Attack,
+	            actionData: action.actionData,
+	            result: `⚔️ Combat modifiers:${combatBadges.map(b => ` ${b.emoji || ''} ${b.label}`).join('')}`,
+	            meta: { assetBadges: combatBadges }
+	        });
+	    }
+
     if (!attackerGarrison || attackerGarrison.troops < troopsToAttack) {
         return `Insufficient troops at ${attackerLocation} for attack. Need ${troopsToAttack}, have ${attackerGarrison?.troops || 0}.`;
     }
@@ -1247,12 +1349,28 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const defenderGarrison = defendingTribe.garrisons[targetLocation];
 
     // Simple combat resolution
+
+    // Apply global combat bonuses from assets (terrain-specific bonuses can be added later)
+    const effects = getCombinedEffects(tribe);
+    const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
+    const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
+
     const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0);
     const defenderStrength = defenderGarrison.troops + (defenderGarrison.weapons || 0);
 
-    // Add some randomness
-    const attackerRoll = Math.random() * attackerStrength;
-    const defenderRoll = Math.random() * defenderStrength;
+    // Terrain-specific defense bonuses for defender
+    let terrainDefBonus = 0;
+    // Try to resolve defender hex location key; fall back to targetLocation
+    const defKey = defenderGarrison.location || targetLocation;
+    const defCoords = parseHexCoords(defKey);
+    const defHex = state.mapData.find((h: any) => h.q === defCoords.q && h.r === defCoords.r) || null;
+    if (defHex) {
+        const terr = defHex.terrain as TerrainType;
+        terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
+    }
+
+    const attackerRoll = Math.random() * (attackerStrength * atkMult);
+    const defenderRoll = Math.random() * (defenderStrength * defMult * (1 + terrainDefBonus));
 
     if (attackerRoll > defenderRoll) {
         // Attacker wins

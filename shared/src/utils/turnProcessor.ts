@@ -206,6 +206,13 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     break;
                 case ActionType.Defend:
                     result = processDefendAction(tribe, action);
+                case ActionType.ReleasePrisoner:
+                    result = processReleasePrisonerAction(tribe, action, state);
+                    break;
+                case ActionType.ExchangePrisoners:
+                    result = processExchangePrisonersAction(tribe, action, state);
+                    break;
+
                     break;
                 case ActionType.RespondToTrade:
                     result = processTradeResponseAction(tribe, action, state);
@@ -245,6 +252,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
 
     // Process diplomatic proposals
     processDiplomaticProposals(state);
+
+    // Process prisoner exchange proposals (expiry)
+    processPrisonerExchanges(state);
 
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
@@ -511,6 +521,56 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     // Clean up empty defender garrison
     if (defenderGarrison && defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0 && (defenderGarrison.chiefs?.length || 0) === 0) {
         delete defenderTribe.garrisons[destKey];
+
+// --- PRISONER DIPLOMACY ACTIONS ---
+function processReleasePrisonerAction(tribe: any, action: any, state: any): string {
+    const name: string = action.actionData?.chief_name;
+    const targetTribeId: string | undefined = action.actionData?.toTribeId;
+    if (!name) return '❌ Release Prisoner: missing chief_name.';
+
+    const idx = (tribe.prisoners || []).findIndex((p: any) => p.chief?.name === name);
+    if (idx === -1) return `❌ Release Prisoner: you do not hold a prisoner named ${name}.`;
+
+    const prisoner = tribe.prisoners![idx];
+    const toTribe = state.tribes.find((t: any) => t.id === (targetTribeId || prisoner.fromTribeId));
+    if (!toTribe) return '❌ Release Prisoner: target tribe not found.';
+
+    // Remove from prisoners and return to target tribe's home garrison
+    tribe.prisoners!.splice(idx, 1);
+    if (!toTribe.garrisons[toTribe.location]) toTribe.garrisons[toTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+    toTribe.garrisons[toTribe.location].chiefs.push(prisoner.chief);
+
+    tribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: action.actionData, result: `🤝 Released prisoner ${name} to ${toTribe.tribeName}.` });
+    toTribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: {}, result: `🎗️ ${tribe.tribeName} released your chief ${name}. She has returned to ${toTribe.location}.` });
+    return `Released ${name}`;
+}
+
+function processExchangePrisonersAction(tribe: any, action: any, state: any): string {
+    const toTribeId: string = action.actionData?.toTribeId;
+    const offeredChiefNames: string[] = action.actionData?.offeredChiefNames || [];
+    const requestedChiefNames: string[] = action.actionData?.requestedChiefNames || [];
+    if (!toTribeId || (offeredChiefNames.length === 0 && requestedChiefNames.length === 0)) {
+        return '❌ Exchange Prisoners: missing toTribeId or no chiefs specified.';
+    }
+    const toTribe = state.tribes.find((t: any) => t.id === toTribeId);
+    if (!toTribe) return '❌ Exchange Prisoners: target tribe not found.';
+
+    const proposal = {
+        id: `px-${Date.now()}`,
+        fromTribeId: tribe.id,
+        toTribeId,
+        offeredChiefNames,
+        requestedChiefNames,
+        expiresOnTurn: state.turn + 3,
+    };
+    state.prisonerExchangeProposals = state.prisonerExchangeProposals || [];
+    state.prisonerExchangeProposals.push(proposal);
+
+    tribe.lastTurnResults.push({ id: `px-sent-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: action.actionData, result: `📜 Proposed a prisoner exchange to ${toTribe.tribeName}.` });
+    toTribe.lastTurnResults.push({ id: `px-recv-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 ${tribe.tribeName} proposed a prisoner exchange.` });
+    return 'Prisoner exchange proposed';
+}
+
     }
 
 }
@@ -559,6 +619,22 @@ function resolveTradeArrival(journey: any, tribe: any, state: any): void {
         });
         // TODO: Create return journey
     }
+}
+
+
+// Handle prisoner exchange proposals at end of turn (expiry only for now)
+function processPrisonerExchanges(state: any): void {
+    if (!state.prisonerExchangeProposals) return;
+    state.prisonerExchangeProposals = state.prisonerExchangeProposals.filter((px: any) => {
+        if (state.turn >= px.expiresOnTurn) {
+            const fromTribe = state.tribes.find((t: any) => t.id === px.fromTribeId);
+            const toTribe = state.tribes.find((t: any) => t.id === px.toTribeId);
+            if (fromTribe) fromTribe.lastTurnResults.push({ id: `px-expired-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 Prisoner exchange with ${toTribe?.tribeName || 'unknown'} has expired.` });
+            if (toTribe) toTribe.lastTurnResults.push({ id: `px-expired-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 Prisoner exchange from ${fromTribe?.tribeName || 'unknown'} has expired.` });
+            return false;
+        }
+        return true;
+    });
 }
 
 // --- DIPLOMATIC PROPOSAL PROCESSING ---
@@ -2111,4 +2187,53 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
     }
 
     return { message: summaryMessage };
+}
+
+
+// Module-scope definitions (ensure availability in switch)
+function processReleasePrisonerAction(tribe: any, action: any, state: any): string {
+    const name: string = action.actionData?.chief_name;
+    const targetTribeId: string | undefined = action.actionData?.toTribeId;
+    if (!name) return '❌ Release Prisoner: missing chief_name.';
+    const idx = (tribe.prisoners || []).findIndex((p: any) => p.chief?.name === name);
+    if (idx === -1) return `❌ Release Prisoner: you do not hold a prisoner named ${name}.`;
+    const prisoner = tribe.prisoners![idx];
+    const toTribe = state.tribes.find((t: any) => t.id === (targetTribeId || prisoner.fromTribeId));
+    if (!toTribe) return '❌ Release Prisoner: target tribe not found.';
+    tribe.prisoners!.splice(idx, 1);
+    if (!toTribe.garrisons[toTribe.location]) toTribe.garrisons[toTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+    toTribe.garrisons[toTribe.location].chiefs.push(prisoner.chief);
+    tribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: action.actionData, result: `🤝 Released prisoner ${name} to ${toTribe.tribeName}.` });
+    toTribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: {}, result: `🎗️ ${tribe.tribeName} released your chief ${name}. She has returned to ${toTribe.location}.` });
+    return `Released ${name}`;
+}
+
+function processExchangePrisonersAction(tribe: any, action: any, state: any): string {
+    const toTribeId: string = action.actionData?.toTribeId;
+    let offeredChiefNames: any = action.actionData?.offeredChiefNames || [];
+    let requestedChiefNames: any = action.actionData?.requestedChiefNames || [];
+    if (typeof offeredChiefNames === 'string') {
+        offeredChiefNames = offeredChiefNames.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+    }
+    if (typeof requestedChiefNames === 'string') {
+        requestedChiefNames = requestedChiefNames.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+    }
+    if (!toTribeId || (offeredChiefNames.length === 0 && requestedChiefNames.length === 0)) {
+        return '❌ Exchange Prisoners: missing toTribeId or no chiefs specified.';
+    }
+    const toTribe = state.tribes.find((t: any) => t.id === toTribeId);
+    if (!toTribe) return '❌ Exchange Prisoners: target tribe not found.';
+    const proposal = {
+        id: `px-${Date.now()}`,
+        fromTribeId: tribe.id,
+        toTribeId,
+        offeredChiefNames,
+        requestedChiefNames,
+        expiresOnTurn: state.turn + 3,
+    };
+    state.prisonerExchangeProposals = state.prisonerExchangeProposals || [];
+    state.prisonerExchangeProposals.push(proposal);
+    tribe.lastTurnResults.push({ id: `px-sent-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: action.actionData, result: `📜 Proposed a prisoner exchange to ${toTribe.tribeName}.` });
+    toTribe.lastTurnResults.push({ id: `px-recv-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 ${tribe.tribeName} proposed a prisoner exchange.` });
+    return 'Prisoner exchange proposed';
 }

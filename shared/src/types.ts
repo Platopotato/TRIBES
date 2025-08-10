@@ -344,6 +344,7 @@ export interface GameState {
     assetRequests: AssetRequest[];
     journeys: Journey[];
     diplomaticProposals: DiplomaticProposal[];
+    prisonerExchangeProposals?: PrisonerExchangeProposal[];
     history?: TurnHistoryRecord[];
     ticker?: TickerState;
     loginAnnouncements?: LoginAnnouncementState;

@@ -54,9 +54,9 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             console.log('✅ SIMPLE EFFECT COMPLETE');
         }
     }, [selectedLocationForAction, setSelectedLocationForAction]);
-  
+
   if (!isOpen) return null;
-  
+
   const selectedActionType = draftAction?.actionType ?? null;
 
   useEffect(() => {
@@ -81,7 +81,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
   const otherTribesWithGarrisons = useMemo(() => {
     return allTribes
         .filter(t => t.id !== tribe.id)
-        .flatMap(t => 
+        .flatMap(t =>
             Object.keys(t.garrisons).map(loc => ({
                 tribeId: t.id,
                 tribeName: t.tribeName,
@@ -100,32 +100,49 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     });
     const firstGarrison = validGarrisonLocations[0] || Object.keys(tribe.garrisons)[0] || tribe.location;
 
-    definition.fields.forEach(field => {
-      if (field.type === 'garrison_select') {
-        initialData[field.name] = firstGarrison;
-      } else if (field.name === 'start_location' || field.name === 'location') {
-        initialData[field.name] = tribe.location;
-      } else if (field.defaultValue !== undefined) {
-        initialData[field.name] = field.defaultValue;
-      } else if (field.type === 'select' && field.options) {
-        initialData[field.name] = field.options[0];
-      } else if (field.type === 'chief_select') {
-        initialData[field.name] = [];
-      } else if (actionType === ActionType.Trade) {
-          initialData['offer_food'] = 0;
-          initialData['offer_scrap'] = 0;
-          initialData['offer_weapons'] = 0;
-          initialData['request_food'] = 0;
-          initialData['request_scrap'] = 0;
-          initialData['request_weapons'] = 0;
-          initialData['troops'] = 1;
-          initialData['weapons'] = 0;
-          if (otherTribesWithGarrisons.length > 0) {
-            initialData['target_location'] = otherTribesWithGarrisons[0].location;
-            initialData['target_tribe_id'] = otherTribesWithGarrisons[0].tribeId;
-          }
+    if (definition) {
+      definition.fields.forEach(field => {
+        if (field.type === 'garrison_select') {
+          initialData[field.name] = firstGarrison;
+        } else if (field.name === 'start_location' || field.name === 'location') {
+          initialData[field.name] = tribe.location;
+        } else if (field.defaultValue !== undefined) {
+          initialData[field.name] = field.defaultValue;
+        } else if (field.type === 'select' && field.options) {
+          initialData[field.name] = field.options[0];
+        } else if (field.type === 'chief_select') {
+          initialData[field.name] = [];
+        } else if (actionType === ActionType.Trade) {
+            initialData['offer_food'] = 0;
+            initialData['offer_scrap'] = 0;
+            initialData['offer_weapons'] = 0;
+            initialData['request_food'] = 0;
+            initialData['request_scrap'] = 0;
+            initialData['request_weapons'] = 0;
+            initialData['troops'] = 1;
+            initialData['weapons'] = 0;
+            if (otherTribesWithGarrisons.length > 0) {
+              initialData['target_location'] = otherTribesWithGarrisons[0].location;
+              initialData['target_tribe_id'] = otherTribesWithGarrisons[0].tribeId;
+            }
+        }
+      });
+    } else {
+      // Custom diplomacy actions
+      if (actionType === ActionType.ReleasePrisoner) {
+        const prisonerNames = (tribe.prisoners || []).map(p => p.chief?.name).filter(Boolean);
+        initialData['chief_name'] = prisonerNames[0] || '';
+        const toId = (tribe.prisoners || [])[0]?.fromTribeId;
+        if (toId) initialData['toTribeId'] = toId;
       }
-    });
+      if (actionType === ActionType.ExchangePrisoners) {
+        // Defaults: first non-self tribe
+        const to = allTribes.find(t => t.id !== tribe.id);
+        if (to) initialData['toTribeId'] = to.id;
+        initialData['offeredChiefNames'] = [];
+        initialData['requestedChiefNames'] = '';
+      }
+    }
 
     setDraftAction({
       actionType: actionType,
@@ -276,7 +293,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     onAddAction(newAction);
     onClose();
   };
-  
+
   const renderField = (field: ActionField) => {
     const value = draftAction?.actionData?.[field.name] ?? '';
     const startLocation = draftAction?.actionData?.start_location;
@@ -430,12 +447,12 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     return (
       <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[75vh] p-1">
         <p className="text-sm text-slate-400 -mt-2 mb-4">{ACTION_DEFINITIONS.Trade.description}</p>
-        
+
         <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Dispatch Caravan From</label>
             {renderField(ACTION_DEFINITIONS.Trade.fields[0])}
         </div>
-        
+
         <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Trade With (Target)</label>
             {otherTribesWithGarrisons.length > 0 ? (
@@ -554,6 +571,92 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     )
   }
 
+  const renderReleasePrisonerForm = () => {
+    const prisonerNames = (tribe.prisoners || []).map(p => p.chief?.name).filter(Boolean);
+    const data = draftAction?.actionData || {};
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[75vh] p-1">
+        <p className="text-sm text-slate-400 -mt-2 mb-4">Release a captured enemy chief back to their tribe.</p>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Prisoner</label>
+          <select
+            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+            value={data.chief_name || ''}
+            onChange={(e) => handleFieldChange('chief_name', e.target.value)}
+          >
+            <option value='' disabled>Select prisoner</option>
+            {prisonerNames.map(name => (<option key={name} value={name}>{name}</option>))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Return To Tribe (optional)</label>
+          <select
+            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+            value={data.toTribeId || ''}
+            onChange={(e) => handleFieldChange('toTribeId', e.target.value)}
+          >
+            <option value=''>Original Owner</option>
+            {allTribes.filter(t => t.id !== tribe.id).map(t => (
+              <option key={t.id} value={t.id}>{t.tribeName}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex justify-between pt-4 border-t border-slate-700">
+          <Button type="button" variant="secondary" onClick={handleBack}>Back</Button>
+          <Button type="submit">Add Action</Button>
+        </div>
+      </form>
+    );
+  };
+
+  const renderExchangePrisonersForm = () => {
+    const data = draftAction?.actionData || {};
+    const prisonerNames = (tribe.prisoners || []).map(p => p.chief?.name).filter(Boolean);
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[75vh] p-1">
+        <p className="text-sm text-slate-400 -mt-2 mb-4">Propose an exchange of prisoners with another tribe.</p>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Target Tribe</label>
+          <select
+            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+            value={data.toTribeId || ''}
+            onChange={(e) => handleFieldChange('toTribeId', e.target.value)}
+          >
+            {allTribes.filter(t => t.id !== tribe.id).map(t => (
+              <option key={t.id} value={t.id}>{t.tribeName}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Offer These Prisoners (you hold)</label>
+          <select multiple className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 min-h-[6rem]"
+            value={data.offeredChiefNames || []}
+            onChange={(e) => handleFieldChange('offeredChiefNames', Array.from(e.target.selectedOptions).map(o => o.value))}
+          >
+            {prisonerNames.length === 0 ? <option disabled>No prisoners to offer</option> : null}
+            {prisonerNames.map(name => (<option key={name} value={name}>{name}</option>))}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Request These Prisoners (type names, comma-separated)</label>
+          <input
+            type="text"
+            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200"
+            value={data.requestedChiefNames || ''}
+            onChange={(e) => handleFieldChange('requestedChiefNames', e.target.value)}
+            placeholder="e.g., Raven, Ironclaw"
+          />
+        </div>
+        <div className="flex justify-between pt-4 border-t border-slate-700">
+          <Button type="button" variant="secondary" onClick={handleBack}>Back</Button>
+          <Button type="submit">Add Action</Button>
+        </div>
+      </form>
+    );
+  };
+
+
   console.log('🎬 ActionModal RENDER COMPLETE at:', Date.now() - renderStartTime, 'ms');
 
   return (
@@ -638,6 +741,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           )}
 
           {selectedActionType === ActionType.Trade ? renderTradeForm() :
+           selectedActionType === ActionType.ReleasePrisoner ? renderReleasePrisonerForm() :
+           selectedActionType === ActionType.ExchangePrisoners ? renderExchangePrisonersForm() :
            selectedActionType ? (
              <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto">
                 <p className="text-sm text-slate-400 -mt-2 mb-4">{ACTION_DEFINITIONS[selectedActionType].description}</p>

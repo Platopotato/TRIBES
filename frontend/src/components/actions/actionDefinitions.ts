@@ -158,3 +158,5 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
     ],
   },
 };
+
+  // Non-plannable diplomacy actions are intentionally omitted from the action grid.

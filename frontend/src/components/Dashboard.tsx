@@ -1107,6 +1107,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   playerTribe={playerTribe}
                   allTribes={allTribes}
                   diplomaticProposals={diplomaticProposals}
+                  prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
+                  onRespondToPrisonerExchange={(proposalId, response) => {
+                    const action: GameAction = { id: `action-${Date.now()}`, actionType: ActionType.RespondToPrisonerExchange, actionData: { proposalId, response } } as any;
+                    setPlannedActions(prev => [...prev, action]);
+                  }}
                   turn={turn}
                   onProposeAlliance={onProposeAlliance}
                   onSueForPeace={onSueForPeace}
@@ -1504,6 +1509,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     playerTribe={playerTribe}
                     allTribes={allTribes}
                     diplomaticProposals={diplomaticProposals}
+                    prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
+                    onRespondToPrisonerExchange={(proposalId, response) => {
+                      // Create a response action to be added to planned actions
+                      const action: GameAction = { id: `action-${Date.now()}`, actionType: ActionType.RespondToPrisonerExchange, actionData: { proposalId, response } } as any;
+                      setPlannedActions(prev => [...prev, action]);
+                    }}
                     turn={turn}
                     onProposeAlliance={onProposeAlliance}
                     onSueForPeace={onSueForPeace}

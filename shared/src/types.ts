@@ -234,6 +234,7 @@ export enum ActionType {
   RespondToTrade = 'Respond to Trade',
   ReleasePrisoner = 'Release Prisoner',
   ExchangePrisoners = 'Exchange Prisoners',
+  RespondToPrisonerExchange = 'Respond to Prisoner Exchange',
 }
 
 export interface PrisonerExchangeProposal {

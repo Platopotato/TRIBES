@@ -25,7 +25,7 @@ export interface ActionDefinition {
   isPlaceholder?: boolean;
 }
 
-export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.StartResearch | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners>]: ActionDefinition } = {
+export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.StartResearch | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners | ActionType.RespondToPrisonerExchange>]: ActionDefinition } = {
   [ActionType.Move]: {
     name: 'Move',
     description: 'Relocate troops, chiefs, and equipment between garrisons.',

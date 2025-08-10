@@ -212,6 +212,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.ExchangePrisoners:
                     result = processExchangePrisonersAction(tribe, action, state);
                     break;
+                case ActionType.RespondToPrisonerExchange:
+                    result = processPrisonerExchangeResponseAction(tribe, action, state);
+                    break;
+
 
                     break;
                 case ActionType.RespondToTrade:
@@ -636,6 +640,62 @@ function processPrisonerExchanges(state: any): void {
         return true;
     });
 }
+
+function processPrisonerExchangeResponseAction(tribe: any, action: any, state: any): string {
+    const proposalId: string = action.actionData?.proposalId;
+    const response: 'accept' | 'reject' = action.actionData?.response;
+    if (!proposalId || !response) return '❌ Respond Prisoner Exchange: missing proposalId or response.';
+    const pxIdx = (state.prisonerExchangeProposals || []).findIndex((p: any) => p.id === proposalId);
+    if (pxIdx === -1) return '❌ Proposal not found or already resolved.';
+    const px = state.prisonerExchangeProposals![pxIdx];
+    if (tribe.id !== px.toTribeId) return '❌ You are not the recipient of this proposal.';
+
+    const fromTribe = state.tribes.find((t: any) => t.id === px.fromTribeId);
+    const toTribe = state.tribes.find((t: any) => t.id === px.toTribeId);
+    if (!fromTribe || !toTribe) return '❌ Tribe(s) not found.';
+
+    if (response === 'reject') {
+        state.prisonerExchangeProposals!.splice(pxIdx, 1);
+        // Notify
+        fromTribe.lastTurnResults.push({ id: `px-rejected-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `${toTribe.tribeName} rejected your prisoner exchange.` });
+        toTribe.lastTurnResults.push({ id: `px-rejected-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `You rejected ${fromTribe.tribeName}'s prisoner exchange.` });
+        return 'Prisoner exchange rejected';
+    }
+
+    // Accept path: verify availability
+    const getPrisonerIdxByName = (holder: any, name: string) => (holder.prisoners || []).findIndex((p: any) => (p.chief?.name || '').toLowerCase() === name.toLowerCase());
+
+    for (const name of (px.offeredChiefNames || [])) {
+        if (getPrisonerIdxByName(fromTribe, name) === -1) return `❌ Offer invalid: ${fromTribe.tribeName} no longer holds ${name}.`;
+    }
+    const requestedList: string[] = Array.isArray(px.requestedChiefNames) ? px.requestedChiefNames : (typeof px.requestedChiefNames === 'string' ? px.requestedChiefNames.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+    for (const name of requestedList) {
+        if (getPrisonerIdxByName(toTribe, name) === -1) return `❌ Request invalid: You no longer hold ${name}.`;
+    }
+
+    // Perform swap: move offered from fromTribe -> toTribe, requested from toTribe -> fromTribe
+    const movePrisonerByName = (src: any, dst: any, name: string) => {
+        const idx = getPrisonerIdxByName(src, name);
+        if (idx >= 0) {
+            const rec = src.prisoners[idx];
+            src.prisoners.splice(idx, 1);
+            dst.prisoners = dst.prisoners || [];
+            dst.prisoners.push(rec);
+        }
+    };
+
+    (px.offeredChiefNames || []).forEach((n: string) => movePrisonerByName(fromTribe, toTribe, n));
+    requestedList.forEach((n: string) => movePrisonerByName(toTribe, fromTribe, n));
+
+    state.prisonerExchangeProposals!.splice(pxIdx, 1);
+
+    // Notify
+    fromTribe.lastTurnResults.push({ id: `px-accepted-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `${toTribe.tribeName} accepted your prisoner exchange.` });
+    toTribe.lastTurnResults.push({ id: `px-accepted-${px.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `You accepted ${fromTribe.tribeName}'s prisoner exchange.` });
+
+    return 'Prisoner exchange accepted';
+}
+
 
 // --- DIPLOMATIC PROPOSAL PROCESSING ---
 function processDiplomaticProposals(state: any): void {

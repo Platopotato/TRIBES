@@ -14,6 +14,9 @@ interface DiplomacyPanelProps {
   playerTribe: Tribe;
   allTribes: Tribe[];
   diplomaticProposals: DiplomaticProposal[];
+  prisonerExchangeProposals?: any[];
+  onRespondToPrisonerExchange?: (proposalId: string, response: 'accept' | 'reject') => void;
+
   turn: number;
   onProposeAlliance: (toTribeId: string) => void;
   onSueForPeace: (toTribeId: string, reparations: { food: number, scrap: number, weapons: number }) => void;
@@ -24,7 +27,7 @@ interface DiplomacyPanelProps {
 
 const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   const { playerTribe, allTribes, diplomaticProposals, turn, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal } = props;
-  
+
   const [warTarget, setWarTarget] = useState<Tribe | null>(null);
   const [peaceTarget, setPeaceTarget] = useState<Tribe | null>(null);
 
@@ -33,7 +36,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
 
   const incomingProposals = diplomaticProposals.filter(p => p.toTribeId === playerTribe.id);
   const outgoingProposals = diplomaticProposals.filter(p => p.fromTribeId === playerTribe.id);
-  
+
   const handleConfirmDeclareWar = () => {
     if (warTarget) {
       onDeclareWar(warTarget.id);
@@ -47,7 +50,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     }
     setPeaceTarget(null);
   };
-  
+
   const getStatusPill = (relation: DiplomaticRelation) => {
     const status = relation?.status || DiplomaticStatus.Neutral;
     const styles = {
@@ -63,10 +66,10 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     const parts = Object.entries(reparations)
       .filter(([, value]) => value > 0)
       .map(([key, value]) => `${value} ${key}`);
-    
+
     return parts.length > 0 ? `They offer: ${parts.join(', ')}.` : 'no reparations.';
   };
-  
+
   const renderTribeList = (tribesToList: Tribe[]) => (
     <div className="space-y-3">
       {tribesToList.map(tribe => {
@@ -157,14 +160,39 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               })}
             </div>
           )}
-          
+
           <div>
             <h4 className="font-semibold text-slate-300 mb-2">Player Tribes</h4>
             {otherTribes.length > 0 ? renderTribeList(otherTribes) : <p className="text-sm text-slate-400 italic">No other active player tribes.</p>}
           </div>
-          
+
           {aiTribes.length > 0 && (
               <div className="pt-3 border-t border-slate-700">
+
+          {props.prisonerExchangeProposals && props.prisonerExchangeProposals.filter(px => px.toTribeId === playerTribe.id).length > 0 && (
+            <div className="pt-3 border-t border-slate-700">
+              <h4 className="font-semibold text-slate-300 mb-2">Prisoner Exchange Proposals</h4>
+              <div className="space-y-3">
+                {props.prisonerExchangeProposals.filter(px => px.toTribeId === playerTribe.id).map(px => (
+                  <div key={px.id} className="p-3 bg-slate-900/50 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="font-semibold text-slate-200">From: {allTribes.find(t => t.id === px.fromTribeId)?.tribeName || 'Unknown'}</div>
+                      <div className="text-xs text-slate-400">Expires on turn {px.expiresOnTurn}</div>
+                    </div>
+                    <div className="text-xs text-slate-300 mt-2">
+                      <div>They offer: {(px.offeredChiefNames || []).join(', ') || 'nothing'}</div>
+                      <div>They request: {Array.isArray(px.requestedChiefNames) ? px.requestedChiefNames.join(', ') : (px.requestedChiefNames || 'nothing')}</div>
+                    </div>
+                    <div className="flex justify-end space-x-2 mt-2">
+                      <Button className="text-xs px-3 py-1 bg-red-800/80 hover:bg-red-700" onClick={() => props.onRespondToPrisonerExchange?.(px.id, 'reject')}>Reject</Button>
+                      <Button className="text-xs px-3 py-1 bg-green-800/80 hover:bg-green-700" onClick={() => props.onRespondToPrisonerExchange?.(px.id, 'accept')}>Accept</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
                   <h4 className="font-semibold text-slate-300 mb-2">AI Tribes</h4>
                   {renderTribeList(aiTribes)}
               </div>
@@ -180,7 +208,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         />
       )}
       {peaceTarget && (
-        <SueForPeaceModal 
+        <SueForPeaceModal
           isOpen={!!peaceTarget}
           onClose={() => setPeaceTarget(null)}
           onSubmit={handleSueForPeaceSubmit}

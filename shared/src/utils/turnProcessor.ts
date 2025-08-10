@@ -311,6 +311,13 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // Normalize destination key to standard format
     const destKey = convertToStandardFormat(journey.destination);
 
+    // If destination is occupied by another tribe, resolve combat on arrival
+    const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+    if (defendingTribe) {
+        resolveCombatOnArrival(journey, tribe, defendingTribe, state, destKey);
+        return;
+    }
+
     // Create or update destination garrison
     if (!tribe.garrisons[destKey]) {
         tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
@@ -332,6 +339,104 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     if (journey.force.troops > 0) moveDetails.push(`${journey.force.troops} troops`);
     if (journey.force.weapons > 0) moveDetails.push(`${journey.force.weapons} weapons`);
     if (journey.force.chiefs.length > 0) moveDetails.push(`${journey.force.chiefs.length} chief${journey.force.chiefs.length > 1 ? 's' : ''} (${journey.force.chiefs.map((c: any) => c.name).join(', ')})`);
+
+
+function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe: any, state: any, destKey: string): void {
+    // Attach badges and compute effects similar to processAttackAction
+    const effects = getCombinedEffects(attackerTribe);
+
+    // Compute base strengths from journey force and defending garrison
+    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0);
+    const defenderGarrison = defenderTribe.garrisons[destKey];
+    const defenderStrength = (defenderGarrison?.troops || 0) + (defenderGarrison?.weapons || 0);
+
+    // Terrain and ration effects
+    let terrainDefBonus = 0;
+    const defCoords = parseHexCoords(destKey);
+    const defHex = state.mapData.find((h: any) => h.q === defCoords.q && h.r === defCoords.r) || null;
+    if (defHex) {
+        const terr = defHex.terrain as TerrainType;
+        terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
+
+        const combatBadges = buildAssetBadges(attackerTribe, { phase: 'combat', terrain: terr });
+        if (combatBadges.length > 0) {
+            attackerTribe.lastTurnResults.push({
+                id: `combat-arrival-mods-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `⚔️ Combat modifiers:${combatBadges.map((b: any) => ` ${b.emoji || ''} ${b.label}`).join('')}`,
+                meta: { assetBadges: combatBadges }
+            });
+        }
+    }
+
+    // Ration modifiers
+    const atkRation = attackerTribe.rationEffects?.combatModifier ? (1 + (attackerTribe.rationEffects.combatModifier / 100)) : 1;
+    const defRation = defenderTribe.rationEffects?.combatModifier ? (1 + (defenderTribe.rationEffects.combatModifier / 100)) : 1;
+
+    // Global combat bonuses
+    const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
+    const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
+
+    const attackerRoll = Math.random() * (attackerStrength * atkMult * atkRation);
+    const defenderRoll = Math.random() * (defenderStrength * defMult * defRation * (1 + terrainDefBonus));
+
+    if (attackerRoll > defenderRoll) {
+        // Attacker wins: reduce both sides, capture hex
+        const atkLosses = Math.min(journey.force.troops, Math.max(1, Math.floor(Math.random() * 3)));
+        const defLosses = Math.min(defenderGarrison.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
+
+        journey.force.troops -= atkLosses;
+        defenderGarrison.troops -= defLosses;
+
+        // Transfer surviving attackers into destination garrison
+        if (!attackerTribe.garrisons[destKey]) attackerTribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        const destGarrison = attackerTribe.garrisons[destKey];
+        destGarrison.troops += journey.force.troops;
+        destGarrison.weapons += journey.force.weapons;
+        if (!destGarrison.chiefs) destGarrison.chiefs = [];
+        destGarrison.chiefs.push(...journey.force.chiefs);
+
+        // Clear journey (done by caller via early return)
+
+        // Notify both tribes
+        attackerTribe.lastTurnResults.push({
+            id: `combat-arrival-win-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🏴‍☠️ Assault success at ${destKey}! You lost ${atkLosses} troops, defenders lost ${defLosses}. Hex captured.`
+        });
+        defenderTribe.lastTurnResults.push({
+            id: `combat-arrival-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🚨 Your garrison at ${destKey} was assaulted and pushed back! You lost ${defLosses} troops.`
+        });
+
+        // If defender garrison is wiped out, keep as zero or consider removing; keeping entry maintains occupancy history
+    } else {
+        // Defender wins: reduce attackers; they do not capture hex
+        const atkLosses = Math.min(journey.force.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
+        const defLosses = Math.min(defenderGarrison.troops, Math.max(0, Math.floor(Math.random() * 2)));
+
+        journey.force.troops -= atkLosses;
+        defenderGarrison.troops -= defLosses;
+
+        attackerTribe.lastTurnResults.push({
+            id: `combat-arrival-loss-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🛑 Assault repelled at ${destKey}. You lost ${atkLosses} troops; defenders lost ${defLosses}.`
+        });
+        defenderTribe.lastTurnResults.push({
+            id: `combat-arrival-defend-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🛡️ Successfully defended ${destKey}. You lost ${defLosses} troops.`
+        });
+        // No capture; journey effectively spent.
+    }
+}
 
     tribe.lastTurnResults.push({
         id: `arrival-${journey.id}`,

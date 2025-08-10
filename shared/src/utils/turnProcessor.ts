@@ -413,6 +413,20 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
             result: `🚨 Your garrison at ${destKey} was assaulted and pushed back! You lost ${defLosses} troops.`
         });
 
+        // Weapons attrition/capture on arrival win
+        const destWeaponsLoss = Math.min(defenderGarrison.weapons || 0, Math.floor(defLosses * 0.5));
+        const atkWeaponsLoss = Math.min(journey.force.weapons || 0, Math.floor(atkLosses * 0.3));
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - destWeaponsLoss;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
+        const captured = Math.floor(destWeaponsLoss * 0.5);
+        journey.force.weapons = (journey.force.weapons || 0) + captured;
+        attackerTribe.lastTurnResults.push({
+            id: `combat-arrival-weapons-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${destWeaponsLoss}, captured ${captured}.`
+        });
+
         // If defender garrison is wiped out, keep as zero or consider removing; keeping entry maintains occupancy history
     } else {
         // Defender wins: reduce attackers; they do not capture hex
@@ -457,7 +471,9 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
                 actionData: {},
                 result: `🏅 You captured enemy chief ${captured.name} at ${destKey}!`
             });
-            // TODO: Persist prisoner in a new prisoners list if we formalize it on Tribe
+            // Persist prisoner on attacker tribe
+            if (!attackerTribe.prisoners) attackerTribe.prisoners = [];
+            attackerTribe.prisoners.push({ chief: captured, fromTribeId: defenderTribe.id, capturedOnTurn: state.turn });
         }
     } else {
         if (attackerChiefs.length > 0 && Math.random() < 0.2) {
@@ -467,13 +483,14 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
             const homeGarrison = attackerTribe.garrisons[attackerTribe.location];
             homeGarrison.chiefs.push(injured);
             const returnTurn = state.turn + 3; // out for 3 turns
+            if (!attackerTribe.injuredChiefs) attackerTribe.injuredChiefs = [];
+            attackerTribe.injuredChiefs.push({ chief: injured, returnTurn, fromHex: destKey });
             attackerTribe.lastTurnResults.push({
                 id: `chief-injured-${Date.now()}`,
                 actionType: ActionType.Attack,
                 actionData: {},
                 result: `🩹 Chief ${injured.name} was injured in battle and returns to ${attackerTribe.location} to recover (back on turn ${returnTurn}).`
             });
-            // Note: we can later add a tribe.injuredChiefs array to track timers formally
         }
     }
 
@@ -1560,6 +1577,23 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         attackerGarrison.troops -= troopsLost;
         defenderGarrison.troops -= defenderLosses;
 
+
+            // Weapon attrition and capture: proportional to troop losses
+            const atkWeaponsLoss = Math.min(attackerGarrison.weapons || 0, Math.floor(troopsLost * 0.5));
+            const defWeaponsLoss = Math.min(defenderGarrison.weapons || 0, Math.floor(defenderLosses * 0.5));
+            attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
+            defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+            // Capture some defender weapons on win
+            const capturedWeapons = Math.floor(defWeaponsLoss * 0.5);
+            attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
+
+            tribe.lastTurnResults.push({
+              id: `attack-weapons-${Date.now()}`,
+              actionType: ActionType.Attack,
+              actionData: action.actionData,
+              result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${defWeaponsLoss}, captured ${capturedWeapons}.`
+            });
+
         // Add result to defender
         defendingTribe.lastTurnResults.push({
             id: `attack-defense-${Date.now()}`,
@@ -1701,6 +1735,26 @@ function processBasicUpkeep(tribe: any, state?: any): void {
             chiefConsumption = totalChiefs * 0.25;
             rationMessage = ' (Hard rations: 0.5 food per troop, 0.25 per chief)';
             moraleChange = -3;
+
+    // Handle injured chiefs returning to duty
+    if (tribe.injuredChiefs && tribe.injuredChiefs.length > 0) {
+        const stillInjured: any[] = [];
+        for (const entry of tribe.injuredChiefs) {
+            if (state && state.turn >= entry.returnTurn) {
+                // Return chief to home garrison (already placed on injury)
+                tribe.lastTurnResults.push({
+                    id: `chief-returned-${Date.now()}`,
+                    actionType: ActionType.Upkeep,
+                    actionData: {},
+                    result: `💪 Chief ${entry.chief.name} has recovered and is ready for duty.`
+                });
+            } else {
+                stillInjured.push(entry);
+            }
+        }
+        tribe.injuredChiefs = stillInjured;
+    }
+
             combatModifier = -10;
             actionEfficiency = 0.8; // -20% action efficiency
             break;

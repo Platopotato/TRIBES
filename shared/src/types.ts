@@ -192,10 +192,25 @@ export interface Tribe {
   currentResearch: ResearchProject | null;
   journeyResponses: { journeyId: string; response: 'accept' | 'reject' }[];
   diplomacy: Record<string, DiplomaticRelation>; // Key is other tribe's ID
+  injuredChiefs?: InjuredChief[]; // Chiefs out of action; return handled via upkeep
+  prisoners?: PrisonerChief[]; // Captured enemy chiefs
   lastStateUpdate?: number; // Timestamp for frontend state synchronization
   forceUIReset?: boolean; // Flag to force frontend UI reset after turn processing
   forceRefreshApplied?: boolean; // Flag indicating Force Refresh logic was applied
 }
+
+export interface InjuredChief {
+  chief: Chief;
+  returnTurn: number;
+  fromHex: string;
+}
+
+export interface PrisonerChief {
+  chief: Chief;
+  fromTribeId: string;
+  capturedOnTurn: number;
+}
+
 
 export enum ActionType {
   Move = 'Move',

@@ -15,6 +15,7 @@ import AssetsPanel from './AssetsPanel';
 import TechPanel from './TechPanel';
 import TechTreeModal from './TechTreeModal';
 import HelpModal from './HelpModal';
+import ChiefStatusPanel from './ChiefStatusPanel';
 import CodexModal from './CodexModal';
 import PendingTradesPanel from './PendingTradesPanel';
 
@@ -577,6 +578,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     rationLevel={playerTribe.rationLevel}
                   />
                   <TribeStats stats={playerTribe.stats} />
+                  <ChiefStatusPanel tribe={playerTribe} />
                   <ActionPanel
                     actions={turnSubmitted ? (playerTribe?.actions || []) : plannedActions}
                     maxActions={maxActions}

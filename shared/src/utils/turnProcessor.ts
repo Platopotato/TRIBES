@@ -1,6 +1,25 @@
 import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
+
+// Create asset badges for UI from combined effects and present assets (module scope)
+function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'combat', resource?: string, terrain?: TerrainType }): { name?: string; label: string; emoji?: string }[] {
+  const badges: { name?: string; label: string; emoji?: string }[] = [];
+  const assets = tribe.assets || [];
+  if (context.phase === 'move') {
+    if (assets.includes('Dune_Buggy')) badges.push({ name: 'Dune_Buggy', label: '+20% speed', emoji: '🏎️' });
+  }
+  if (context.phase === 'scavenge') {
+    if (context.resource?.toLowerCase() === 'scrap' && assets.includes('Ratchet_Set')) badges.push({ name: 'Ratchet_Set', label: '+15% scrap', emoji: '🔧' });
+  }
+  if (context.phase === 'combat') {
+    if (assets.includes('Dune_Buggy') && (context.terrain === TerrainType.Plains || context.terrain === TerrainType.Desert)) {
+      badges.push({ name: 'Dune_Buggy', label: '-10% defense (terrain)', emoji: '🛡️' });
+    }
+  }
+  return badges;
+}
+
 import { generateAIActions } from '../ai/aiActions.js';
 
 // Combined effects system pulling from assets and ration effects
@@ -748,7 +767,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     const combinedEffects = getCombinedEffects(tribe);
     const arrivalTurn = Math.ceil(pathInfo.cost / combinedEffects.movementSpeedBonus);
 
-    // Attach asset badges to result later
+    // Attach asset badges to result later (helper defined above)
     const moveBadges = buildAssetBadges(tribe, { phase: 'move' });
 
     // FAST-TRACK LOGIC: Short moves (≤1 turn) are instant
@@ -1258,14 +1277,6 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     let baseAmount = 0;
     switch (resourceType.toLowerCase()) {
         case 'food':
-
-	    // Add badges to message
-	    const scavBadges = buildAssetBadges(tribe, { phase: 'scavenge', resource: resourceName });
-	    const scavBadgesText = scavBadges.length > 0 ? ` ${scavBadges.map(b => `${b.emoji || ''} ${b.label}`).join(' ')}` : '';
-
-	    return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage}${scavBadgesText} Area explored and resources gathered.`;
-	}
-
             baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
             resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
             tribe.globalResources.food += resourceGained;
@@ -1307,6 +1318,9 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
         if (resKey === 'weapons') tribe.globalResources.weapons += bonusAmount;
     }
 
+    // Add badges to message
+    const scavBadges = buildAssetBadges(tribe, { phase: 'scavenge', resource: resourceName });
+    const scavBadgesText = scavBadges.length > 0 ? ` ${scavBadges.map((b: any) => `${b.emoji || ''} ${b.label}`).join(' ')}` : '';
 
     return `✅ ${troopCount} troops successfully scavenged ${location} and found ${resourceGained} ${resourceName}!${poiMessage}${scavBadgesText} Area explored and resources gathered.`;
 }
@@ -1319,19 +1333,17 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     const attackerGarrison = tribe.garrisons[attackerLocation];
 
-	    // Add combat badge line to attacker (defender gets its separate message already)
-	    const defCoords2 = parseHexCoords(defKey);
-	    const defHex2 = state.mapData.find((h: any) => h.q === defCoords2.q && h.r === defCoords2.r) || null;
-	    const combatBadges = buildAssetBadges(tribe, { phase: 'combat', terrain: defHex2?.terrain });
-	    if (combatBadges.length > 0) {
-	        tribe.lastTurnResults.push({
-	            id: `combat-mods-${Date.now()}`,
-	            actionType: ActionType.Attack,
-	            actionData: action.actionData,
-	            result: `⚔️ Combat modifiers:${combatBadges.map(b => ` ${b.emoji || ''} ${b.label}`).join('')}`,
-	            meta: { assetBadges: combatBadges }
-	        });
-	    }
+    // Add combat badge line to attacker (defender gets its separate message already)
+    const combatBadgesEarly = (typeof buildAssetBadges === 'function') ? buildAssetBadges(tribe, { phase: 'combat', terrain: undefined }) : [];
+    if (combatBadgesEarly.length > 0) {
+        tribe.lastTurnResults.push({
+            id: `combat-mods-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: action.actionData,
+            result: `⚔️ Combat modifiers:${combatBadgesEarly.map((b: any) => ` ${b.emoji || ''} ${b.label}`).join('')}`,
+            meta: { assetBadges: combatBadgesEarly }
+        });
+    }
 
     if (!attackerGarrison || attackerGarrison.troops < troopsToAttack) {
         return `Insufficient troops at ${attackerLocation} for attack. Need ${troopsToAttack}, have ${attackerGarrison?.troops || 0}.`;
@@ -1367,6 +1379,18 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     if (defHex) {
         const terr = defHex.terrain as TerrainType;
         terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
+
+        // Add combat badge line to attacker (defender gets its separate message already)
+        const combatBadges = buildAssetBadges(tribe, { phase: 'combat', terrain: terr });
+        if (combatBadges.length > 0) {
+            tribe.lastTurnResults.push({
+                id: `combat-mods-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: action.actionData,
+                result: `⚔️ Combat modifiers:${combatBadges.map((b: any) => ` ${b.emoji || ''} ${b.label}`).join('')}`,
+                meta: { assetBadges: combatBadges }
+            });
+        }
     }
 
     const attackerRoll = Math.random() * (attackerStrength * atkMult);

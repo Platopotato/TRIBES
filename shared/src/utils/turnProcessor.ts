@@ -546,12 +546,6 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
 }
 
 
-    // Create arrival message
-    const moveDetails = [];
-    if (journey.force.troops > 0) moveDetails.push(`${journey.force.troops} troops`);
-    if (journey.force.weapons > 0) moveDetails.push(`${journey.force.weapons} weapons`);
-    if (journey.force.chiefs.length > 0) moveDetails.push(`${journey.force.chiefs.length} chief${journey.force.chiefs.length > 1 ? 's' : ''} (${journey.force.chiefs.map((c: any) => c.name).join(', ')})`);
-
 
 function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe: any, state: any, destKey: string): void {
     // Attach badges and compute effects similar to processAttackAction
@@ -775,17 +769,6 @@ function processExchangePrisonersAction(tribe: any, action: any, state: any): st
     return 'Prisoner exchange proposed';
 }
 
-    }
-
-}
-
-    tribe.lastTurnResults.push({
-        id: `arrival-${journey.id}`,
-        actionType: ActionType.Move,
-        actionData: {},
-        result: `🎯 Journey completed! ${moveDetails.join(', ')} arrived at ${destKey}. Garrison now has ${destGarrison.troops} troops, ${destGarrison.weapons} weapons, and ${destGarrison.chiefs.length} chiefs.`
-    });
-}
 
 function resolveTradeArrival(journey: any, tribe: any, state: any): void {
     // Find target tribe at destination

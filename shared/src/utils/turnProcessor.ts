@@ -1245,62 +1245,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 }
 
 
-// Minimal Build Outpost: spend 20 scrap, use 5 troops from a garrison, requires visible hex. Adds Outpost POI (shield marker via legend).
-function processBuildOutpostAction(tribe: any, action: any, state: any): string {
-    const startRaw = action.actionData?.start_location;
-    const targetRaw = action.actionData?.target_location;
-    const builders = Math.max(0, parseInt(action.actionData?.troops ?? '5'));
-
-    if (!startRaw) return `❌ Build Outpost failed: No source garrison specified.`;
-    if (!targetRaw) return `❌ Build Outpost failed: No target hex specified.`;
-
-    const start = convertToStandardFormat(startRaw);
-    const target = convertToStandardFormat(targetRaw);
-
-    // Visibility: require target in tribe.exploredHexes
-    if (!Array.isArray(tribe.exploredHexes) || !tribe.exploredHexes.includes(target)) {
-        return `❌ Build Outpost failed: Target hex ${target} is not visible.`;
-    }
-
-    // Terrain check: disallow Water
-    let terrainOk = true;
-    if (state?.mapData) {
-        const { q, r } = parseHexCoords(target);
-        const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
-        if (!hexData) return `❌ Build Outpost failed: Target hex not found on map.`;
-        if (hexData.terrain === 'Water') terrainOk = false;
-    }
-    if (!terrainOk) return `❌ Build Outpost failed: Cannot build on Water.`;
-
-    // Cost and garrison checks
-    if ((tribe.globalResources?.scrap ?? 0) < 20) return `❌ Build Outpost failed: Need 20 scrap.`;
-    const garrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
-    if (!garrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
-    if ((garrison.troops ?? 0) < 5 || builders < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
-
-    // Ensure we do not already have an Outpost POI at target
-    if (state?.mapData) {
-        const { q, r } = parseHexCoords(target);
-        const hexIndex = state.mapData.findIndex((hex: any) => hex.q === q && hex.r === r);
-        if (hexIndex >= 0) {
-            const hex = state.mapData[hexIndex];
-            if (hex.poi?.type === POIType.Outpost) {
-                return `❌ Build Outpost failed: An Outpost already exists at ${target}.`;
-            }
-            // Deduct costs
-            tribe.globalResources.scrap -= 20;
-            garrison.troops -= 5;
-            // Place Outpost POI (shield symbol provided by POI_SYMBOLS/POI_COLORS mapping)
-            hex.poi = { id: `poi-outpost-${tribe.id}-${target}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
-            // Optional: mark explored (already required)
-            if (!tribe.exploredHexes.includes(target)) tribe.exploredHexes.push(target);
-            return `🛡️ Outpost established at ${target}. Spent 20 scrap and assigned 5 builders.`;
-        }
-    }
-
-    return `❌ Build Outpost failed: Could not update target hex.`;
-}
-
+// NOTE: Legacy immediate Build Outpost implementation removed; journey-based version above is authoritative.
 function processRestAction(tribe: any, action: any): string {
     // Initialize morale if not set
     if (tribe.globalResources.morale === undefined) {

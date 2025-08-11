@@ -179,6 +179,10 @@ function getOutpostOwnerTribeId(hex: any): string | null {
     const owner = rest.split('-')[0];
     return owner || null;
 }
+function setOutpostOwner(hex: any, ownerId: string, hexKey: string) {
+    if (!hex?.poi || hex.poi.type !== POIType.Outpost) return;
+    hex.poi.id = `poi-outpost-${ownerId}-${hexKey}`;
+}
 function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ignoreKey?: string): { blockedAt: string, ownerId: string } | null {
     for (const key of path) {
         if (ignoreKey && convertToStandardFormat(key) === convertToStandardFormat(ignoreKey)) continue;
@@ -636,6 +640,17 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
     // Apply losses
     // If multiple neutral arrivals and no occupant/hostility, narrate standoff
     if (!occupant && arrivals.length > 1) {
+    // If hex has an Outpost POI, transfer ownership to the winner
+    const hexForPOI = state.mapData.find((h: any) => h.q === q && h.r === r);
+    if (hexForPOI?.poi?.type === POIType.Outpost) {
+        const prevOwnerId = getOutpostOwnerTribeId(hexForPOI);
+        setOutpostOwner(hexForPOI, winner.tribe.id, destKey);
+        const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+        const captureMsg = `🏴‍☠️ Outpost at ${destKey} captured by ${winner.tribe.tribeName}. Banner replaced.`;
+        winner.tribe.lastTurnResults.push({ id: `outpost-capture-${destKey}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: captureMsg });
+        if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${destKey}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${destKey} was seized by ${winner.tribe.tribeName}.` });
+    }
+
         const parties = Array.from(arrivalsByTribe.values()).map(e => e.tribe.tribeName).join(', ');
         arrivals.forEach(({ tribe }) => {
             tribe.lastTurnResults.push({ id: `contest-neutral-${destKey}-${tribe.id}-${state.turn}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Contested arrival at ${destKey}: ${parties} arrive simultaneously. No sides are at war — forces spread out and keep watch. The hex remains shared for now.` });

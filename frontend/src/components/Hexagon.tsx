@@ -26,6 +26,16 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
   const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
 
   const { q, r, terrain, poi } = hexData;
+
+  const outpostOwnerId: string | null = React.useMemo(() => {
+    if (!poi || poi.type !== POIType.Outpost) return null;
+    // poi.id is like "poi-outpost-<tribeId>-<hex>"
+    const s = String(poi.id || '');
+    const idx = s.indexOf('poi-outpost-');
+    if (idx === -1) return null;
+    const rest = s.slice(idx + 'poi-outpost-'.length);
+    return rest.split('-')[0] || null;
+  }, [poi]);
   const width = Math.sqrt(3) * size;
   const height = 2 * size;
 
@@ -207,7 +217,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
       
       {!isPoliticalMode && poi && !isFogged && (
         <g className="pointer-events-none" style={poi.rarity === 'Very Rare' ? { filter: 'url(#poi-glow)' } : {}}>
-            <polygon 
+            <polygon
                 points={diamondPoints}
                 className={`${POI_COLORS[poi.type].bg} stroke-black/50 stroke-1`}
             />
@@ -221,6 +231,25 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
+            {poi.type === POIType.Outpost && outpostOwnerId && (
+              <g transform={`translate(${size * 0.45}, ${-size * 0.45})`}>
+                <circle cx="0" cy="0" r={size * 0.22} fill="#111827" stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
+                {/* owner tribe badge if visible on hex */}
+                {(() => {
+                  const owner = (tribesOnHex || []).find(t => t.id === outpostOwnerId);
+                  if (!owner) return null;
+                  const icon = TRIBE_ICONS[owner.icon] || TRIBE_ICONS['castle'];
+                  return (
+                    <>
+                      <circle cx="0" cy="0" r={size * 0.18} fill={owner.color} />
+                      <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">
+                        {icon}
+                      </text>
+                    </>
+                  );
+                })()}
+              </g>
+            )}
         </g>
       )}
 

@@ -1,9 +1,9 @@
 /** @jsxImportSource react */
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tribe, GameAction, HexData, User, GamePhase, Garrison, ChiefRequest, AssetRequest, ActionType, Journey, DiplomaticProposal, TurnDeadline } from '@radix-tribes/shared';
+import { Tribe, GameAction, HexData, User, GamePhase, Garrison, ChiefRequest, AssetRequest, ActionType, Journey, DiplomaticProposal, TurnDeadline as TurnDeadlineType } from '@radix-tribes/shared';
 import Header from './Header';
 import ResourcePanel from './ResourcePanel';
-import TurnDeadline from './TurnDeadline';
+import TurnDeadlineBadge from './TurnDeadline';
 import TribeStats from './TribeStats';
 import ActionPanel from './ActionPanel';
 import MapView from './MapView';
@@ -59,7 +59,7 @@ interface DashboardProps {
   onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
-  turnDeadline?: TurnDeadline;
+  turnDeadline?: TurnDeadlineType;
   uiMode?: 'mobile' | 'desktop'; // New prop to control UI mode
 }
 
@@ -457,7 +457,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             </h1>
             <div className="flex flex-col space-y-1">
               <p className={`text-slate-400 ${shouldUseMobileUI ? 'text-sm' : 'text-base'}`}>Turn {turn}</p>
-              <TurnDeadline turnDeadline={turnDeadline} currentTurn={turn} />
+              <TurnDeadlineBadge turnDeadline={turnDeadline} currentTurn={turn} />
             </div>
           </div>
           <div className="flex items-center gap-4">

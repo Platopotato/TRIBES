@@ -6,7 +6,7 @@ interface TurnDeadlineProps {
   currentTurn: number;
 }
 
-const TurnDeadline: React.FC<TurnDeadlineProps> = ({ turnDeadline, currentTurn }) => {
+const TurnDeadlineBadge: React.FC<TurnDeadlineProps> = ({ turnDeadline, currentTurn }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [urgencyLevel, setUrgencyLevel] = useState<'safe' | 'warning' | 'urgent'>('safe');
 
@@ -125,4 +125,4 @@ const TurnDeadline: React.FC<TurnDeadlineProps> = ({ turnDeadline, currentTurn }
   );
 };
 
-export default TurnDeadline;
+export default TurnDeadlineBadge;

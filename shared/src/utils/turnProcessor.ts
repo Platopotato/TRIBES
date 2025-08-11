@@ -1,4 +1,4 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 
@@ -356,9 +356,10 @@ function processActiveJourneys(state: any): void {
     state.journeys.push(...newJourneys);
     // Second pass: resolve contested arrivals per destination hex
     for (const [destKey, entries] of Object.entries(arrivalsByDest)) {
-        // If only one arrival and no occupant, use existing move arrival
-        const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey]);
-        if (!occupant && (entries as any[]).length === 1) {
+        // If only one arrival and no non-allied occupant, use existing move arrival
+        const occupants = state.tribes.filter((t: any) => t.garrisons && t.garrisons[destKey]);
+        const nonAlliedOccupant = occupants.find((t: any) => entries.some(e => (t.id !== e.tribe.id) && (t.diplomacy?.[e.tribe.id]?.status !== DiplomaticStatus.Alliance) && (e.tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance)));
+        if (!nonAlliedOccupant && (entries as any[]).length === 1) {
             const { journey, tribe } = (entries as any[])[0];
             resolveMoveArrival(journey, tribe, state);
         } else {
@@ -372,14 +373,15 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // Normalize destination key to standard format
     const destKey = convertToStandardFormat(journey.destination);
 
-    // If destination is occupied by another tribe, resolve combat on arrival
-    const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
-    if (defendingTribe) {
-        resolveCombatOnArrival(journey, tribe, defendingTribe, state, destKey);
+    // If destination is occupied, only fight non-allies; allies may stack
+    const occupantTribes = state.tribes.filter((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+    const enemyTribe = occupantTribes.find((t: any) => (t.diplomacy?.[tribe.id]?.status !== DiplomaticStatus.Alliance) && (tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance));
+    if (enemyTribe) {
+        resolveCombatOnArrival(journey, tribe, enemyTribe, state, destKey);
         return;
     }
 
-    // Create or update destination garrison
+    // Otherwise, stack with allies or empty hex: create/update your garrison
     if (!tribe.garrisons[destKey]) {
         tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
     }
@@ -417,13 +419,34 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
         arrivalsByTribe.set(tribe.id, entry);
     }
 
-    // Include existing occupant (defender) if any other tribe currently holds the hex
-    const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey]);
+    // Include existing occupant (defender) if any non-allied tribe currently holds the hex
+    const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey] && Array.from(arrivalsByTribe.values()).some(a => (a.tribe.id !== t.id) && (t.diplomacy?.[a.tribe.id]?.status !== DiplomaticStatus.Alliance) && (a.tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance)));
     const sides: Array<{ kind: 'arrival' | 'occupant', tribe: any, troops: number, weapons: number, chiefs: any[], sampleJourney?: any }>= [];
     if (occupant) {
         const g = occupant.garrisons[destKey];
         sides.push({ kind: 'occupant', tribe: occupant, troops: g.troops || 0, weapons: g.weapons || 0, chiefs: (g.chiefs || []).slice() });
     }
+    // If all arrivals are allied with each other AND with the occupant (if any), allow stacking without combat
+    const arrivalEntries = Array.from(arrivalsByTribe.values());
+    const allAllied = (partyA: any, partyB: any) => (partyA.diplomacy?.[partyB.id]?.status === DiplomaticStatus.Alliance) || (partyB.diplomacy?.[partyA.id]?.status === DiplomaticStatus.Alliance);
+    const arrivalsMutuallyAllied = arrivalEntries.every((a, i) => arrivalEntries.every((b, j) => (i === j) || allAllied(a.tribe, b.tribe)));
+    const occupantAlliedWithAllArrivals = !occupant || arrivalEntries.every(a => allAllied(a.tribe, occupant));
+
+    if (arrivalsMutuallyAllied && occupantAlliedWithAllArrivals) {
+        // Stack peacefully: just add all arriving forces to their respective garrisons
+        for (const entry of arrivalEntries) {
+            if (!entry.tribe.garrisons[destKey]) entry.tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            const g = entry.tribe.garrisons[destKey];
+            g.troops += entry.troops;
+            g.weapons = (g.weapons || 0) + (entry.weapons || 0);
+            if (!g.chiefs) g.chiefs = [];
+            g.chiefs.push(...(entry.chiefs || []));
+            entry.tribe.lastTurnResults.push({ id: `ally-stack-${destKey}-${entry.tribe.id}-${state.turn}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Allied forces arrived at ${destKey} and stacked without conflict.` });
+        }
+        return;
+    }
+
+    // Otherwise, we have at least one non-allied party; include all arrivals and potential occupant as sides in combat
     for (const entry of arrivalsByTribe.values()) {
         sides.push({ kind: 'arrival', tribe: entry.tribe, troops: entry.troops, weapons: entry.weapons, chiefs: entry.chiefs, sampleJourney: entry.sampleJourney });
     }

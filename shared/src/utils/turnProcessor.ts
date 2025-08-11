@@ -322,13 +322,51 @@ function processActiveJourneys(state: any): void {
                         resolveTradeArrival(journey, tribe, state);
                         break;
                     case JourneyType.Scout:
-                        resolveScoutArrival(journey, tribe, state);
+                        // On arrival, just reveal area and log message inline
+                        {
+                            const destKey = convertToStandardFormat(journey.destination);
+                            const { q, r } = parseHexCoords(destKey);
+                            const revealedHexes = getHexesInRange({ q, r }, 1);
+                            revealedHexes.forEach(hex => {
+                                if (!tribe.exploredHexes.includes(hex)) tribe.exploredHexes.push(hex);
+                            });
+                            tribe.lastTurnResults.push({ id: `scout-arrival-${journey.id}`, actionType: ActionType.Scout, actionData: {}, result: `🔍 Scouts arrived at ${destKey} and completed reconnaissance. Area mapped.` });
+                        }
                         break;
                     case JourneyType.Scavenge:
-                        resolveScavengeArrival(journey, tribe, state);
+                        {
+                            const destKey = convertToStandardFormat(journey.destination);
+                            const pseudoAction = { actionData: { location: destKey, target_location: destKey, resource_type: journey.scavengeType || 'food', troops: journey.force.troops, weapons: journey.force.weapons } };
+                            if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
+                            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+                            const g = tribe.garrisons[destKey];
+                            g.troops += journey.force.troops;
+                            g.weapons = (g.weapons || 0) + (journey.force.weapons || 0);
+                            const result = processScavengeAction(tribe, pseudoAction, state);
+                            tribe.lastTurnResults.push({ id: `scavenge-arrival-${journey.id}`, actionType: ActionType.Scavenge, actionData: {}, result });
+                        }
                         break;
                     case JourneyType.Attack:
-                        resolveAttackArrival(journey, tribe, state);
+                        // Reuse move arrival combat logic
+                        {
+                            const destKey = convertToStandardFormat(journey.destination);
+                            const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+                            if (defendingTribe) {
+                                // Fallback to move arrival combat for now
+                                // Duplicate minimal inline behavior: create a temporary move-like journey
+                                const tempJourney = journey;
+                                resolveMoveArrival(tempJourney, tribe, state);
+                            } else {
+                                if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+                                const destGarrison = tribe.garrisons[destKey];
+                                destGarrison.troops += journey.force.troops;
+                                destGarrison.weapons += journey.force.weapons;
+                                if (!destGarrison.chiefs) destGarrison.chiefs = [];
+                                destGarrison.chiefs.push(...journey.force.chiefs);
+                                if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
+                                tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `⚔️ Assault force arrived at ${destKey}. No defenders — hex occupied.` });
+                            }
+                        }
                         break;
                     default:
                         // Generic journey completion
@@ -518,6 +556,8 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
             const captured = defenderChiefs.splice(Math.floor(Math.random() * defenderChiefs.length), 1)[0];
             defenderTribe.lastTurnResults.push({
                 id: `chief-captured-${Date.now()}`,
+
+
                 actionType: ActionType.Attack,
                 actionData: {},
                 result: `🎗️ Chief ${captured.name} was captured at ${destKey} and is now a prisoner!`
@@ -1790,91 +1830,7 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     }
 
 
-function resolveAttackArrival(journey: any, tribe: any, state: any): void {
-    const destKey = convertToStandardFormat(journey.destination);
 
-    // Identify defending tribe if any
-    const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
-
-    if (!defendingTribe) {
-        // No defender: occupy the hex
-        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-        const destGarrison = tribe.garrisons[destKey];
-        destGarrison.troops += journey.force.troops;
-        destGarrison.weapons += journey.force.weapons;
-        if (!destGarrison.chiefs) destGarrison.chiefs = [];
-        destGarrison.chiefs.push(...journey.force.chiefs);
-        if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
-        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `⚔️ Assault force arrived at ${destKey}. No defenders — hex occupied.` });
-        return;
-    }
-
-    // Otherwise resolve combat using arrival-based combat routine similar to on-arrival battle
-    const fakeAction = { actionData: { target_location: destKey, start_location: journey.origin, troops: journey.force.troops } };
-    // Minimal inline resolution reusing processAttackAction components is tricky; perform a focused arrival combat:
-    const atkGarrison = { troops: journey.force.troops, weapons: journey.force.weapons };
-    const defGarrison = defendingTribe.garrisons[destKey];
-
-    const effects = getCombinedEffects(tribe);
-    const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
-    const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
-
-    const attackerStrength = atkGarrison.troops + (atkGarrison.weapons || 0);
-    const defenderStrength = defGarrison.troops + (defGarrison.weapons || 0);
-
-    let terrainDefBonus = 0;
-    const defCoords = parseHexCoords(destKey);
-    const defHex = state.mapData.find((h: any) => h.q === defCoords.q && h.r === defCoords.r) || null;
-    if (defHex) {
-        const terr = defHex.terrain as TerrainType;
-        terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
-    }
-
-    const attackerRoll = Math.random() * (attackerStrength * atkMult);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * (1 + terrainDefBonus));
-
-    if (attackerRoll > defenderRoll) {
-        const atkLosses = Math.min(atkGarrison.troops, Math.max(1, Math.floor(Math.random() * 3)));
-        const defLosses = Math.min(defGarrison.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
-
-        // Apply losses
-        journey.force.troops -= atkLosses;
-        defGarrison.troops -= defLosses;
-        const atkWeaponsLoss = Math.min(atkGarrison.weapons || 0, Math.floor(atkLosses * 0.5));
-        const defWeaponsLoss = Math.min(defGarrison.weapons || 0, Math.floor(defLosses * 0.5));
-        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
-        defGarrison.weapons = (defGarrison.weapons || 0) - defWeaponsLoss;
-
-        // Transfer survivors to dest
-        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-        const dest = tribe.garrisons[destKey];
-        dest.troops += journey.force.troops;
-        dest.weapons += journey.force.weapons;
-        if (!dest.chiefs) dest.chiefs = [];
-        dest.chiefs.push(...journey.force.chiefs);
-        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: fakeAction.actionData, result: `⚔️ Victory at ${destKey}! Lost ${atkLosses} troops; enemy lost ${defLosses}. Hex captured.` });
-        defendingTribe.lastTurnResults.push({ id: `defense-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} assaulted ${destKey} and captured it. You lost ${defLosses} troops.` });
-    } else {
-        const attackerLosses = Math.min(atkGarrison.troops, Math.floor(Math.random() * 4) + 2);
-        const defenderLosses = Math.min(defGarrison.troops, Math.floor(Math.random() * 2) + 1);
-        // Apply losses to origin garrison if needed
-        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: fakeAction.actionData, result: `🛡️ Defeat at ${destKey}. Lost ${attackerLosses} troops; enemy lost ${defenderLosses}.` });
-        defGarrison.troops -= defenderLosses;
-        // No survivors transferred; journey considered ended.
-    }
-}
-
-        // Use tribe.location as home base
-        const home = tribe.location;
-        if (!tribe.garrisons[home]) {
-            tribe.garrisons[home] = { troops: 0, weapons: 0, chiefs: [] };
-        }
-        tribe.garrisons[home].weapons += resourceGained;
-    } else if (resourceName === 'scrap') {
-        tribe.globalResources.scrap += resourceGained;
-    } else if (resourceName === 'food') {
-        tribe.globalResources.food += resourceGained;
-    }
 
 
     // Apply asset scavenge bonuses (e.g., Ratchet_Set)

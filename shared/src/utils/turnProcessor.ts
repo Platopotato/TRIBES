@@ -98,6 +98,52 @@ function convertToStandardFormat(coords: string): string {
         const r = parseInt(rStr.trim());
         return `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
     } else if (coords.includes('.')) {
+
+// Diplomacy helpers (module scope)
+function isAtWar(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'War' || s2 === 'War';
+}
+function isAllied(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'Alliance' || s2 === 'Alliance';
+}
+
+// Terrain and narrative helpers
+function getTerrainAt(hexKey: string, state: any): TerrainType | undefined {
+    try {
+        const { q, r } = parseHexCoords(hexKey);
+        const h = state.mapData.find((x: any) => x.q === q && x.r === r);
+        return h?.terrain as TerrainType | undefined;
+    } catch { return undefined; }
+}
+
+function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, state: any): string {
+    const terr = getTerrainAt(destKey, state);
+    const a = tribeA.garrisons[destKey] || { troops: 0, chiefs: [] };
+    const b = tribeB.garrisons[destKey] || { troops: 0, chiefs: [] };
+    const chiefs = (a.chiefs?.length || 0) + (b.chiefs?.length || 0);
+    const chiefSpice = chiefs > 0 ? (chiefs > 2 ? ' matriarchs with war‑banners unfurled' : ' chieftains watching from the lines') : '';
+    const total = (a.troops || 0) + (b.troops || 0);
+    const sizeHint = total > 60 ? 'large war‑bands' : total > 20 ? 'seasoned companies' : 'lean patrols';
+    const byTerr: Record<string, string> = {
+        Plains: 'dust plumes drift across the plain',
+        Desert: 'heat‑haze shimmers over broken dunes',
+        Forest: 'shadows trade places between treelines',
+        Mountains: 'echoes roll across the rock faces',
+        Ruins: 'ruined walls bristle with lookouts',
+        Swamp: 'mire and reeds swallow any advance',
+        Wasteland: 'ash and wind drown out the sentries',
+        Crater: 'scarred ground offers jagged cover',
+        Radiation: 'counters tick under hushed voices',
+        Water: 'shorelines and barges set a tense divide',
+    };
+    const terrLine = terr ? byTerr[terr] || 'the ground between them lies tense and silent' : 'the ground between them lies tense and silent';
+    return `${sizeHint} hold position — ${terrLine},${chiefSpice || ' eyes hard behind painted veils'}.`;
+}
+
         // Already in correct format: "051.044"
         return coords;
     } else {
@@ -406,36 +452,6 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
         const flavor = describeNeutralEncounter(tribe, occupantTribes[0], destKey, state);
         tribe.lastTurnResults.push({ id: `move-stack-${Date.now()}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Entered ${destKey} where ${occupantNames} are present. No hostilities — ${flavor}` });
         occupantTribes.forEach((t: any) => {
-    // Flavor helpers
-    function getTerrainAt(hexKey: string, state: any): TerrainType | undefined {
-        try {
-            const { q, r } = parseHexCoords(hexKey);
-            const h = state.mapData.find((x: any) => x.q === q && x.r === r);
-            return h?.terrain as TerrainType | undefined;
-        } catch { return undefined; }
-    }
-    function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, state: any): string {
-        const terr = getTerrainAt(destKey, state);
-        const a = tribeA.garrisons[destKey] || { troops: 0, chiefs: [] };
-        const b = tribeB.garrisons[destKey] || { troops: 0, chiefs: [] };
-        const chiefsLine = (a.chiefs?.length || 0) + (b.chiefs?.length || 0) > 0 ? ' banners and escorts visible' : '';
-        const byTerr: Record<string, string> = {
-            Plains: 'dust plumes drift across the plain',
-            Desert: 'heat-haze shimmers between patrol lines',
-            Forest: 'shadows trade places between treelines',
-            Mountains: 'echoes roll across the rock faces',
-            Ruins: 'ruined walls bristle with lookouts',
-            Swamp: 'mire and reed beds swallow any advance',
-            Wasteland: 'ash and wind drown out the sentries',
-            Crater: 'scarred ground offers broken cover',
-            Radiation: 'counters tick under hushed voices',
-            Water: 'shorelines and barges set a tense divide',
-        };
-        const terrLine = terr ? byTerr[terr] || 'the ground between them lies tense and silent' : 'the ground between them lies tense and silent';
-        const sizeHint = (a.troops + b.troops) > 40 ? 'large formations' : (a.troops + b.troops) > 12 ? 'companies' : 'small detachments';
-        return `${sizeHint} hold position — ${terrLine},${chiefsLine}.`;
-    }
-
             const flavorB = describeNeutralEncounter(t, tribe, destKey, state);
             t.lastTurnResults.push({ id: `move-stack-${Date.now()}-${tribe.id}`, actionType: ActionType.Move, actionData: {}, result: `👀 ${tribe.tribeName} entered ${destKey}. No treaty exists — ${flavorB}` });
         });

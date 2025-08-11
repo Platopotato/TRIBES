@@ -99,6 +99,15 @@ function convertToStandardFormat(coords: string): string {
         return `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
     } else if (coords.includes('.')) {
 
+        // Already in correct format: "051.044"
+        return coords;
+    } else {
+        // Unknown format, return as-is
+        return coords;
+    }
+}
+
+// --- PHASE 1 RESTORATION: BASIC ACTIONS ---
 // Diplomacy helpers (module scope)
 function isAtWar(a: any, b: any): boolean {
     const s1 = a?.diplomacy?.[b?.id]?.status;
@@ -144,15 +153,6 @@ function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, sta
     return `${sizeHint} hold position — ${terrLine},${chiefSpice || ' eyes hard behind painted veils'}.`;
 }
 
-        // Already in correct format: "051.044"
-        return coords;
-    } else {
-        // Unknown format, return as-is
-        return coords;
-    }
-}
-
-// --- PHASE 1 RESTORATION: BASIC ACTIONS ---
 export function processGlobalTurn(gameState: GameState): GameState {
     // PHASE 1: Restore basic actions and upkeep
     // Testing: Recruit, Rest, BuildWeapons, basic upkeep

@@ -163,11 +163,15 @@ export function processGlobalTurn(gameState: GameState): GameState {
         }
     });
 
+    // Clear previous results ONCE for all tribes before processing actions to avoid wiping
+    // defender reports added during another tribe's turn
+    state.tribes.forEach(t => { t.lastTurnResults = []; t.journeyResponses = []; });
+
     // Process each tribe's actions
     for (const tribe of state.tribes) {
-        // Clear previous results
-        tribe.lastTurnResults = [];
-        tribe.journeyResponses = [];
+        // Clear previous results: now done globally before the loop to avoid wiping
+        // defender reports added during other tribes' actions.
+        // (Intentionally not clearing per-tribe here.)
 
         // CRITICAL FIX: Filter out any undefined values from exploredHexes
         tribe.exploredHexes = (tribe.exploredHexes || []).filter(hex => hex !== undefined && hex !== null);

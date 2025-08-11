@@ -140,6 +140,10 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     const totalWidth = tribesOnHex.length * iconSize - (tribesOnHex.length - 1) * (iconSize / 2);
     const startX = -totalWidth / 2;
 
+    // For multiple tribes, if an Outpost is present, skip the large multi-tribe icons to reduce clutter
+    if (poi?.type === POIType.Outpost) {
+      return <g className="pointer-events-none" />;
+    }
     return (
         <g className="pointer-events-none">
             {tribesOnHex.map((tribe, index) => {
@@ -236,22 +240,34 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
-                {poi.type === POIType.Outpost && tribesOnHex && tribesOnHex.length === 1 && (() => {
-                  const tribe = tribesOnHex[0];
-                  const hexCoords = formatHexCoords(q, r);
-                  const g = tribe.garrisons?.[hexCoords];
-                  const troops = g?.troops ?? 0;
-                  if (troops <= 0) return null;
-                  const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
-                  return (
-                    <g transform={`translate(${size * -0.45}, ${-size * 0.45})`}>
-                      <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
-                      <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
-                      <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
-                      <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>{troops}</text>
-                    </g>
-                  );
-                })()}
+                {poi.type === POIType.Outpost && tribesOnHex && tribesOnHex.length > 0 && (() => {
+              // Render a small stacked overlay for each tribe garrison present on this Outpost
+              const overlays = [] as JSX.Element[];
+              const hexCoords = formatHexCoords(q, r);
+              const yStep = size * 0.3;
+              const startY = -size * 0.45;
+              (tribesOnHex || []).forEach((tribe, idx) => {
+                const g = tribe.garrisons?.[hexCoords];
+                const troops = g?.troops ?? 0;
+                const chiefs = g?.chiefs?.length ?? 0;
+                if (troops <= 0) return;
+                const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
+                overlays.push(
+                  <g key={`op-g-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + idx * yStep})`}>
+                    <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
+                    <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
+                    <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
+                    <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>{troops}</text>
+                    {chiefs > 0 && (
+                      <text x={size*0.3} y={-size*0.15} textAnchor="middle" dy=".05em" className="font-bold" fontSize={size*0.2}>
+                        ★
+                      </text>
+                    )}
+                  </g>
+                );
+              });
+              return <>{overlays}</>;
+            })()}
 
             {poi.type === POIType.Outpost && outpostOwnerId && (
               <g transform={`translate(${size * 0.45}, ${-size * 0.45})`}>

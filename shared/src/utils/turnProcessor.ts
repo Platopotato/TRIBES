@@ -302,6 +302,9 @@ function processActiveJourneys(state: any): void {
     const completedJourneys: any[] = [];
     const newJourneys: any[] = [];
 
+    // First pass: advance journeys and collect those that arrive now
+    const arrivalsByDest: Record<string, Array<{ journey: any, tribe: any }>> = {};
+
     state.journeys = state.journeys.filter((journey: any) => {
         // Decrement arrival turn
         journey.arrivalTurn -= 1;
@@ -318,68 +321,29 @@ function processActiveJourneys(state: any): void {
         if (journey.arrivalTurn <= 0) {
             const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
             if (tribe) {
-                switch (journey.type) {
-                    case JourneyType.Move:
-                        resolveMoveArrival(journey, tribe, state);
-                        break;
-                    case JourneyType.Trade:
-                        resolveTradeArrival(journey, tribe, state);
-                        break;
-                    case JourneyType.Scout:
-                        // On arrival, just reveal area and log message inline
-                        {
-                            const destKey = convertToStandardFormat(journey.destination);
-                            const { q, r } = parseHexCoords(destKey);
-                            const revealedHexes = getHexesInRange({ q, r }, 1);
-                            revealedHexes.forEach(hex => {
-                                if (!tribe.exploredHexes.includes(hex)) tribe.exploredHexes.push(hex);
-                            });
-                            tribe.lastTurnResults.push({ id: `scout-arrival-${journey.id}`, actionType: ActionType.Scout, actionData: {}, result: `🔍 Scouts arrived at ${destKey} and completed reconnaissance. Area mapped.` });
-                        }
-                        break;
-                    case JourneyType.Scavenge:
-                        {
-                            const destKey = convertToStandardFormat(journey.destination);
-                            const pseudoAction = { actionData: { location: destKey, target_location: destKey, resource_type: journey.scavengeType || 'food', troops: journey.force.troops, weapons: journey.force.weapons } };
-                            if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
-                            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-                            const g = tribe.garrisons[destKey];
-                            g.troops += journey.force.troops;
-                            g.weapons = (g.weapons || 0) + (journey.force.weapons || 0);
-                            const result = processScavengeAction(tribe, pseudoAction, state);
-                            tribe.lastTurnResults.push({ id: `scavenge-arrival-${journey.id}`, actionType: ActionType.Scavenge, actionData: {}, result });
-                        }
-                        break;
-                    case JourneyType.Attack:
-                        // Reuse move arrival combat logic
-                        {
-                            const destKey = convertToStandardFormat(journey.destination);
-                            const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
-                            if (defendingTribe) {
-                                // Fallback to move arrival combat for now
-                                // Duplicate minimal inline behavior: create a temporary move-like journey
-                                const tempJourney = journey;
-                                resolveMoveArrival(tempJourney, tribe, state);
-                            } else {
-                                if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-                                const destGarrison = tribe.garrisons[destKey];
-                                destGarrison.troops += journey.force.troops;
-                                destGarrison.weapons += journey.force.weapons;
-                                if (!destGarrison.chiefs) destGarrison.chiefs = [];
-                                destGarrison.chiefs.push(...journey.force.chiefs);
-                                if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
-                                tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `⚔️ Assault force arrived at ${destKey}. No defenders — hex occupied.` });
-                            }
-                        }
-                        break;
-                    default:
-                        // Generic journey completion
-                        tribe.lastTurnResults.push({
-                            id: `arrival-${journey.id}`,
-                            actionType: ActionType.Move,
-                            actionData: {},
-                            result: `Journey to ${journey.destination} completed.`
-                        });
+                const destKey = convertToStandardFormat(journey.destination);
+                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+                    // Collect arrivals to resolve contested hexes in a second pass
+                    if (!arrivalsByDest[destKey]) arrivalsByDest[destKey] = [];
+                    arrivalsByDest[destKey].push({ journey, tribe });
+                } else if (journey.type === JourneyType.Trade) {
+                    resolveTradeArrival(journey, tribe, state);
+                } else if (journey.type === JourneyType.Scout) {
+                    const { q, r } = parseHexCoords(destKey);
+                    const revealedHexes = getHexesInRange({ q, r }, 1);
+                    revealedHexes.forEach(hex => { if (!tribe.exploredHexes.includes(hex)) tribe.exploredHexes.push(hex); });
+                    tribe.lastTurnResults.push({ id: `scout-arrival-${journey.id}`, actionType: ActionType.Scout, actionData: {}, result: `🔍 Scouts arrived at ${destKey} and completed reconnaissance. Area mapped.` });
+                } else if (journey.type === JourneyType.Scavenge) {
+                    const pseudoAction = { actionData: { location: destKey, target_location: destKey, resource_type: journey.scavengeType || 'food', troops: journey.force.troops, weapons: journey.force.weapons } };
+                    if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
+                    if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+                    const g = tribe.garrisons[destKey];
+                    g.troops += journey.force.troops;
+                    g.weapons = (g.weapons || 0) + (journey.force.weapons || 0);
+                    const result = processScavengeAction(tribe, pseudoAction, state);
+                    tribe.lastTurnResults.push({ id: `scavenge-arrival-${journey.id}`, actionType: ActionType.Scavenge, actionData: {}, result });
+                } else {
+                    tribe.lastTurnResults.push({ id: `arrival-${journey.id}`, actionType: ActionType.Move, actionData: {}, result: `Journey to ${journey.destination} completed.` });
                 }
             }
             return false; // Remove completed journey
@@ -390,6 +354,18 @@ function processActiveJourneys(state: any): void {
 
     // Add any new journeys created during processing
     state.journeys.push(...newJourneys);
+    // Second pass: resolve contested arrivals per destination hex
+    for (const [destKey, entries] of Object.entries(arrivalsByDest)) {
+        // If only one arrival and no occupant, use existing move arrival
+        const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey]);
+        if (!occupant && (entries as any[]).length === 1) {
+            const { journey, tribe } = (entries as any[])[0];
+            resolveMoveArrival(journey, tribe, state);
+        } else {
+            resolveContestedArrivalAtHex(destKey as string, entries as Array<{journey:any, tribe:any}>, state);
+        }
+    }
+
 }
 
 function resolveMoveArrival(journey: any, tribe: any, state: any): void {
@@ -418,6 +394,132 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     if (!tribe.exploredHexes.includes(destKey)) {
         tribe.exploredHexes.push(destKey);
     }
+// Deterministic random from seed string (FNV-1a hash -> [0,1))
+function seededRandom(seed: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  return (h >>> 0) / 4294967296;
+}
+
+// Resolve contested arrivals: multiple journeys (possibly from different tribes) and/or an existing occupant at destKey
+function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey: any, tribe: any }>, state: any): void {
+    // Aggregate forces per tribe for all arrivals to this hex
+    const arrivalsByTribe = new Map<string, { tribe: any, troops: number, weapons: number, chiefs: any[], sampleJourney: any }>();
+    for (const { journey, tribe } of arrivals) {
+        const entry = arrivalsByTribe.get(tribe.id) || { tribe, troops: 0, weapons: 0, chiefs: [], sampleJourney: journey };
+        entry.troops += journey.force.troops || 0;
+        entry.weapons += journey.force.weapons || 0;
+        if (!entry.chiefs) entry.chiefs = [];
+        entry.chiefs.push(...(journey.force.chiefs || []));
+        arrivalsByTribe.set(tribe.id, entry);
+    }
+
+    // Include existing occupant (defender) if any other tribe currently holds the hex
+    const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey]);
+    const sides: Array<{ kind: 'arrival' | 'occupant', tribe: any, troops: number, weapons: number, chiefs: any[], sampleJourney?: any }>= [];
+    if (occupant) {
+        const g = occupant.garrisons[destKey];
+        sides.push({ kind: 'occupant', tribe: occupant, troops: g.troops || 0, weapons: g.weapons || 0, chiefs: (g.chiefs || []).slice() });
+    }
+    for (const entry of arrivalsByTribe.values()) {
+        sides.push({ kind: 'arrival', tribe: entry.tribe, troops: entry.troops, weapons: entry.weapons, chiefs: entry.chiefs, sampleJourney: entry.sampleJourney });
+    }
+
+    if (sides.length === 0) return;
+
+    // Terrain context
+    const { q, r } = parseHexCoords(destKey);
+    const defHex = state.mapData.find((h: any) => h.q === q && h.r === r) || null;
+    const terrain = defHex ? defHex.terrain : undefined;
+
+    // Compute deterministic rolls per side
+    const seedBase = `${state.turn}:${destKey}`;
+    const rolls: Array<{ sideIndex: number, roll: number, strength: number }>= [];
+    for (let i = 0; i < sides.length; i++) {
+        const s = sides[i];
+        const effects = getCombinedEffects(s.tribe);
+        const ration = s.tribe.rationEffects?.combatModifier ? (1 + (s.tribe.rationEffects.combatModifier / 100)) : 1;
+        const base = (s.troops + (s.weapons || 0)) * (1 + (effects.globalCombatAttackBonus || 0)) * ration;
+        let defBonus = 0;
+        if (s.kind === 'occupant' && terrain) {
+            defBonus += (effects.terrainDefenseBonus[terrain] || 0);
+        }
+        const strength = base * (1 + defBonus);
+        const roll = seededRandom(`${seedBase}:${s.tribe.id}`) * Math.max(0.0001, strength);
+        rolls.push({ sideIndex: i, roll, strength });
+    }
+
+    // Determine winner
+    rolls.sort((a, b) => b.roll - a.roll);
+    const winner = sides[rolls[0].sideIndex];
+
+    // Compute simple losses deterministically for all sides (including winner)
+    const lossesByTribe: Record<string, { troops: number, weapons: number }> = {};
+    for (let i = 0; i < sides.length; i++) {
+        const s = sides[i];
+        const seed = seededRandom(`${seedBase}:loss:${s.tribe.id}`);
+        const maxTroopLoss = s === winner ? 3 : 5;
+        const troopLoss = Math.min(s.troops, Math.max(0, Math.floor(seed * maxTroopLoss)));
+        const weaponLoss = Math.min(s.weapons || 0, Math.floor(troopLoss * 0.5));
+        lossesByTribe[s.tribe.id] = { troops: troopLoss, weapons: weaponLoss };
+    }
+
+    // Apply losses
+    for (const s of sides) {
+        const L = lossesByTribe[s.tribe.id];
+        s.troops -= L.troops;
+        s.weapons = (s.weapons || 0) - L.weapons;
+        if (s.troops < 0) s.troops = 0;
+        if (s.weapons < 0) s.weapons = 0;
+    }
+
+    // Winner occupies
+    if (winner.kind === 'occupant') {
+        // Update occupant garrison
+        const g = winner.tribe.garrisons[destKey];
+        g.troops = winner.troops;
+        g.weapons = winner.weapons;
+    } else {
+        if (!winner.tribe.garrisons[destKey]) winner.tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        const g = winner.tribe.garrisons[destKey];
+        g.troops = (g.troops || 0) + winner.troops;
+        g.weapons = (g.weapons || 0) + (winner.weapons || 0);
+        if (!g.chiefs) g.chiefs = [];
+        g.chiefs.push(...(winner.chiefs || []));
+    }
+
+    // Losers retreat or are destroyed (minimal: destroy survivors for now; TODO: retreat path)
+    for (const s of sides) {
+        if (s === winner) continue;
+        const survivors = s.troops;
+        const tribe = s.tribe;
+        if (s.kind === 'occupant') {
+            // Update occupant garrison after losses; if wiped, remove
+            const g = tribe.garrisons[destKey];
+            g.troops = survivors;
+            g.weapons = s.weapons;
+            if (g.troops <= 0 && g.weapons <= 0 && (!g.chiefs || g.chiefs.length === 0)) delete tribe.garrisons[destKey];
+        } else {
+            // Arriving losers: remove survivors (no retreat in MVP)
+            // Their troops are considered routed and lost
+        }
+    }
+
+    // Messages for all involved tribes
+    const names = sides.map(s => s.tribe.tribeName).join(' vs ');
+    for (const s of sides) {
+        const L = lossesByTribe[s.tribe.id];
+        const isWinner = s === winner;
+        const msg = isWinner
+            ? `⚔️ Contested arrival at ${destKey}: You prevailed against ${names}. Casualties: -${L.troops} troops, -${L.weapons} weapons.`
+            : `⚔️ Contested arrival at ${destKey}: You were defeated by ${winner.tribe.tribeName}. Casualties: -${L.troops} troops, -${L.weapons} weapons.`;
+        s.tribe.lastTurnResults.push({ id: `contest-${destKey}-${s.tribe.id}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: msg });
+    }
+}
+
 
     // Create arrival message
     const moveDetails = [];

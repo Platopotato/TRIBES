@@ -719,55 +719,11 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     // Clean up empty defender garrison
     if (defenderGarrison && defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0 && (defenderGarrison.chiefs?.length || 0) === 0) {
         delete defenderTribe.garrisons[destKey];
-
-// --- PRISONER DIPLOMACY ACTIONS ---
-function processReleasePrisonerAction(tribe: any, action: any, state: any): string {
-    const name: string = action.actionData?.chief_name;
-    const targetTribeId: string | undefined = action.actionData?.toTribeId;
-    if (!name) return '❌ Release Prisoner: missing chief_name.';
-
-    const idx = (tribe.prisoners || []).findIndex((p: any) => p.chief?.name === name);
-    if (idx === -1) return `❌ Release Prisoner: you do not hold a prisoner named ${name}.`;
-
-    const prisoner = tribe.prisoners![idx];
-    const toTribe = state.tribes.find((t: any) => t.id === (targetTribeId || prisoner.fromTribeId));
-    if (!toTribe) return '❌ Release Prisoner: target tribe not found.';
-
-    // Remove from prisoners and return to target tribe's home garrison
-    tribe.prisoners!.splice(idx, 1);
-    if (!toTribe.garrisons[toTribe.location]) toTribe.garrisons[toTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
-    toTribe.garrisons[toTribe.location].chiefs.push(prisoner.chief);
-
-    tribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: action.actionData, result: `🤝 Released prisoner ${name} to ${toTribe.tribeName}.` });
-    toTribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: {}, result: `🎗️ ${tribe.tribeName} released your chief ${name}. She has returned to ${toTribe.location}.` });
-    return `Released ${name}`;
-}
-
-function processExchangePrisonersAction(tribe: any, action: any, state: any): string {
-    const toTribeId: string = action.actionData?.toTribeId;
-    const offeredChiefNames: string[] = action.actionData?.offeredChiefNames || [];
-    const requestedChiefNames: string[] = action.actionData?.requestedChiefNames || [];
-    if (!toTribeId || (offeredChiefNames.length === 0 && requestedChiefNames.length === 0)) {
-        return '❌ Exchange Prisoners: missing toTribeId or no chiefs specified.';
     }
-    const toTribe = state.tribes.find((t: any) => t.id === toTribeId);
-    if (!toTribe) return '❌ Exchange Prisoners: target tribe not found.';
-
-    const proposal = {
-        id: `px-${Date.now()}`,
-        fromTribeId: tribe.id,
-        toTribeId,
-        offeredChiefNames,
-        requestedChiefNames,
-        expiresOnTurn: state.turn + 3,
-    };
-    state.prisonerExchangeProposals = state.prisonerExchangeProposals || [];
-    state.prisonerExchangeProposals.push(proposal);
-
-    tribe.lastTurnResults.push({ id: `px-sent-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: action.actionData, result: `📜 Proposed a prisoner exchange to ${toTribe.tribeName}.` });
-    toTribe.lastTurnResults.push({ id: `px-recv-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 ${tribe.tribeName} proposed a prisoner exchange.` });
-    return 'Prisoner exchange proposed';
 }
+
+
+
 
 
 function resolveTradeArrival(journey: any, tribe: any, state: any): void {

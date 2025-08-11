@@ -559,11 +559,8 @@ export class SocketHandler {
       try {
         const gameState = await this.gameService.getGameState();
         if (gameState) {
-          // Ensure newsletter field exists (migration might not be applied yet)
-          if (!gameState.newsletter) {
-            gameState.newsletter = { newsletters: [] };
-            console.log(`📰 Initialized newsletter field for first time`);
-          }
+          // File-backed newsletter state
+          const news = (this.gameService as any).database?.getNewsletterState?.() || (gameState.newsletter || { newsletters: [] });
 
           // Generate ID and set published date
           const newsletter = {
@@ -573,35 +570,16 @@ export class SocketHandler {
           };
 
           // Update or add newsletter
-          const existingIndex = gameState.newsletter.newsletters.findIndex(n => n.turn === newsletter.turn);
-          if (existingIndex >= 0) {
-            gameState.newsletter.newsletters[existingIndex] = newsletter;
-          } else {
-            gameState.newsletter.newsletters.push(newsletter);
-          }
+          const idx = news.newsletters.findIndex((n: any) => n.turn === newsletter.turn);
+          if (idx >= 0) news.newsletters[idx] = newsletter; else news.newsletters.push(newsletter);
 
           // Set as current newsletter if it's for the current turn
           if (newsletter.turn === gameState.turn) {
-            gameState.newsletter.currentNewsletter = newsletter;
+            news.currentNewsletter = newsletter;
           }
 
-          console.log(`📰 About to save newsletter:`, {
-            turn: newsletter.turn,
-            title: newsletter.title,
-            newsletterCount: gameState.newsletter.newsletters.length,
-            isCurrentTurn: newsletter.turn === gameState.turn
-          });
-
-          await this.gameService.updateGameState(gameState);
-
-          // Verify the save worked by fetching fresh data
-          const verifyState = await this.gameService.getGameState();
-          console.log(`📰 Save verification:`, {
-            hasNewsletter: !!verifyState?.newsletter,
-            newsletterCount: verifyState?.newsletter?.newsletters?.length || 0,
-            hasCurrentNewsletter: !!verifyState?.newsletter?.currentNewsletter,
-            currentNewsletterTurn: verifyState?.newsletter?.currentNewsletter?.turn
-          });
+          // Persist
+          (this.gameService as any).database?.setNewsletterState?.(news);
 
           await emitGameState();
           console.log(`✅ Newsletter saved and emitted for turn ${newsletter.turn}`);
@@ -623,10 +601,13 @@ export class SocketHandler {
 
             // Update current newsletter if it's for current turn
             if (newsletter.turn === gameState.turn) {
-              gameState.newsletter.currentNewsletter = newsletter;
+              const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
+              news.currentNewsletter = newsletter;
+              const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
+              if (idx >= 0) news.newsletters[idx] = newsletter;
+              (this.gameService as any).database?.setNewsletterState?.(news);
             }
 
-            await this.gameService.updateGameState(gameState);
             await emitGameState();
             console.log(`✅ Newsletter published: ${newsletter.title}`);
           }
@@ -646,11 +627,14 @@ export class SocketHandler {
             newsletter.isPublished = false;
 
             // Clear current newsletter if it's the one being unpublished
-            if (gameState.newsletter.currentNewsletter?.id === newsletterId) {
-              gameState.newsletter.currentNewsletter = undefined;
+            const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
+            if (news.currentNewsletter?.id === newsletterId) {
+              news.currentNewsletter = undefined;
             }
+            const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
+            if (idx >= 0) news.newsletters[idx] = newsletter;
+            (this.gameService as any).database?.setNewsletterState?.(news);
 
-            await this.gameService.updateGameState(gameState);
             await emitGameState();
             console.log(`✅ Newsletter unpublished: ${newsletter.title}`);
           }

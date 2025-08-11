@@ -123,13 +123,14 @@ const NewsletterModal: React.FC<NewsletterModalProps> = ({
               </div>
 
               {/* Newsletter Content */}
-              <div 
+              <div
                 className="prose prose-invert prose-lg max-w-none text-slate-200 leading-relaxed"
-                dangerouslySetInnerHTML={{ 
+                dangerouslySetInnerHTML={{
                   __html: formatContent(displayNewsletter.content)
                 }}
               />
             </div>
+
           ) : (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📰</div>
@@ -143,20 +144,43 @@ const NewsletterModal: React.FC<NewsletterModalProps> = ({
 
         {/* Footer */}
         {displayNewsletter && (
-          <div className="border-t border-slate-600 p-4 bg-slate-900/50">
-            <div className="flex items-center justify-between text-sm text-slate-400">
-              <div>
-                📊 Turn {displayNewsletter.turn} Chronicle
-              </div>
-              <div>
-                {publishedNewsletters.length > 1 && (
-                  <span>
-                    {publishedNewsletters.findIndex(n => n.id === displayNewsletter.id) + 1} of {publishedNewsletters.length} newsletters
-                  </span>
-                )}
+          <>
+            <div className="border-t border-slate-600 p-4 bg-slate-900/50">
+              <div className="flex items-center justify-between text-sm text-slate-400">
+                <div>
+                  📊 Turn {displayNewsletter.turn} Chronicle
+                </div>
+                <div>
+                  {publishedNewsletters.length > 1 && (
+                    <span>
+                      {publishedNewsletters.findIndex(n => n.id === displayNewsletter.id) + 1} of {publishedNewsletters.length} newsletters
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Back issues list */}
+            {publishedNewsletters.length > 1 && (
+              <div className="mt-8 border-t border-slate-700 pt-4">
+                <h4 className="text-slate-300 font-semibold mb-2">Back issues</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {publishedNewsletters.map(n => (
+                    <button
+                      key={n.id}
+                      onClick={() => setSelectedNewsletter(n)}
+                      className={`w-full text-left px-3 py-2 rounded border ${displayNewsletter && n.id === displayNewsletter.id ? 'bg-slate-700 border-slate-500' : 'bg-slate-700/50 hover:bg-slate-700 border-slate-600'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-200">Turn {n.turn} — {n.title}</span>
+                        <span className="text-slate-400 text-sm">{new Date(n.publishedAt as any).toLocaleDateString()}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         </div>
       </div>

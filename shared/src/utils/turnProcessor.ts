@@ -103,6 +103,23 @@ export function processGlobalTurn(gameState: GameState): GameState {
         tribes: gameState.tribes.map(tribe => ({ ...tribe }))
     };
 
+
+	// Normalize any garrison keys and home location to standard "051.044" format
+	function normalizeTribeCoordinates(tribe: any) {
+	  const normalized: Record<string, any> = {};
+	  Object.entries(tribe.garrisons || {}).forEach(([key, gar]: any) => {
+	    const std = convertToStandardFormat(String(key));
+	    if (!normalized[std]) normalized[std] = { troops: 0, weapons: 0, chiefs: [] };
+	    normalized[std].troops += gar.troops || 0;
+	    normalized[std].weapons += gar.weapons || 0;
+	    const chiefs = gar.chiefs || [];
+	    if (!normalized[std].chiefs) normalized[std].chiefs = [];
+	    normalized[std].chiefs.push(...chiefs);
+	  });
+	  tribe.garrisons = normalized;
+	  tribe.location = convertToStandardFormat(tribe.location);
+	}
+
     const resultsByTribe: Record<string, any[]> = Object.fromEntries(state.tribes.map(t => [t.id, []]));
 
     // GENERATE AI ACTIONS: Add AI actions for tribes that haven't submitted
@@ -111,6 +128,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
 	// Create asset badges for UI from combined effects and present assets
 	function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'combat', resource?: string, terrain?: TerrainType }): { name?: string; label: string; emoji?: string }[] {
 	  const badges: { name?: string; label: string; emoji?: string }[] = [];
+
+	    // Ensure tribe coordinates and keys are normalized before any processing
+	    state.tribes.forEach(tr => normalizeTribeCoordinates(tr));
+
 	  const assets = tribe.assets || [];
 	  if (context.phase === 'move') {
 	    // Movement-speed assets
@@ -300,7 +321,15 @@ function processActiveJourneys(state: any): void {
                     case JourneyType.Trade:
                         resolveTradeArrival(journey, tribe, state);
                         break;
-                    // Add other journey types as needed
+                    case JourneyType.Scout:
+                        resolveScoutArrival(journey, tribe, state);
+                        break;
+                    case JourneyType.Scavenge:
+                        resolveScavengeArrival(journey, tribe, state);
+                        break;
+                    case JourneyType.Attack:
+                        resolveAttackArrival(journey, tribe, state);
+                        break;
                     default:
                         // Generic journey completion
                         tribe.lastTurnResults.push({
@@ -806,13 +835,14 @@ function processRecruitAction(tribe: any, action: any): string {
 
 // Minimal Build Outpost: spend 20 scrap, use 5 troops from a garrison, requires visible hex. Adds Outpost POI (shield marker via legend).
 function processBuildOutpostAction(tribe: any, action: any, state: any): string {
-    const start = action.actionData?.start_location;
+    const startRaw = action.actionData?.start_location;
     const targetRaw = action.actionData?.target_location;
     const builders = Math.max(0, parseInt(action.actionData?.troops ?? '5'));
 
-    if (!start) return `❌ Build Outpost failed: No source garrison specified.`;
+    if (!startRaw) return `❌ Build Outpost failed: No source garrison specified.`;
     if (!targetRaw) return `❌ Build Outpost failed: No target hex specified.`;
 
+    const start = convertToStandardFormat(startRaw);
     const target = convertToStandardFormat(targetRaw);
 
     // Visibility: require target in tribe.exploredHexes
@@ -832,7 +862,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 
     // Cost and garrison checks
     if ((tribe.globalResources?.scrap ?? 0) < 20) return `❌ Build Outpost failed: Need 20 scrap.`;
-    const garrison = tribe.garrisons[start];
+    const garrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
     if (!garrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
     if ((garrison.troops ?? 0) < 5 || builders < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
 
@@ -876,13 +906,14 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 
 // Minimal Build Outpost: spend 20 scrap, use 5 troops from a garrison, requires visible hex. Adds Outpost POI (shield marker via legend).
 function processBuildOutpostAction(tribe: any, action: any, state: any): string {
-    const start = action.actionData?.start_location;
+    const startRaw = action.actionData?.start_location;
     const targetRaw = action.actionData?.target_location;
     const builders = Math.max(0, parseInt(action.actionData?.troops ?? '5'));
 
-    if (!start) return `❌ Build Outpost failed: No source garrison specified.`;
+    if (!startRaw) return `❌ Build Outpost failed: No source garrison specified.`;
     if (!targetRaw) return `❌ Build Outpost failed: No target hex specified.`;
 
+    const start = convertToStandardFormat(startRaw);
     const target = convertToStandardFormat(targetRaw);
 
     // Visibility: require target in tribe.exploredHexes
@@ -902,7 +933,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 
     // Cost and garrison checks
     if ((tribe.globalResources?.scrap ?? 0) < 20) return `❌ Build Outpost failed: Need 20 scrap.`;
-    const garrison = tribe.garrisons[start];
+    const garrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
     if (!garrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
     if ((garrison.troops ?? 0) < 5 || builders < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
 
@@ -991,8 +1022,8 @@ function processSetRationAction(tribe: any, action: any): string {
 }
 
 function processBuildWeaponsAction(tribe: any, action: any): string {
-    const location = action.actionData.location;
-    const garrison = tribe.garrisons[location];
+    const location = convertToStandardFormat(action.actionData.location);
+    const garrison = tribe.garrisons[location] || tribe.garrisons[convertToStandardFormat(location)];
 
     if (!garrison) {
         return `No garrison found at ${location} to build weapons.`;
@@ -1027,18 +1058,23 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         return `❌ Move action failed: No destination location specified.`;
     }
 
-    const startGarrison = tribe.garrisons[startLocation];
+	    // Standardize keys for any input format (e.g., "4,-6" -> "054.044")
+	    const startKey = convertToStandardFormat(startLocation);
+	    const destKeyStd = convertToStandardFormat(destination);
+
+
+    const startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[startKey];
     if (!startGarrison) {
-        return `❌ No garrison found at ${startLocation} to move troops from.`;
+        return `❌ No garrison found at ${startKey} to move troops from.`;
     }
 
     // Validate resources
     if (startGarrison.troops < troopsToMove) {
-        return `❌ Insufficient troops at ${startLocation}. Need ${troopsToMove}, have ${startGarrison.troops}.`;
+        return `❌ Insufficient troops at ${startKey}. Need ${troopsToMove}, have ${startGarrison.troops}.`;
     }
 
     if (startGarrison.weapons < weaponsToMove) {
-        return `❌ Insufficient weapons at ${startLocation}. Need ${weaponsToMove}, have ${startGarrison.weapons}.`;
+        return `❌ Insufficient weapons at ${startKey}. Need ${weaponsToMove}, have ${startGarrison.weapons}.`;
     }
 
     // Validate chiefs
@@ -1100,19 +1136,20 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 
     if (isFastTrackable) {
         // INSTANT MOVEMENT for short distances
-        if (!tribe.garrisons[destination]) {
-            tribe.garrisons[destination] = { troops: 0, weapons: 0, chiefs: [] };
+        const destKey = convertToStandardFormat(destination);
+        if (!tribe.garrisons[destKey]) {
+            tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
         }
 
-        const destGarrison = tribe.garrisons[destination];
+        const destGarrison = tribe.garrisons[destKey];
         destGarrison.troops += troopsToMove;
         destGarrison.weapons += weaponsToMove;
         if (!destGarrison.chiefs) destGarrison.chiefs = [];
         destGarrison.chiefs.push(...movingChiefs);
 
         // Add to explored hexes
-        if (!tribe.exploredHexes.includes(destination)) {
-            tribe.exploredHexes.push(destination);
+        if (!tribe.exploredHexes.includes(destKey)) {
+            tribe.exploredHexes.push(destKey);
         }
 
         const moveDetails = [];
@@ -1120,15 +1157,15 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         if (weaponsToMove > 0) moveDetails.push(`${weaponsToMove} weapons`);
         if (movingChiefs.length > 0) moveDetails.push(`${movingChiefs.length} chief${movingChiefs.length > 1 ? 's' : ''} (${movingChiefs.map((c: any) => c.name).join(', ')})`);
 
-        return `⚡ Fast movement: ${moveDetails.join(', ')} instantly moved from ${startLocation} to ${destination}! (Distance: ${pathInfo.cost.toFixed(1)} movement cost)`;
+        return `⚡ Fast movement: ${moveDetails.join(', ')} instantly moved from ${startKey} to ${destKeyStd}! (Distance: ${pathInfo.cost.toFixed(1)} movement cost)`;
     } else {
         // MULTI-TURN JOURNEY for long distances
         const journey = {
             id: `move-${Date.now()}-${tribe.id}`,
             ownerTribeId: tribe.id,
             type: JourneyType.Move,
-            origin: startLocation,
-            destination: destination,
+            origin: startKey,
+            destination: destKeyStd,
             path: pathInfo.path,
             currentLocation: pathInfo.path[0], // Start at first step
             force: {
@@ -1163,7 +1200,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 	            id: `move-dispatched-${journey.id}`,
 	            actionType: ActionType.Move,
 	            actionData: action.actionData,
-	            result: `🚶 Dispatched movement from ${startLocation} to ${destination}. ETA: ${arrivalTurn} turn(s).${badgesText}`,
+	            result: `🚶 Dispatched movement from ${startKey} to ${destKeyStd}. ETA: ${arrivalTurn} turn(s).${badgesText}`,
 	            meta: { assetBadges: moveBadges }
 	        });
 
@@ -1180,11 +1217,12 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 }
 
 function processTradeAction(tribe: any, action: any, state: any): string {
-    const startLocation = action.actionData.start_location;
+    const startRaw = action.actionData.start_location;
     const targetLocationAndTribe = action.actionData.target_location_and_tribe;
     const troops = action.actionData.troops || 0;
     const weapons = action.actionData.weapons || 0;
     const chiefsToMove = action.actionData.chiefsToMove || [];
+    const startLocation = convertToStandardFormat(startRaw || tribe.location);
 
     const offerFood = action.actionData.offer_food || 0;
     const offerScrap = action.actionData.offer_scrap || 0;
@@ -1198,12 +1236,13 @@ function processTradeAction(tribe: any, action: any, state: any): string {
     }
 
     // Parse target location and tribe ID
-    const [targetLocation, targetTribeId] = targetLocationAndTribe.split(':');
+    const [targetRaw, targetTribeId] = targetLocationAndTribe.split(':');
+    const targetLocation = convertToStandardFormat(targetRaw);
     if (!targetLocation || !targetTribeId) {
         return `❌ Trade action failed: Invalid target format.`;
     }
 
-    const sourceGarrison = tribe.garrisons[startLocation];
+    const sourceGarrison = tribe.garrisons[startLocation] || tribe.garrisons[convertToStandardFormat(startLocation)];
     if (!sourceGarrison) {
         return `❌ Trade action failed: No garrison at ${startLocation}.`;
     }
@@ -1301,6 +1340,50 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
 
     // Convert coordinates to standard format
     const location = convertToStandardFormat(locationRaw);
+
+
+	    // Multi-turn journey: if travel time > 1 turn, dispatch a scouting journey instead of instant resolve
+	    const startLocation = convertToStandardFormat(action.actionData.start_location || action.actionData.fromLocation || tribe.location);
+	    const startCoords = parseHexCoords(startLocation);
+	    const destCoords = parseHexCoords(location);
+	    const pathInfo = findPath(startCoords, destCoords, state?.mapData || []);
+	    if (!pathInfo) {
+	        return `❌ Could not find a path from ${startLocation} to ${location}.`;
+	    }
+	    const effectsForScout = getCombinedEffects(tribe);
+	    const etaTurns = Math.ceil(pathInfo.cost / effectsForScout.movementSpeedBonus);
+	    if (etaTurns > 1) {
+	        const troops = Math.max(1, action.actionData.troops || 1);
+	        const weapons = Math.max(0, action.actionData.weapons || 0);
+	        const chiefsToMove: string[] = action.actionData.chiefsToMove || [];
+	        const startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[convertToStandardFormat(startLocation)];
+	        if (!startGarrison || startGarrison.troops < troops || (startGarrison.weapons || 0) < weapons) {
+	            return `❌ Scout dispatch failed: insufficient forces at ${startLocation}.`;
+	        }
+	        const availableChiefs = startGarrison.chiefs || [];
+	        const movingChiefs = availableChiefs.filter((c: any) => chiefsToMove.includes(c.name));
+	        // Deduct
+	        startGarrison.troops -= troops;
+	        startGarrison.weapons = (startGarrison.weapons || 0) - weapons;
+	        startGarrison.chiefs = availableChiefs.filter((c: any) => !chiefsToMove.includes(c.name));
+	        // Enqueue journey
+	        const journey = {
+	            id: `scout-${Date.now()}-${tribe.id}`,
+	            ownerTribeId: tribe.id,
+	            type: JourneyType.Scout,
+	            origin: startLocation,
+	            destination: location,
+	            path: pathInfo.path,
+	            currentLocation: pathInfo.path[0],
+	            force: { troops, weapons, chiefs: movingChiefs },
+	            payload: { food: 0, scrap: 0, weapons: 0 },
+	            arrivalTurn: etaTurns,
+	            status: 'en_route',
+	        };
+	        if (!state.journeys) state.journeys = [];
+	        state.journeys.push(journey);
+	        return `🔍 Scout party dispatched from ${startLocation} to ${location}. Arrival in ${etaTurns} turn(s).`;
+	    }
 
     // ENHANCED SCOUTING: Add scouted hex + 1 radius to explored hexes
     const { q, r } = parseHexCoords(location);
@@ -1455,10 +1538,27 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
         // Convert location back to q,r coordinates for lookup
         const { q, r } = parseHexCoords(location);
         const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+
+	    // If multi-turn dispatched, we returned already. Continue with instant resolution below.
+
         if (hexData?.terrain) {
             terrainType = hexData.terrain.toLowerCase();
+
+            }
         }
-    }
+
+    // Simple message for instant scout result
+    tribe.lastTurnResults.push({
+        id: `scout-instant-${Date.now()}`,
+        actionType: ActionType.Scout,
+        actionData: {},
+        result: `🔍 Scouts completed reconnaissance at ${location}.`
+    });
+
+
+
+
+
 
     // Select appropriate narrative based on terrain
     const terrainOptions = terrainNarratives[terrainType as keyof typeof terrainNarratives] || terrainNarratives.plains;
@@ -1468,7 +1568,39 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
     const discoveryOptions = terrainDiscoveries[terrainType as keyof typeof terrainDiscoveries] || genericDiscoveries;
     const discovery = discoveryOptions[Math.floor(Math.random() * discoveryOptions.length)];
 
-    return `🔍 Scouts ventured into ${location} and discovered ${terrainDesc}. Among the landscape, they observed ${discovery}. The surrounding area has been mapped and added to tribal knowledge.`;
+    // POI reporting: if scouts revealed any hexes with POIs, include a brief report
+    let poiReport = '';
+    if (state?.mapData && Array.isArray(revealedHexes) && revealedHexes.length > 0) {
+        const discoveredPOIs: { loc: string; type: string; rarity?: string; difficulty?: number }[] = [];
+        for (const hexLoc of revealedHexes) {
+            const { q: rq, r: rr } = parseHexCoords(hexLoc);
+            const hexData = state.mapData.find((h: any) => h.q === rq && h.r === rr);
+            if (!hexData) continue;
+            let poi: any = null;
+            if (hexData.poi) poi = hexData.poi;
+            else if (hexData.poiType) {
+                poi = { type: hexData.poiType, rarity: hexData.poiRarity || 'Common', difficulty: hexData.poiDifficulty || 5 };
+            }
+            if (poi && poi.type) {
+                discoveredPOIs.push({ loc: hexLoc, type: String(poi.type), rarity: poi.rarity, difficulty: poi.difficulty });
+            }
+        }
+        if (discoveredPOIs.length > 0) {
+            const maxListed = 3;
+            const listed = discoveredPOIs.slice(0, maxListed).map(p => {
+                const parts = [p.type];
+                if (p.rarity) parts.unshift(p.rarity);
+                const detail = `${parts.join(' ')}${p.difficulty ? ` (difficulty ${p.difficulty})` : ''}`;
+                // If this is the central scouted tile, call it "here" otherwise show coords
+                const where = p.loc === location ? 'here' : p.loc;
+                return `${detail} at ${where}`;
+            });
+            const more = discoveredPOIs.length > maxListed ? ` and ${discoveredPOIs.length - maxListed} more nearby` : '';
+            poiReport = ` Additionally, our scouts report ${listed.length === 1 ? 'a point of interest: ' + listed[0] : 'the following points of interest: ' + listed.join('; ')}${more}.`;
+        }
+    }
+
+    return `🔍 Scouts ventured into ${location} and discovered ${terrainDesc}. Among the landscape, they observed ${discovery}. The surrounding area has been mapped and added to tribal knowledge.${poiReport}`;
 }
 
 function processScavengeAction(tribe: any, action: any, state?: any): string {
@@ -1541,8 +1673,14 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
                     poiBonus = 4; // Quadruple weapons from Weapons Caches
                     poiMessage = ' 🗡️ The Weapons Cache contains military-grade equipment!';
                 } else {
+
+
                     poiBonus = 1.2;
                     poiMessage = ' 🛡️ The cache contains some useful gear.';
+
+
+
+
                 }
                 break;
             case 'Ruins':
@@ -1559,16 +1697,35 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
                     poiMessage = ' 💀 The battlefield yields some salvageable equipment.';
                 }
                 break;
+
+
+
+
             case 'Factory':
                 if (resourceType.toLowerCase() === 'scrap') {
                     poiBonus = 2.5;
                     poiMessage = ' 🏭 The factory contains valuable industrial components!';
+
+
                 } else {
                     poiBonus = 1.4;
                     poiMessage = ' 🔩 The factory yields some useful materials.';
                 }
+
+
+
+                // fallthrough handled above
+
+
                 break;
+
+
+
+
+
             default:
+
+
                 poiBonus = 1.5; // Generic POI bonus
                 poiMessage = ` 📍 The ${poi.type} provides additional scavenging opportunities.`;
         }
@@ -1596,28 +1753,129 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     switch (resourceType.toLowerCase()) {
         case 'food':
             baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
-            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
-            tribe.globalResources.food += resourceGained;
             resourceName = 'food';
             break;
         case 'scrap':
             baseAmount = Math.floor(Math.random() * 2) + 2; // 2-3 base per 2 troops
-            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
-            tribe.globalResources.scrap += resourceGained;
             resourceName = 'scrap';
             break;
         case 'weapons':
             baseAmount = Math.floor(Math.random() * 2) + 1; // 1-2 base per 2 troops
-            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
-            tribe.globalResources.weapons += resourceGained;
             resourceName = 'weapons';
             break;
         default:
             baseAmount = Math.floor(Math.random() * 3) + 2; // 2-4 base per 2 troops
-            resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
-            tribe.globalResources.food += resourceGained;
             resourceName = 'food';
     }
+
+    // Compute total gained before applying carry caps/inventory updates
+    resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
+
+    // Carry capacity and correct destination for weapons
+    if (resourceName === 'weapons') {
+        // Max carry of 1 weapon per troop scavenging
+        const maxCarry = Math.max(0, troopCount);
+        if (resourceGained > maxCarry) resourceGained = maxCarry;
+
+        // Add weapons to nearest/home garrison rather than globalResources
+        const home = tribe.location;
+        if (!tribe.garrisons[home]) {
+            tribe.garrisons[home] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        tribe.garrisons[home].weapons += resourceGained;
+    } else if (resourceName === 'scrap') {
+        tribe.globalResources.scrap += resourceGained;
+    } else if (resourceName === 'food') {
+        tribe.globalResources.food += resourceGained;
+    }
+
+
+function resolveAttackArrival(journey: any, tribe: any, state: any): void {
+    const destKey = convertToStandardFormat(journey.destination);
+
+    // Identify defending tribe if any
+    const defendingTribe = state.tribes.find((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+
+    if (!defendingTribe) {
+        // No defender: occupy the hex
+        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        const destGarrison = tribe.garrisons[destKey];
+        destGarrison.troops += journey.force.troops;
+        destGarrison.weapons += journey.force.weapons;
+        if (!destGarrison.chiefs) destGarrison.chiefs = [];
+        destGarrison.chiefs.push(...journey.force.chiefs);
+        if (!tribe.exploredHexes.includes(destKey)) tribe.exploredHexes.push(destKey);
+        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `⚔️ Assault force arrived at ${destKey}. No defenders — hex occupied.` });
+        return;
+    }
+
+    // Otherwise resolve combat using arrival-based combat routine similar to on-arrival battle
+    const fakeAction = { actionData: { target_location: destKey, start_location: journey.origin, troops: journey.force.troops } };
+    // Minimal inline resolution reusing processAttackAction components is tricky; perform a focused arrival combat:
+    const atkGarrison = { troops: journey.force.troops, weapons: journey.force.weapons };
+    const defGarrison = defendingTribe.garrisons[destKey];
+
+    const effects = getCombinedEffects(tribe);
+    const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
+    const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
+
+    const attackerStrength = atkGarrison.troops + (atkGarrison.weapons || 0);
+    const defenderStrength = defGarrison.troops + (defGarrison.weapons || 0);
+
+    let terrainDefBonus = 0;
+    const defCoords = parseHexCoords(destKey);
+    const defHex = state.mapData.find((h: any) => h.q === defCoords.q && h.r === defCoords.r) || null;
+    if (defHex) {
+        const terr = defHex.terrain as TerrainType;
+        terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
+    }
+
+    const attackerRoll = Math.random() * (attackerStrength * atkMult);
+    const defenderRoll = Math.random() * (defenderStrength * defMult * (1 + terrainDefBonus));
+
+    if (attackerRoll > defenderRoll) {
+        const atkLosses = Math.min(atkGarrison.troops, Math.max(1, Math.floor(Math.random() * 3)));
+        const defLosses = Math.min(defGarrison.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
+
+        // Apply losses
+        journey.force.troops -= atkLosses;
+        defGarrison.troops -= defLosses;
+        const atkWeaponsLoss = Math.min(atkGarrison.weapons || 0, Math.floor(atkLosses * 0.5));
+        const defWeaponsLoss = Math.min(defGarrison.weapons || 0, Math.floor(defLosses * 0.5));
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
+        defGarrison.weapons = (defGarrison.weapons || 0) - defWeaponsLoss;
+
+        // Transfer survivors to dest
+        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        const dest = tribe.garrisons[destKey];
+        dest.troops += journey.force.troops;
+        dest.weapons += journey.force.weapons;
+        if (!dest.chiefs) dest.chiefs = [];
+        dest.chiefs.push(...journey.force.chiefs);
+        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: fakeAction.actionData, result: `⚔️ Victory at ${destKey}! Lost ${atkLosses} troops; enemy lost ${defLosses}. Hex captured.` });
+        defendingTribe.lastTurnResults.push({ id: `defense-${journey.id}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} assaulted ${destKey} and captured it. You lost ${defLosses} troops.` });
+    } else {
+        const attackerLosses = Math.min(atkGarrison.troops, Math.floor(Math.random() * 4) + 2);
+        const defenderLosses = Math.min(defGarrison.troops, Math.floor(Math.random() * 2) + 1);
+        // Apply losses to origin garrison if needed
+        tribe.lastTurnResults.push({ id: `attack-arrival-${journey.id}`, actionType: ActionType.Attack, actionData: fakeAction.actionData, result: `🛡️ Defeat at ${destKey}. Lost ${attackerLosses} troops; enemy lost ${defenderLosses}.` });
+        defGarrison.troops -= defenderLosses;
+        // No survivors transferred; journey considered ended.
+    }
+}
+
+        // Use tribe.location as home base
+        const home = tribe.location;
+        if (!tribe.garrisons[home]) {
+            tribe.garrisons[home] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        tribe.garrisons[home].weapons += resourceGained;
+    } else if (resourceName === 'scrap') {
+        tribe.globalResources.scrap += resourceGained;
+    } else if (resourceName === 'food') {
+        tribe.globalResources.food += resourceGained;
+    }
+
 
     // Apply asset scavenge bonuses (e.g., Ratchet_Set)
     const combinedEffects = getCombinedEffects(tribe);
@@ -1633,7 +1891,21 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
         resourceGained += bonusAmount;
         if (resKey === 'food') tribe.globalResources.food += bonusAmount;
         if (resKey === 'scrap') tribe.globalResources.scrap += bonusAmount;
-        if (resKey === 'weapons') tribe.globalResources.weapons += bonusAmount;
+        if (resKey === 'weapons') {
+            // Weapons bonus also respects carry cap and goes to garrisons
+            const home = tribe.location;
+            if (!tribe.garrisons[home]) tribe.garrisons[home] = { troops: 0, weapons: 0, chiefs: [] };
+            const currentWeapons = tribe.garrisons[home].weapons || 0;
+            // Re-apply cap against troopCount for bonus overflow (hard cap = troopCount total)
+            const maxCarry = Math.max(0, troopCount);
+            const maxAdditional = Math.max(0, maxCarry - (resourceGained - bonusAmount));
+            const appliedBonus = Math.min(bonusAmount, maxAdditional);
+            tribe.garrisons[home].weapons = currentWeapons + appliedBonus;
+            // If some bonus can't be carried, reduce resourceGained accordingly
+            if (appliedBonus < bonusAmount) {
+                resourceGained = resourceGained - (bonusAmount - appliedBonus);
+            }
+        }
     }
 
     // Add badges to message
@@ -1646,15 +1918,52 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
 // --- PHASE 3: COMBAT & DIPLOMACY PROCESSORS ---
 function processAttackAction(tribe: any, action: any, state: any): string {
     // Accept both camelCase and snake_case inputs from UI/AI
-    const targetLocation = action.actionData.targetLocation || action.actionData.target_location;
-    const attackerLocation = action.actionData.fromLocation || action.actionData.start_location;
+    const targetLocation = convertToStandardFormat(action.actionData.targetLocation || action.actionData.target_location);
+    const attackerLocation = convertToStandardFormat(action.actionData.fromLocation || action.actionData.start_location);
     const troopsToAttack = action.actionData.troops || 1;
 
-    const attackerGarrison = tribe.garrisons[attackerLocation];
+    const attackerGarrison = tribe.garrisons[attackerLocation] || tribe.garrisons[convertToStandardFormat(attackerLocation)];
 
     // Add combat badge line to attacker (defender gets its separate message already)
     const combatBadgesEarly = (typeof buildAssetBadges === 'function') ? buildAssetBadges(tribe, { phase: 'combat', terrain: undefined }) : [];
     if (combatBadgesEarly.length > 0) {
+
+	// Multi-turn journey: Attack dispatch when ETA > 1
+	const origin = attackerLocation;
+	const dest = targetLocation;
+	const pathInfo = findPath(parseHexCoords(origin), parseHexCoords(dest), state.mapData);
+	if (!pathInfo) {
+	    return `❌ Could not find a path from ${origin} to ${dest}.`;
+	}
+	const effAtk = getCombinedEffects(tribe);
+	const etaAtk = Math.ceil(pathInfo.cost / effAtk.movementSpeedBonus);
+	if (etaAtk > 1) {
+	    const weaponsToSend = Math.max(0, action.actionData.weapons || 0);
+	    if ((attackerGarrison.weapons || 0) < weaponsToSend) return `Insufficient weapons at ${origin}.`;
+	    const chiefsToMove: string[] = action.actionData.chiefsToMove || [];
+	    const availableChiefs = attackerGarrison.chiefs || [];
+	    const movingChiefs = availableChiefs.filter((c: any) => chiefsToMove.includes(c.name));
+	    // Deduct
+	    attackerGarrison.troops -= troopsToAttack;
+	    attackerGarrison.weapons = (attackerGarrison.weapons || 0) - weaponsToSend;
+	    attackerGarrison.chiefs = availableChiefs.filter((c: any) => !chiefsToMove.includes(c.name));
+	    if (!state.journeys) state.journeys = [];
+	    state.journeys.push({
+	        id: `attack-${Date.now()}-${tribe.id}`,
+	        ownerTribeId: tribe.id,
+	        type: JourneyType.Attack,
+	        origin,
+	        destination: dest,
+	        path: pathInfo.path,
+	        currentLocation: pathInfo.path[0],
+	        force: { troops: troopsToAttack, weapons: weaponsToSend, chiefs: movingChiefs },
+	        payload: { food: 0, scrap: 0, weapons: 0 },
+	        arrivalTurn: etaAtk,
+	        status: 'en_route',
+	    });
+	    return `⚔️ Assault force dispatched from ${origin} to ${dest}. Arrival in ${etaAtk} turn(s).`;
+	}
+
         tribe.lastTurnResults.push({
             id: `combat-mods-${Date.now()}`,
             actionType: ActionType.Attack,
@@ -1670,14 +1979,14 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     // Find defending tribe
     const defendingTribe = state.tribes.find((t: any) =>
-        t.id !== tribe.id && t.garrisons[targetLocation]
+        t.id !== tribe.id && (t.garrisons[targetLocation] || t.garrisons[convertToStandardFormat(targetLocation)])
     );
 
     if (!defendingTribe) {
         return `No enemy garrison found at ${targetLocation} to attack.`;
     }
 
-    const defenderGarrison = defendingTribe.garrisons[targetLocation];
+    const defenderGarrison = defendingTribe.garrisons[targetLocation] || defendingTribe.garrisons[convertToStandardFormat(targetLocation)];
 
     // Simple combat resolution
 

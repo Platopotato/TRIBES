@@ -5,7 +5,7 @@ import { ActionType, GameAction, Tribe, Garrison, Chief, HexData } from '../../t
 import { ACTION_DEFINITIONS, ActionField } from './actionDefinitions';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { findPath, parseHexCoords } from '../../lib/mapUtils';
+import { findPath, parseHexCoords, formatHexCoords } from '../../lib/mapUtils';
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -64,13 +64,20 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         const start = parseHexCoords(draftAction.actionData.start_location);
         const end = parseHexCoords(draftAction.actionData.finish_location);
         const pathInfo = findPath(start, end, mapData);
-        setTravelTime(pathInfo?.cost ?? null);
+        let movementSpeedBonus = 1.0;
+        // Apply movement speed bonuses based on assets (mirrors server behavior)
+        if (tribe.assets?.includes('Dune_Buggy')) movementSpeedBonus *= 1.2;
+        const eta = pathInfo ? Math.ceil(pathInfo.cost / movementSpeedBonus) : null;
+        setTravelTime(eta);
         setPathPreview(pathInfo ? pathInfo.path : null);
     } else if (draftAction?.actionData?.start_location && draftAction?.actionData?.target_location) {
         const start = parseHexCoords(draftAction.actionData.start_location);
         const end = parseHexCoords(draftAction.actionData.target_location);
         const pathInfo = findPath(start, end, mapData);
-        setTravelTime(pathInfo?.cost ?? null);
+        let movementSpeedBonus = 1.0;
+        if (draftAction?.actionType === ActionType.Move && tribe.assets?.includes('Dune_Buggy')) movementSpeedBonus *= 1.2;
+        const eta = pathInfo ? Math.ceil(pathInfo.cost / movementSpeedBonus) : null;
+        setTravelTime(eta);
         setPathPreview(pathInfo ? pathInfo.path : null);
     } else {
         setTravelTime(null);
@@ -90,7 +97,28 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         );
   }, [allTribes, tribe.id]);
 
+
+	  // Show ETA as soon as a destination is selected (even before submitting)
+	  useEffect(() => {
+	    if (![ActionType.Move, ActionType.Attack, ActionType.Scout, ActionType.Scavenge].includes(draftAction?.actionType as ActionType)) return;
+	    const start = draftAction?.actionData?.start_location;
+	    const dest = selectedHexForDisplay && selectedHexForDisplay !== 'Selecting...' ? selectedHexForDisplay : null;
+	    if (start && dest) {
+	      const pathInfo = findPath(parseHexCoords(start), parseHexCoords(dest), mapData);
+	      let movementSpeedBonus = 1.0;
+	      // Apply movement speed bonuses based on assets (mirrors server behavior)
+	      if (tribe.assets?.includes('Dune_Buggy')) movementSpeedBonus *= 1.2;
+	      const eta = pathInfo ? Math.ceil(pathInfo.cost / movementSpeedBonus) : null;
+	      setTravelTime(eta);
+	      setPathPreview(pathInfo ? pathInfo.path : null);
+	    } else {
+	      setTravelTime(null);
+	      setPathPreview(null);
+	    }
+	  }, [draftAction?.actionType, draftAction?.actionData?.start_location, selectedHexForDisplay, mapData, tribe.assets]);
+
   const handleSelectActionType = (actionType: ActionType) => {
+
     const definition = ACTION_DEFINITIONS[actionType];
     const initialData: { [key: string]: any } = {};
 
@@ -198,7 +226,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
   const handleConfirmSelection = () => {
     if (!pendingHexSelection || !currentFieldName) return;
 
-    const location = `${pendingHexSelection.q},${pendingHexSelection.r}`;
+    const location = formatHexCoords(pendingHexSelection.q, pendingHexSelection.r);
 
     // Update the field with the location
     handleFieldChange(currentFieldName, location);

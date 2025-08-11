@@ -7,7 +7,8 @@ import {
   User,
   Tribe,
   generateMapData,
-  SECURITY_QUESTIONS
+  SECURITY_QUESTIONS,
+  NewsletterState
 } from '../../../shared/dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,10 +19,14 @@ export class DatabaseService {
   private useDatabase: boolean = false;
   private dataDir: string;
   private dataFile: string;
+  private newsletterFile: string;
+
 
   constructor() {
     this.dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
     this.dataFile = path.join(this.dataDir, 'game-data.json');
+
+    this.newsletterFile = path.join(this.dataDir, 'newsletters.json');
   }
 
   async initialize(): Promise<void> {
@@ -35,6 +40,15 @@ export class DatabaseService {
       await this.prisma.$connect();
       this.useDatabase = true;
       console.log('✅ Connected to PostgreSQL database');
+
+      // Ensure newsletters file exists even in DB mode
+      try {
+        if (!fs.existsSync(this.newsletterFile)) {
+          fs.writeFileSync(this.newsletterFile, JSON.stringify({ newsletters: [], currentNewsletter: undefined }));
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not initialize newsletters file:', e);
+      }
 
       // Test a simple query
       console.log('🔄 Testing database connection with simple query...');
@@ -54,6 +68,16 @@ export class DatabaseService {
 
       this.useDatabase = false;
       this.prisma = null;
+
+      // Ensure newsletters file exists in either mode
+      try {
+        if (!fs.existsSync(this.newsletterFile)) {
+          fs.writeFileSync(this.newsletterFile, JSON.stringify({ newsletters: [], currentNewsletter: undefined }));
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not initialize newsletters file:', e);
+      }
+
 
       // Ensure data directory exists for file storage
       if (!fs.existsSync(this.dataDir)) {
@@ -130,6 +154,7 @@ export class DatabaseService {
         console.log('🔄 Checking for existing game state...');
         // Check if we have any game state
         const gameStateCount = await this.prisma.gameState.count();
+
         console.log(`📊 Found ${gameStateCount} game state(s) in database`);
 
         if (gameStateCount === 0) {
@@ -185,12 +210,39 @@ export class DatabaseService {
       if (!gameState) return null;
 
       // Convert database format back to GameState format
-      return this.convertDbGameStateToGameState(gameState);
+      const converted = this.convertDbGameStateToGameState(gameState);
+      const news = this.getNewsletterState();
+      return { ...converted, newsletter: news };
     } else {
       // File-based fallback
       return this.getGameStateFromFile();
     }
   }
+
+  // Newsletter persistence
+  private readNewsletterState(): NewsletterState {
+    try {
+      if (fs.existsSync(this.newsletterFile)) {
+        const raw = fs.readFileSync(this.newsletterFile, 'utf-8');
+        const data = JSON.parse(raw);
+        return data as NewsletterState;
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to read newsletter file:', e);
+    }
+    return { newsletters: [], currentNewsletter: undefined };
+  }
+
+  private writeNewsletterState(news: NewsletterState): void {
+    try {
+      fs.writeFileSync(this.newsletterFile, JSON.stringify(news, null, 2));
+    } catch (e) {
+      console.warn('⚠️ Failed to write newsletter file:', e);
+    }
+  }
+
+  public getNewsletterState(): NewsletterState { return this.readNewsletterState(); }
+  public setNewsletterState(n: NewsletterState): void { this.writeNewsletterState(n); }
 
   async updateGameState(gameState: GameState, skipValidation: boolean = false): Promise<void> {
     if (this.useDatabase && this.prisma) {
@@ -866,14 +918,14 @@ export class DatabaseService {
         console.log(`✅ Map data creation completed: ${totalCreated} hexes created`);
         // Create new tribes (only for users that exist)
         console.log(`👥 Creating ${gameState.tribes.length} tribes...`);
-        
+
         // Get all existing user IDs to validate foreign key constraints
         const existingUsers = await tx.user.findMany({ select: { id: true } });
         const existingUserIds = new Set(existingUsers.map(u => u.id));
-        
+
         let createdTribes = 0;
         let skippedTribes = 0;
-        
+
         for (const tribe of gameState.tribes) {
           // Check if the playerId exists in the database (skip this check for AI tribes)
           if (!tribe.isAI && !existingUserIds.has(tribe.playerId)) {
@@ -886,7 +938,7 @@ export class DatabaseService {
           if (tribe.isAI) {
             console.log(`🤖 Processing AI tribe: ${tribe.tribeName} (${tribe.aiType}) with playerId: ${tribe.playerId}`);
           }
-          
+
           try {
             // Use upsert to handle existing tribes gracefully
             await tx.tribe.upsert({

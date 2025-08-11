@@ -30,10 +30,14 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
   const outpostOwnerId: string | null = React.useMemo(() => {
     if (!poi || poi.type !== POIType.Outpost) return null;
     const s = String(poi.id || '');
-    const idx = s.indexOf('poi-outpost-');
+    const prefix = 'poi-outpost-';
+    const idx = s.indexOf(prefix);
     if (idx === -1) return null;
-    const rest = s.slice(idx + 'poi-outpost-'.length);
-    return rest.split('-')[0] || null;
+    const rest = s.slice(idx + prefix.length);
+    // Tribe IDs may contain hyphens; take everything before the last '-' as tribeId
+    const lastDash = rest.lastIndexOf('-');
+    if (lastDash === -1) return null;
+    return rest.slice(0, lastDash) || null;
   }, [poi]);
 
   const ownerTribe: Tribe | undefined = React.useMemo(() => {

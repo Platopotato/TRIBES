@@ -1245,8 +1245,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 }
 
 
-// Minimal Build Outpost: spend 20 scrap, use 5 troops from a garrison, requires visible hex. Adds Outpost POI (shield marker via legend).
-function processBuildOutpostAction(tribe: any, action: any, state: any): string {
+// NOTE: Legacy immediate Build Outpost implementation removed; journey-based version above is authoritative.
     const startRaw = action.actionData?.start_location;
     const targetRaw = action.actionData?.target_location;
     const builders = Math.max(0, parseInt(action.actionData?.troops ?? '5'));
@@ -1298,8 +1297,6 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
         }
     }
 
-    return `❌ Build Outpost failed: Could not update target hex.`;
-}
 
 function processRestAction(tribe: any, action: any): string {
     // Initialize morale if not set

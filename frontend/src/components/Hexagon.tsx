@@ -50,7 +50,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     [-width / 2, size / 2],
     [-width / 2, -size / 2],
   ].map(p => `${p[0]},${p[1]}`).join(' ');
-  
+
   const getPresenceIndicator = () => {
     if (!tribesOnHex || tribesOnHex.length === 0) return null;
     const hexCoords = formatHexCoords(q, r);
@@ -58,13 +58,13 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     const getTroopBoxStyle = (tribe: Tribe) => {
         if (!playerTribe) return 'bg-slate-600/80';
         if (tribe.id === playerTribe.id) return 'bg-green-700/80';
-        
+
         const status = playerTribe.diplomacy[tribe.id]?.status;
         if (status === DiplomaticStatus.Alliance) return 'bg-blue-800/80';
         if (status === DiplomaticStatus.War) return 'bg-red-800/80';
         return 'bg-yellow-800/80';
     };
-    
+
     // Simple rendering for single tribe
     if (tribesOnHex.length === 1) {
         const tribe = tribesOnHex[0];
@@ -72,7 +72,12 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         const troops = garrison?.troops ?? 0;
         const chiefCount = garrison?.chiefs?.length ?? 0;
         const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
-        
+
+        // If this hex also has an Outpost, suppress the large garrison display in favor of the mini overlay on the POI
+        if (poi?.type === POIType.Outpost) {
+            return null;
+        }
+
         return (
             <g className="pointer-events-none transform-gpu transition-transform group-hover:-translate-y-1 duration-200">
                 <circle
@@ -160,7 +165,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         </g>
     );
   };
-  
+
   const getFillColor = () => {
     if (isPoliticalMode) {
         if (politicalData) {
@@ -206,15 +211,15 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         className={`transition-colors duration-100 stroke-black/50 group-hover:stroke-amber-400`}
         strokeWidth={isSelectable ? 1.2 : 0.5}
       />
-      
+
       {!isPoliticalMode && isInPlayerInfluence && hexData.terrain !== 'Water' && (
-        <polygon 
+        <polygon
             points={points}
             className="fill-green-400/10 stroke-green-400/30 pointer-events-none"
             strokeWidth="0.5"
         />
       )}
-      
+
       {!isPoliticalMode && poi && !isFogged && (
         <g className="pointer-events-none" style={poi.rarity === 'Very Rare' ? { filter: 'url(#poi-glow)' } : {}}>
             <polygon
@@ -231,6 +236,23 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
+                {poi.type === POIType.Outpost && tribesOnHex && tribesOnHex.length === 1 && (() => {
+                  const tribe = tribesOnHex[0];
+                  const hexCoords = formatHexCoords(q, r);
+                  const g = tribe.garrisons?.[hexCoords];
+                  const troops = g?.troops ?? 0;
+                  if (troops <= 0) return null;
+                  const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
+                  return (
+                    <g transform={`translate(${size * -0.45}, ${-size * 0.45})`}>
+                      <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
+                      <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
+                      <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
+                      <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>{troops}</text>
+                    </g>
+                  );
+                })()}
+
             {poi.type === POIType.Outpost && outpostOwnerId && (
               <g transform={`translate(${size * 0.45}, ${-size * 0.45})`}>
                 <circle cx="0" cy="0" r={size * 0.22} fill="#111827" stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />

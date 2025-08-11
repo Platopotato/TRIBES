@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Tribe, GameAction, HexData, User, GamePhase, Garrison, ChiefRequest, AssetRequest, ActionType, Journey, DiplomaticProposal, TurnDeadline } from '@radix-tribes/shared';
 import Header from './Header';
 import ResourcePanel from './ResourcePanel';
+import TurnDeadline from './TurnDeadline';
 import TribeStats from './TribeStats';
 import ActionPanel from './ActionPanel';
 import MapView from './MapView';
@@ -456,11 +457,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             </h1>
             <div className="flex flex-col space-y-1">
               <p className={`text-slate-400 ${shouldUseMobileUI ? 'text-sm' : 'text-base'}`}>Turn {turn}</p>
-              {turnDeadline && (
-                <div className="text-xs font-medium text-amber-400">
-                  📅 {new Date(turnDeadline.deadline).toLocaleDateString()} • ⏰ {new Date(turnDeadline.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </div>
-              )}
+              <TurnDeadline turnDeadline={turnDeadline} currentTurn={turn} />
             </div>
           </div>
           <div className="flex items-center gap-4">

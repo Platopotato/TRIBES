@@ -38,6 +38,18 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         globalCombatAttackBonus: 0,
         globalCombatDefenseBonus: 0,
         terrainDefenseBonus: {},
+// Diplomacy helpers
+function isAtWar(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'War' || s2 === 'War';
+}
+function isAllied(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'Alliance' || s2 === 'Alliance';
+}
+
     };
 
     // Assets
@@ -358,8 +370,8 @@ function processActiveJourneys(state: any): void {
     for (const [destKey, entries] of Object.entries(arrivalsByDest)) {
         // If only one arrival and no non-allied occupant, use existing move arrival
         const occupants = state.tribes.filter((t: any) => t.garrisons && t.garrisons[destKey]);
-        const nonAlliedOccupant = occupants.find((t: any) => entries.some(e => (t.id !== e.tribe.id) && (t.diplomacy?.[e.tribe.id]?.status !== DiplomaticStatus.Alliance) && (e.tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance)));
-        if (!nonAlliedOccupant && (entries as any[]).length === 1) {
+        const hostileOccupant = occupants.find((t: any) => entries.some(e => !isAllied(t, e.tribe) && isAtWar(t, e.tribe)));
+        if (!hostileOccupant && (entries as any[]).length === 1) {
             const { journey, tribe } = (entries as any[])[0];
             resolveMoveArrival(journey, tribe, state);
         } else {
@@ -375,7 +387,7 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
 
     // If destination is occupied, only fight non-allies; allies may stack
     const occupantTribes = state.tribes.filter((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
-    const enemyTribe = occupantTribes.find((t: any) => (t.diplomacy?.[tribe.id]?.status !== DiplomaticStatus.Alliance) && (tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance));
+    const enemyTribe = occupantTribes.find((t: any) => !isAllied(t, tribe) && isAtWar(t, tribe));
     if (enemyTribe) {
         resolveCombatOnArrival(journey, tribe, enemyTribe, state, destKey);
         return;
@@ -384,6 +396,15 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // Otherwise, stack with allies or empty hex: create/update your garrison
     if (!tribe.garrisons[destKey]) {
         tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+    }
+
+    // Narrative for neutral stacking (no combat)
+    if (occupantTribes.length > 0 && !enemyTribe) {
+        const occupantNames = occupantTribes.map((t: any) => t.tribeName).join(' and ');
+        tribe.lastTurnResults.push({ id: `move-stack-${Date.now()}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Entered ${destKey} where ${occupantNames} are present. No hostilities — forces keep a wary distance and share the ground for now.` });
+        occupantTribes.forEach((t: any) => {
+            t.lastTurnResults.push({ id: `move-stack-${Date.now()}-${tribe.id}`, actionType: ActionType.Move, actionData: {}, result: `👀 ${tribe.tribeName} entered ${destKey}. No treaty exists — both sides maintain watchful positions.` });
+        });
     }
 
     const destGarrison = tribe.garrisons[destKey];
@@ -422,7 +443,7 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
     }
 
     // Include existing occupant (defender) if any non-allied tribe currently holds the hex
-    const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey] && Array.from(arrivalsByTribe.values()).some(a => (a.tribe.id !== t.id) && (t.diplomacy?.[a.tribe.id]?.status !== DiplomaticStatus.Alliance) && (a.tribe.diplomacy?.[t.id]?.status !== DiplomaticStatus.Alliance)));
+    const occupant = state.tribes.find((t: any) => t.garrisons && t.garrisons[destKey] && Array.from(arrivalsByTribe.values()).some(a => (a.tribe.id !== t.id) && !isAllied(t, a.tribe) && isAtWar(t, a.tribe)));
     const sides: Array<{ kind: 'arrival' | 'occupant', tribe: any, troops: number, weapons: number, chiefs: any[], sampleJourney?: any }>= [];
     if (occupant) {
         const g = occupant.garrisons[destKey];
@@ -493,6 +514,24 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
     }
 
     // Apply losses
+    // If multiple neutral arrivals and no occupant/hostility, narrate standoff
+    if (!occupant && arrivals.length > 1) {
+        const parties = Array.from(arrivalsByTribe.values()).map(e => e.tribe.tribeName).join(', ');
+        arrivals.forEach(({ tribe }) => {
+            tribe.lastTurnResults.push({ id: `contest-neutral-${destKey}-${tribe.id}-${state.turn}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Contested arrival at ${destKey}: ${parties} arrive simultaneously. No sides are at war — forces spread out and keep watch. The hex remains shared for now.` });
+        });
+        // Peaceful stack: add forces to each tribe’s own garrison at the hex
+        for (const entry of arrivalsByTribe.values()) {
+            if (!entry.tribe.garrisons[destKey]) entry.tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            const g = entry.tribe.garrisons[destKey];
+            g.troops += entry.troops;
+            g.weapons = (g.weapons || 0) + (entry.weapons || 0);
+            if (!g.chiefs) g.chiefs = [];
+            g.chiefs.push(...(entry.chiefs || []));
+        }
+        return;
+    }
+
     for (const s of sides) {
         const L = lossesByTribe[s.tribe.id];
         s.troops -= L.troops;

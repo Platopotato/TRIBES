@@ -29,13 +29,19 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
 
   const outpostOwnerId: string | null = React.useMemo(() => {
     if (!poi || poi.type !== POIType.Outpost) return null;
-    // poi.id is like "poi-outpost-<tribeId>-<hex>"
     const s = String(poi.id || '');
     const idx = s.indexOf('poi-outpost-');
     if (idx === -1) return null;
     const rest = s.slice(idx + 'poi-outpost-'.length);
     return rest.split('-')[0] || null;
   }, [poi]);
+
+  const ownerTribe: Tribe | undefined = React.useMemo(() => {
+    if (!outpostOwnerId) return undefined;
+    if (playerTribe && String(playerTribe.id) === String(outpostOwnerId)) return playerTribe;
+    const fromVisible = (tribesOnHex || []).find(t => String(t.id) === String(outpostOwnerId));
+    return fromVisible;
+  }, [outpostOwnerId, playerTribe, tribesOnHex]);
   const width = Math.sqrt(3) * size;
   const height = 2 * size;
 
@@ -240,20 +246,23 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
-                {poi.type === POIType.Outpost && tribesOnHex && tribesOnHex.length > 0 && (() => {
+                {poi.type === POIType.Outpost && (() => {
               // Render a small stacked overlay for each tribe garrison present on this Outpost
               const overlays = [] as JSX.Element[];
               const hexCoords = formatHexCoords(q, r);
               const yStep = size * 0.3;
               const startY = -size * 0.45;
-              (tribesOnHex || []).forEach((tribe, idx) => {
+              // start with visible tribes, but ensure ownerTribe is included if not already present (string-safe compare)
+              const base = [...(tribesOnHex || [])];
+              if (ownerTribe && !base.some(t => String(t.id) === String(ownerTribe.id))) base.push(ownerTribe);
+              base.forEach((tribe, idx) => {
                 const g = tribe.garrisons?.[hexCoords];
                 const troops = g?.troops ?? 0;
                 const chiefs = g?.chiefs?.length ?? 0;
                 if (troops <= 0) return;
                 const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
                 overlays.push(
-                  <g key={`op-g-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + idx * yStep})`}>
+                  <g key={`op-g-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + overlays.length * yStep})`}>
                     <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
                     <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
                     <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
@@ -272,14 +281,12 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             {poi.type === POIType.Outpost && outpostOwnerId && (
               <g transform={`translate(${size * 0.45}, ${-size * 0.45})`}>
                 <circle cx="0" cy="0" r={size * 0.22} fill="#111827" stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
-                {/* owner tribe badge if visible on hex */}
-                {(() => {
-                  const owner = (tribesOnHex || []).find(t => t.id === outpostOwnerId);
-                  if (!owner) return null;
-                  const icon = TRIBE_ICONS[owner.icon] || TRIBE_ICONS['castle'];
+                {/* owner tribe badge (falls back to playerTribe if they own the outpost) */}
+                {ownerTribe && (() => {
+                  const icon = TRIBE_ICONS[ownerTribe.icon] || TRIBE_ICONS['castle'];
                   return (
                     <>
-                      <circle cx="0" cy="0" r={size * 0.18} fill={owner.color} />
+                      <circle cx="0" cy="0" r={size * 0.18} fill={ownerTribe.color} />
                       <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">
                         {icon}
                       </text>

@@ -38,19 +38,8 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         globalCombatAttackBonus: 0,
         globalCombatDefenseBonus: 0,
         terrainDefenseBonus: {},
-// Diplomacy helpers
-function isAtWar(a: any, b: any): boolean {
-    const s1 = a?.diplomacy?.[b?.id]?.status;
-    const s2 = b?.diplomacy?.[a?.id]?.status;
-    return s1 === 'War' || s2 === 'War';
-}
-function isAllied(a: any, b: any): boolean {
-    const s1 = a?.diplomacy?.[b?.id]?.status;
-    const s2 = b?.diplomacy?.[a?.id]?.status;
-    return s1 === 'Alliance' || s2 === 'Alliance';
-}
-
     };
+
 
     // Assets
     for (const assetName of tribe.assets || []) {
@@ -84,6 +73,19 @@ function isAllied(a: any, b: any): boolean {
     }
 
     return effects;
+
+// Diplomacy helpers (module scope)
+function isAtWar(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'War' || s2 === 'War';
+}
+function isAllied(a: any, b: any): boolean {
+    const s1 = a?.diplomacy?.[b?.id]?.status;
+    const s2 = b?.diplomacy?.[a?.id]?.status;
+    return s1 === 'Alliance' || s2 === 'Alliance';
+}
+
 }
 
 // --- COORDINATE CONVERSION UTILITIES ---
@@ -401,9 +403,41 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // Narrative for neutral stacking (no combat)
     if (occupantTribes.length > 0 && !enemyTribe) {
         const occupantNames = occupantTribes.map((t: any) => t.tribeName).join(' and ');
-        tribe.lastTurnResults.push({ id: `move-stack-${Date.now()}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Entered ${destKey} where ${occupantNames} are present. No hostilities — forces keep a wary distance and share the ground for now.` });
+        const flavor = describeNeutralEncounter(tribe, occupantTribes[0], destKey, state);
+        tribe.lastTurnResults.push({ id: `move-stack-${Date.now()}`, actionType: ActionType.Move, actionData: {}, result: `🤝 Entered ${destKey} where ${occupantNames} are present. No hostilities — ${flavor}` });
         occupantTribes.forEach((t: any) => {
-            t.lastTurnResults.push({ id: `move-stack-${Date.now()}-${tribe.id}`, actionType: ActionType.Move, actionData: {}, result: `👀 ${tribe.tribeName} entered ${destKey}. No treaty exists — both sides maintain watchful positions.` });
+    // Flavor helpers
+    function getTerrainAt(hexKey: string, state: any): TerrainType | undefined {
+        try {
+            const { q, r } = parseHexCoords(hexKey);
+            const h = state.mapData.find((x: any) => x.q === q && x.r === r);
+            return h?.terrain as TerrainType | undefined;
+        } catch { return undefined; }
+    }
+    function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, state: any): string {
+        const terr = getTerrainAt(destKey, state);
+        const a = tribeA.garrisons[destKey] || { troops: 0, chiefs: [] };
+        const b = tribeB.garrisons[destKey] || { troops: 0, chiefs: [] };
+        const chiefsLine = (a.chiefs?.length || 0) + (b.chiefs?.length || 0) > 0 ? ' banners and escorts visible' : '';
+        const byTerr: Record<string, string> = {
+            Plains: 'dust plumes drift across the plain',
+            Desert: 'heat-haze shimmers between patrol lines',
+            Forest: 'shadows trade places between treelines',
+            Mountains: 'echoes roll across the rock faces',
+            Ruins: 'ruined walls bristle with lookouts',
+            Swamp: 'mire and reed beds swallow any advance',
+            Wasteland: 'ash and wind drown out the sentries',
+            Crater: 'scarred ground offers broken cover',
+            Radiation: 'counters tick under hushed voices',
+            Water: 'shorelines and barges set a tense divide',
+        };
+        const terrLine = terr ? byTerr[terr] || 'the ground between them lies tense and silent' : 'the ground between them lies tense and silent';
+        const sizeHint = (a.troops + b.troops) > 40 ? 'large formations' : (a.troops + b.troops) > 12 ? 'companies' : 'small detachments';
+        return `${sizeHint} hold position — ${terrLine},${chiefsLine}.`;
+    }
+
+            const flavorB = describeNeutralEncounter(t, tribe, destKey, state);
+            t.lastTurnResults.push({ id: `move-stack-${Date.now()}-${tribe.id}`, actionType: ActionType.Move, actionData: {}, result: `👀 ${tribe.tribeName} entered ${destKey}. No treaty exists — ${flavorB}` });
         });
     }
 
@@ -497,6 +531,17 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
         const roll = seededRandom(`${seedBase}:${s.tribe.id}`) * Math.max(0.0001, strength);
         rolls.push({ sideIndex: i, roll, strength });
     }
+    // If some arrivals are at war but others are neutral, narrate the break while combat resolver proceeds
+    const warringPairs = arrivalEntries.flatMap((a, i) => arrivalEntries.slice(i + 1).map(b => ({ a, b })).filter(({ a, b }) => isAtWar(a.tribe, b.tribe)));
+    if (warringPairs.length === 0 && occupant && !Array.from(arrivalsByTribe.values()).some(e => isAtWar(e.tribe, occupant))) {
+        // Already handled by allied/neutral stacking block earlier
+    } else if (warringPairs.length > 0) {
+        const parties = Array.from(new Set(warringPairs.flatMap(p => [p.a.tribe.tribeName, p.b.tribe.tribeName])));
+        for (const entry of arrivalsByTribe.values()) {
+            entry.tribe.lastTurnResults.push({ id: `contest-war-spark-${destKey}-${entry.tribe.id}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Tension snaps at ${destKey}: ${parties.join(' vs ')} engage while others scatter for cover.` });
+        }
+    }
+
 
     // Determine winner
     rolls.sort((a, b) => b.roll - a.roll);

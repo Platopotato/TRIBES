@@ -22,6 +22,37 @@ function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'comba
 
 import { generateAIActions } from '../ai/aiActions.js';
 
+// Outpost helpers (module scope)
+function getOutpostOwnerTribeId(hex: any): string | null {
+  const poi = hex?.poi;
+  if (!poi || poi.type !== POIType.Outpost) return null;
+  const s = String(poi.id || '');
+  const idx = s.indexOf('poi-outpost-');
+  if (idx === -1) return null;
+  const rest = s.slice(idx + 'poi-outpost-'.length);
+  return rest.split('-')[0] || null;
+}
+function setOutpostOwner(hex: any, ownerId: string, hexKey: string) {
+  if (!hex?.poi || hex.poi.type !== POIType.Outpost) return;
+  hex.poi.id = `poi-outpost-${ownerId}-${hexKey}`;
+}
+function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ignoreKey?: string): { blockedAt: string, ownerId: string } | null {
+  for (const key of path) {
+    if (ignoreKey && convertToStandardFormat(key) === convertToStandardFormat(ignoreKey)) continue;
+    const { q, r } = parseHexCoords(key);
+    const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+    if (!hex?.poi || hex.poi.type !== POIType.Outpost) continue;
+    const ownerId = getOutpostOwnerTribeId(hex);
+    if (!ownerId) continue;
+    const owner = state.tribes.find((t: any) => t.id === ownerId);
+    if (!owner) continue;
+    if (!isAllied(tribe, owner)) {
+      return { blockedAt: key, ownerId };
+    }
+  }
+  return null;
+}
+
 // Combined effects system pulling from assets and ration effects
 interface CombinedEffects {
     movementSpeedBonus: number; // multiplier

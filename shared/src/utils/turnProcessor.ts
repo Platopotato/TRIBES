@@ -396,6 +396,8 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     if (!tribe.exploredHexes.includes(destKey)) {
         tribe.exploredHexes.push(destKey);
     }
+}
+
 // Deterministic random from seed string (FNV-1a hash -> [0,1))
 function seededRandom(seed: string): number {
     let h = 2166136261;
@@ -456,7 +458,7 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
     // Terrain context
     const { q, r } = parseHexCoords(destKey);
     const defHex = state.mapData.find((h: any) => h.q === q && h.r === r) || null;
-    const terrain = defHex ? defHex.terrain : undefined;
+    const terrain = defHex ? (defHex.terrain as TerrainType) : undefined;
 
     // Compute deterministic rolls per side
     const seedBase = `${state.turn}:${destKey}`;
@@ -468,7 +470,7 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
         const base = (s.troops + (s.weapons || 0)) * (1 + (effects.globalCombatAttackBonus || 0)) * ration;
         let defBonus = 0;
         if (s.kind === 'occupant' && terrain) {
-            defBonus += (effects.terrainDefenseBonus[terrain] || 0);
+            defBonus += (effects.terrainDefenseBonus[terrain as TerrainType] || 0);
         }
         const strength = base * (1 + defBonus);
         const roll = seededRandom(`${seedBase}:${s.tribe.id}`) * Math.max(0.0001, strength);

@@ -6,6 +6,24 @@ import { ACTION_DEFINITIONS, ActionField } from './actionDefinitions';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { findPath, parseHexCoords, formatHexCoords } from '../../lib/mapUtils';
+// Helper that tolerates both "051.044" and "q,r" style coords
+const parseAnyCoords = (coords: string): { q: number, r: number } => {
+  if (!coords || typeof coords !== 'string') return { q: NaN as any, r: NaN as any };
+  if (coords.includes('.')) {
+    return parseHexCoords(coords);
+  }
+  if (coords.includes(',')) {
+    const [qStr, rStr] = coords.split(',');
+    return { q: parseInt(qStr.trim()), r: parseInt(rStr.trim()) };
+  }
+  // Fallback: try direct numbers separated by space
+  const parts = coords.trim().split(/\s+/);
+  if (parts.length === 2) {
+    return { q: parseInt(parts[0]), r: parseInt(parts[1]) };
+  }
+  throw new Error(`Unsupported coordinate format: ${coords}`);
+};
+
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -61,8 +79,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
   useEffect(() => {
     if (draftAction?.actionData?.start_location && draftAction?.actionData?.finish_location) {
-        const start = parseHexCoords(draftAction.actionData.start_location);
-        const end = parseHexCoords(draftAction.actionData.finish_location);
+        const start = parseAnyCoords(draftAction.actionData.start_location);
+        const end = parseAnyCoords(draftAction.actionData.finish_location);
         const pathInfo = findPath(start, end, mapData);
         let movementSpeedBonus = 1.0;
         // Apply movement speed bonuses based on assets (mirrors server behavior)
@@ -71,8 +89,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         setTravelTime(eta);
         setPathPreview(pathInfo ? pathInfo.path : null);
     } else if (draftAction?.actionData?.start_location && draftAction?.actionData?.target_location) {
-        const start = parseHexCoords(draftAction.actionData.start_location);
-        const end = parseHexCoords(draftAction.actionData.target_location);
+        const start = parseAnyCoords(draftAction.actionData.start_location);
+        const end = parseAnyCoords(draftAction.actionData.target_location);
         const pathInfo = findPath(start, end, mapData);
         let movementSpeedBonus = 1.0;
         if (draftAction?.actionType === ActionType.Move && tribe.assets?.includes('Dune_Buggy')) movementSpeedBonus *= 1.2;
@@ -104,7 +122,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 	    const start = draftAction?.actionData?.start_location;
 	    const dest = selectedHexForDisplay && selectedHexForDisplay !== 'Selecting...' ? selectedHexForDisplay : null;
 	    if (start && dest) {
-	      const pathInfo = findPath(parseHexCoords(start), parseHexCoords(dest), mapData);
+	      const pathInfo = findPath(parseAnyCoords(start), parseAnyCoords(dest), mapData);
 	      let movementSpeedBonus = 1.0;
 	      // Apply movement speed bonuses based on assets (mirrors server behavior)
 	      if (tribe.assets?.includes('Dune_Buggy')) movementSpeedBonus *= 1.2;
@@ -206,7 +224,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           newActionData['target_tribe_id'] = tribeId;
           const start = newActionData.start_location;
           if (start) {
-              const pathInfo = findPath(parseHexCoords(start), parseHexCoords(location), mapData);
+              const pathInfo = findPath(parseAnyCoords(start), parseAnyCoords(location), mapData);
               setTravelTime(pathInfo?.cost ?? null);
               setPathPreview(pathInfo ? pathInfo.path : null);
           }

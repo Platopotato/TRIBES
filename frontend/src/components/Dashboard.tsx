@@ -23,6 +23,8 @@ import JourneysPanel from './JourneysPanel';
 import DiplomacyPanel from './DiplomacyPanel';
 import Leaderboard from './Leaderboard';
 
+import { formatHexCoords, parseHexCoords } from '../lib/mapUtils';
+
 // Global type for field name and callback storage
 declare global {
   interface Window {
@@ -299,9 +301,8 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
   }, [playerTribe, plannedActions]);
 
-  const formatHexCoords = (q: number, r: number): string => {
-    return `${q},${r}`;
-  };
+  // Use shared standard key format NNN.NNN
+  const formatHex = (q: number, r: number): string => formatHexCoords(q, r);
 
   const handleAddAction = (action: GameAction) => {
     setPlannedActions(prev => [...prev, action]);
@@ -377,7 +378,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     console.log('🔥 DASHBOARD handleSelectHex CALLED:', { q, r });
     console.log('🔥 DASHBOARD handleSelectHex - mapSelectionMode at start:', mapSelectionMode);
 
-    const location = formatHexCoords(q, r);
+    const location = formatHex(q, r);
     setSelectedHex(location);
 
     console.log('🔥 FORMATTED LOCATION:', location);
@@ -1181,7 +1182,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     return;
                   }
 
-                  const location = formatHexCoords(q, r);
+                  const location = formatHex(q, r);
                   console.log('🔥 ACTION MODAL formatted location:', location);
                   console.log('🔥 ACTION MODAL mapSelectionMode:', mapSelectionMode);
 
@@ -1263,7 +1264,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 console.log('🔥 DASHBOARD: Hex selected for ActionModal:', location);
                 console.log('🔥 DASHBOARD: Setting pending hex selection');
                 // Parse the location to get q,r coordinates
-                const [q, r] = location.split(',').map(Number);
+                const { q, r } = parseHexCoords(location);
                 console.log('🔥 DASHBOARD: Parsed coordinates:', { q, r });
                 setPendingHexSelection({ q, r });
 
@@ -1344,7 +1345,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               startingLocations={startingLocations}
               selectionMode={mapSelectionMode.active}
               onHexSelect={(q, r) => {
-                const location = formatHexCoords(q, r);
+                const location = formatHex(q, r);
                 const hexData = mapData.find(hex => hex.q === q && hex.r === r);
                 if (hexData) {
                   setSelectedHexInfo({ q, r, terrain: hexData.terrain });
@@ -1370,7 +1371,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                       e.preventDefault();
                       e.stopPropagation();
                       // Confirm selection
-                      const location = formatHexCoords(pendingHexSelection.q, pendingHexSelection.r);
+                      const location = formatHex(pendingHexSelection.q, pendingHexSelection.r);
                       if (mapSelectionMode.onSelect) {
                         mapSelectionMode.onSelect(location);
                       }
@@ -1383,7 +1384,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                       e.preventDefault();
                       e.stopPropagation();
                       // Confirm selection
-                      const location = formatHexCoords(pendingHexSelection.q, pendingHexSelection.r);
+                      const location = formatHex(pendingHexSelection.q, pendingHexSelection.r);
                       if (mapSelectionMode.onSelect) {
                         mapSelectionMode.onSelect(location);
                       }

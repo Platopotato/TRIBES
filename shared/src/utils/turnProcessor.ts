@@ -168,6 +168,34 @@ export function processGlobalTurn(gameState: GameState): GameState {
 	function normalizeTribeCoordinates(tribe: any) {
 	  const normalized: Record<string, any> = {};
 	  Object.entries(tribe.garrisons || {}).forEach(([key, gar]: any) => {
+// Outpost helpers
+function getOutpostOwnerTribeId(hex: any): string | null {
+    const poi = hex?.poi;
+    if (!poi || poi.type !== POIType.Outpost) return null;
+    // id format from builder: poi-outpost-<tribeId>-<hex>
+    const parts = String(poi.id || '').split('poi-outpost-');
+    if (parts.length < 2) return null;
+    const rest = parts[1];
+    const owner = rest.split('-')[0];
+    return owner || null;
+}
+function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ignoreKey?: string): { blockedAt: string, ownerId: string } | null {
+    for (const key of path) {
+        if (ignoreKey && convertToStandardFormat(key) === convertToStandardFormat(ignoreKey)) continue;
+        const { q, r } = parseHexCoords(key);
+        const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+        if (!hex?.poi || hex.poi.type !== POIType.Outpost) continue;
+        const ownerId = getOutpostOwnerTribeId(hex);
+        if (!ownerId) continue;
+        const owner = state.tribes.find((t: any) => t.id === ownerId);
+        if (!owner) continue;
+        if (!isAllied(tribe, owner)) {
+            return { blockedAt: key, ownerId };
+        }
+    }
+    return null;
+}
+
 	    const std = convertToStandardFormat(String(key));
 	    if (!normalized[std]) normalized[std] = { troops: 0, weapons: 0, chiefs: [] };
 	    normalized[std].troops += gar.troops || 0;
@@ -363,6 +391,33 @@ function processActiveJourneys(state: any): void {
     const newJourneys: any[] = [];
 
     // First pass: advance journeys and collect those that arrive now
+function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void {
+    const destKey = convertToStandardFormat(journey.destination);
+    const { q, r } = parseHexCoords(destKey);
+    const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+    if (!hex) {
+        tribe.lastTurnResults.push({ id: `outpost-arrival-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `❌ Outpost arrival failed at ${destKey}: hex not found.` });
+        return;
+    }
+    if (hex.terrain === 'Water') {
+        tribe.lastTurnResults.push({ id: `outpost-arrival-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `❌ Outpost arrival failed: cannot build on Water.` });
+        return;
+    }
+    if (hex.poi?.type === POIType.Outpost) {
+        tribe.lastTurnResults.push({ id: `outpost-arrival-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `❌ Outpost arrival failed: another outpost already exists at ${destKey}.` });
+        return;
+    }
+    // Found the outpost
+    hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
+    if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+    tribe.garrisons[destKey].troops += (journey.force.troops || 0);
+    tribe.garrisons[destKey].weapons += (journey.force.weapons || 0);
+    if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+    tribe.garrisons[destKey].chiefs.push(...(journey.force.chiefs || []));
+
+    tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders remain as the garrison.` });
+}
+
     const arrivalsByDest: Record<string, Array<{ journey: any, tribe: any }>> = {};
 
     state.journeys = state.journeys.filter((journey: any) => {
@@ -382,7 +437,7 @@ function processActiveJourneys(state: any): void {
             const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
             if (tribe) {
                 const destKey = convertToStandardFormat(journey.destination);
-                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack || journey.type === JourneyType.BuildOutpost) {
                     // Collect arrivals to resolve contested hexes in a second pass
                     if (!arrivalsByDest[destKey]) arrivalsByDest[destKey] = [];
                     arrivalsByDest[destKey].push({ journey, tribe });
@@ -421,7 +476,11 @@ function processActiveJourneys(state: any): void {
         const hostileOccupant = occupants.find((t: any) => entries.some(e => !isAllied(t, e.tribe) && isAtWar(t, e.tribe)));
         if (!hostileOccupant && (entries as any[]).length === 1) {
             const { journey, tribe } = (entries as any[])[0];
-            resolveMoveArrival(journey, tribe, state);
+            if (journey.type === JourneyType.BuildOutpost) {
+                resolveBuildOutpostArrival(journey, tribe, state);
+            } else {
+                resolveMoveArrival(journey, tribe, state);
+            }
         } else {
             resolveContestedArrivalAtHex(destKey as string, entries as Array<{journey:any, tribe:any}>, state);
         }
@@ -1043,7 +1102,7 @@ function processRecruitAction(tribe: any, action: any): string {
     }
 
 
-// Minimal Build Outpost: spend 20 scrap, use 5 troops from a garrison, requires visible hex. Adds Outpost POI (shield marker via legend).
+// Build Outpost: require 5 troops, 20 scrap; builders travel along path; on arrival they found an Outpost and remain as garrison.
 function processBuildOutpostAction(tribe: any, action: any, state: any): string {
     const startRaw = action.actionData?.start_location;
     const targetRaw = action.actionData?.target_location;
@@ -1055,10 +1114,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
     const start = convertToStandardFormat(startRaw);
     const target = convertToStandardFormat(targetRaw);
 
-    // Visibility: require target in tribe.exploredHexes
-    if (!Array.isArray(tribe.exploredHexes) || !tribe.exploredHexes.includes(target)) {
-        return `❌ Build Outpost failed: Target hex ${target} is not visible.`;
-    }
+    // No strict visibility requirement; builders can travel to construct
 
     // Terrain check: disallow Water
     let terrainOk = true;
@@ -1072,9 +1128,9 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
 
     // Cost and garrison checks
     if ((tribe.globalResources?.scrap ?? 0) < 20) return `❌ Build Outpost failed: Need 20 scrap.`;
-    const garrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
-    if (!garrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
-    if ((garrison.troops ?? 0) < 5 || builders < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
+    let buildGarrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
+    if (!buildGarrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
+    if ((buildGarrison.troops ?? 0) < 5 || builders < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
 
     // Ensure we do not already have an Outpost POI at target
     if (state?.mapData) {
@@ -1085,18 +1141,47 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
             if (hex.poi?.type === POIType.Outpost) {
                 return `❌ Build Outpost failed: An Outpost already exists at ${target}.`;
             }
-            // Deduct costs
-            tribe.globalResources.scrap -= 20;
-            garrison.troops -= 5;
-            // Place Outpost POI (shield symbol provided by POI_SYMBOLS/POI_COLORS mapping)
-            hex.poi = { id: `poi-outpost-${tribe.id}-${target}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
-            // Optional: mark explored (already required)
-            if (!tribe.exploredHexes.includes(target)) tribe.exploredHexes.push(target);
-            return `🛡️ Outpost established at ${target}. Spent 20 scrap and assigned 5 builders.`;
         }
     }
 
-    return `❌ Build Outpost failed: Could not update target hex.`;
+    // Enforce costs and spawn a BuildOutpost journey that founds the outpost on arrival
+    if ((tribe.globalResources?.scrap ?? 0) < 20) return `❌ Build Outpost failed: Need 20 scrap.`;
+    buildGarrison = tribe.garrisons[start] || tribe.garrisons[convertToStandardFormat(start)];
+    if (!buildGarrison) return `❌ Build Outpost failed: No garrison at ${start}.`;
+    if ((buildGarrison.troops ?? 0) < 5) return `❌ Build Outpost failed: Requires at least 5 builders at ${start}.`;
+
+    const pathInfo = findPath(parseHexCoords(start), parseHexCoords(target), state.mapData);
+    if (!pathInfo) return `❌ Build Outpost failed: No route from ${start} to ${target}.`;
+    const blockade = pathBlockedByHostileOutpost(pathInfo.path, tribe, state);
+    if (blockade) return `⛔ Build Outpost blocked at ${blockade.blockedAt} by a hostile outpost. Seek alliance or attack to pass.`;
+
+    // Deduct resources and move 5 builders (keepers)
+    tribe.globalResources.scrap -= 20;
+    buildGarrison.troops -= 5;
+
+    const chiefsToMove: string[] = (action.actionData?.chiefsToMove || []).filter((name: string) => (buildGarrison.chiefs || []).some((c: any) => c.name === name));
+    const movingChiefs = (buildGarrison.chiefs || []).filter((c: any) => chiefsToMove.includes(c.name));
+    buildGarrison.chiefs = (buildGarrison.chiefs || []).filter((c: any) => !chiefsToMove.includes(c.name));
+
+    const arrivalTurn = Math.max(1, Math.ceil(pathInfo.cost / getCombinedEffects(tribe).movementSpeedBonus));
+    const journey = {
+        id: `outpost-${Date.now()}-${tribe.id}`,
+        ownerTribeId: tribe.id,
+        type: JourneyType.BuildOutpost,
+        origin: start,
+        destination: target,
+        path: pathInfo.path,
+        currentLocation: pathInfo.path[0],
+        force: { troops: 5, weapons: 0, chiefs: movingChiefs },
+        payload: { food: 0, scrap: 0, weapons: 0 },
+        arrivalTurn,
+        status: 'en_route'
+    };
+    if (!state.journeys) state.journeys = [];
+    if (journey.arrivalTurn > 1 && journey.path.length > 1) { journey.path.shift(); journey.currentLocation = journey.path[0]; }
+    state.journeys.push(journey);
+
+    return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. ETA: ${arrivalTurn} turn(s).`;
 }
 
     // Recruit troops
@@ -1325,6 +1410,11 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     if (!pathInfo) {
         // debug: pathfinding failed
         return `❌ Could not find a path from ${startLocation} to ${destination}. Route may be blocked by impassable terrain.`;
+    }
+    // Outpost blockade check: non-allies cannot pass
+    const blockade = pathBlockedByHostileOutpost(pathInfo.path, tribe, state);
+    if (blockade) {
+        return `⛔ Movement blocked at ${blockade.blockedAt} by a hostile outpost. Seek alliance or attack to pass.`;
     }
 
     // Calculate movement speed with bonuses (assets like Dune_Buggy etc.)

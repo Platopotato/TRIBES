@@ -15,12 +15,17 @@ export function computeCasualties(attTroops: number, attWeapons: number, defTroo
 
   let defCasualtyFrac: number;
   let atkCasualtyFrac: number;
+
+  // For very lopsided battles (>4:1), make casualties more decisive
+  const isLopsided = ratio > 4.0 || ratio < 0.25;
+  const lopsidedBonus = isLopsided ? 1.3 : 1.0; // +30% casualties for overwhelming victories
+
   if (winner === 'attacker') {
-    defCasualtyFrac = intensityBase * (1.0 + Math.min(1.0, ratio - 1) * 0.6) * terrainMitigation * outpostMitigation * rndA;
-    atkCasualtyFrac = (intensityBase * 0.5) * (1.0 - Math.min(0.7, ratio - 1) * 0.5) * rndB;
+    defCasualtyFrac = intensityBase * (1.0 + Math.min(1.5, ratio - 1) * 0.8) * terrainMitigation * outpostMitigation * lopsidedBonus * rndA;
+    atkCasualtyFrac = (intensityBase * 0.4) * (1.0 - Math.min(0.8, ratio - 1) * 0.6) * rndB;
   } else {
-    atkCasualtyFrac = intensityBase * (1.0 + Math.min(1.0, (1/ratio) - 1) * 0.6) * rndA;
-    defCasualtyFrac = (intensityBase * 0.5) * (1.0 - Math.min(0.7, (1/ratio) - 1) * 0.5) * terrainMitigation * outpostMitigation * rndB;
+    atkCasualtyFrac = intensityBase * (1.0 + Math.min(1.5, (1/ratio) - 1) * 0.8) * lopsidedBonus * rndA;
+    defCasualtyFrac = (intensityBase * 0.4) * (1.0 - Math.min(0.8, (1/ratio) - 1) * 0.6) * terrainMitigation * outpostMitigation * rndB;
   }
   const atkLosses = Math.max(1, Math.min(attTroops, Math.floor(attTroops * atkCasualtyFrac)));
   const defLosses = Math.max(1, Math.min(defTroops, Math.floor(defTroops * defCasualtyFrac)));

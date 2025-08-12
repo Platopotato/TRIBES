@@ -803,8 +803,16 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     // Add explicit outpost defensive bonus to win/loss calculation
     const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
-    const attackerRoll = Math.random() * (attackerStrength * atkMult * atkRation);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * defRation * (1 + terrainDefBonus) * outpostDefBonus);
+    // Calculate final effective strengths
+    const finalAttackerStrength = attackerStrength * atkMult * atkRation;
+    const finalDefenderStrength = defenderStrength * defMult * defRation * (1 + terrainDefBonus) * outpostDefBonus;
+
+    // For very lopsided battles (>3:1 ratio), reduce randomness to ensure decisive outcomes
+    const strengthRatio = finalAttackerStrength / finalDefenderStrength;
+    const randomnessFactor = strengthRatio > 3.0 ? 0.3 : 1.0; // Reduce randomness for overwhelming force
+
+    const attackerRoll = (0.5 + Math.random() * randomnessFactor) * finalAttackerStrength;
+    const defenderRoll = (0.5 + Math.random() * randomnessFactor) * finalDefenderStrength;
 
     if (attackerRoll > defenderRoll) {
         // Attacker wins: reduce both sides with higher lethality, capture hex
@@ -2242,8 +2250,16 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     // Add explicit outpost defensive bonus to win/loss calculation
     const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
-    const attackerRoll = Math.random() * (attackerStrength * atkMult * attackerRationMod);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * outpostDefBonus);
+    // Calculate final effective strengths
+    const finalAttackerStrength = attackerStrength * atkMult * attackerRationMod;
+    const finalDefenderStrength = defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * outpostDefBonus;
+
+    // For very lopsided battles (>3:1 ratio), reduce randomness to ensure decisive outcomes
+    const strengthRatio = finalAttackerStrength / finalDefenderStrength;
+    const randomnessFactor = strengthRatio > 3.0 ? 0.3 : 1.0; // Reduce randomness for overwhelming force
+
+    const attackerRoll = (0.5 + Math.random() * randomnessFactor) * finalAttackerStrength;
+    const defenderRoll = (0.5 + Math.random() * randomnessFactor) * finalDefenderStrength;
 
     if (attackerRoll > defenderRoll) {
 

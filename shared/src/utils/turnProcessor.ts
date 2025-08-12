@@ -48,6 +48,31 @@ function getHomeBaseDefensiveBonus(tribe: any, location: string): number {
 
   return bonus;
 }
+
+function checkForEnemyEncounter(journey: any, movingTribe: any, state: any, hexLocation: string): any {
+  // Check if any enemy tribes have garrisons at this hex
+  const enemyTribes = state.tribes.filter((tribe: any) => {
+    if (tribe.id === movingTribe.id) return false;
+    if (!tribe.garrisons || !tribe.garrisons[hexLocation]) return false;
+
+    // Only fight if at war (not neutral or allied)
+    const diplomacy = movingTribe.diplomacy[tribe.id];
+    return !diplomacy || diplomacy.status === 'War';
+  });
+
+  if (enemyTribes.length > 0) {
+    // Found enemy forces - return the first enemy for combat
+    const enemyTribe = enemyTribes[0];
+    const enemyGarrison = enemyTribe.garrisons[hexLocation];
+
+    // Only trigger combat if enemy has meaningful forces
+    if (enemyGarrison.troops > 0 || enemyGarrison.weapons > 0 || (enemyGarrison.chiefs?.length || 0) > 0) {
+      return { enemyTribe, enemyGarrison, location: hexLocation };
+    }
+  }
+
+  return null;
+}
 function getOutpostOwnerTribeId(hex: any): string | null {
   const poi = hex?.poi;
   if (!poi) return null;
@@ -548,11 +573,24 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         // Decrement arrival turn
         journey.arrivalTurn -= 1;
 
-        // Advance journey along path
+        // Advance journey along path and check for enemy encounters
         if (journey.arrivalTurn > 0 && journey.path.length > 1) {
             journey.path.shift(); // Remove current location
             if (journey.path.length > 0) {
-                journey.currentLocation = journey.path[0]; // Move to next hex
+                const nextHex = journey.path[0];
+                journey.currentLocation = nextHex;
+
+                // Check for enemy encounters during movement
+                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+                    const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
+                    if (tribe) {
+                        const enemyEncounter = checkForEnemyEncounter(journey, tribe, state, nextHex);
+                        if (enemyEncounter) {
+                            // Combat interrupts movement - journey will be handled in encounter resolution
+                            return true; // Keep journey for now, will be resolved in encounter processing
+                        }
+                    }
+                }
             }
         }
 
@@ -593,6 +631,10 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
 
     // Add any new journeys created during processing
     state.journeys.push(...newJourneys);
+
+    // Process movement encounters (battles that occur during travel)
+    processMovementEncounters(state);
+
     // Second pass: resolve contested arrivals per destination hex
     for (const [destKey, entries] of Object.entries(arrivalsByDest)) {
         // If only one arrival and no non-allied occupant, use existing move arrival
@@ -610,6 +652,167 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         }
     }
 
+}
+
+function processMovementEncounters(state: any): void {
+    // Find all journeys that might have encountered enemies during movement
+    const encountersToResolve: Array<{journey: any, tribe: any, encounter: any}> = [];
+
+    state.journeys.forEach((journey: any) => {
+        if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+            const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
+            if (tribe) {
+                const encounter = checkForEnemyEncounter(journey, tribe, state, journey.currentLocation);
+                if (encounter) {
+                    encountersToResolve.push({ journey, tribe, encounter });
+                }
+            }
+        }
+    });
+
+    // Resolve each encounter
+    encountersToResolve.forEach(({ journey, tribe, encounter }) => {
+        resolveMovementEncounter(journey, tribe, encounter.enemyTribe, state, encounter.location);
+    });
+}
+
+function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTribe: any, state: any, encounterLocation: string): void {
+    const defenderGarrison = defenderTribe.garrisons[encounterLocation];
+
+    // Use existing combat resolution logic
+    const effects = getCombinedEffects(attackerTribe);
+    const defHex = state.mapData.find((h: any) => {
+        const coords = `${String(50 + h.q).padStart(3, '0')}.${String(50 + h.r).padStart(3, '0')}`;
+        return coords === encounterLocation;
+    });
+
+    let terrainDefBonus = 0;
+    if (defHex?.terrain) {
+        const defEffects = getCombinedEffects(defenderTribe);
+        terrainDefBonus = (defEffects.terrainDefenseBonus as any)[defHex.terrain] || 0;
+    }
+
+    // Combat strength calculation
+    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0) * 1.5;
+    const defenderStrength = (defenderGarrison.troops || 0) + (defenderGarrison.weapons || 0) * 1.5;
+
+    // Apply defensive bonuses
+    const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0;
+    const homeDefBonus = getHomeBaseDefensiveBonus(defenderTribe, encounterLocation);
+    const totalDefBonus = outpostDefBonus * homeDefBonus;
+
+    const finalAttackerStrength = attackerStrength;
+    const finalDefenderStrength = defenderStrength * (1 + terrainDefBonus) * totalDefBonus;
+
+    const attackerWins = finalAttackerStrength > finalDefenderStrength;
+
+    if (attackerWins) {
+        // Attacker wins - continue movement after casualties
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, encounterLocation) }
+        );
+
+        // Apply losses
+        journey.force.troops -= atkLosses;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
+        defenderGarrison.troops -= defLosses;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+
+        // Clean up empty garrison
+        if (defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0 && (defenderGarrison.chiefs?.length || 0) === 0) {
+            delete defenderTribe.garrisons[encounterLocation];
+        }
+
+        // Capture some weapons
+        const capturedWeapons = Math.floor(defWeaponsLoss * 0.3);
+        journey.force.weapons = (journey.force.weapons || 0) + capturedWeapons;
+
+        // Battle narrative
+        attackerTribe.lastTurnResults.push({
+            id: `movement-encounter-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `⚔️ **MOVEMENT ENCOUNTER!** Your forces encountered ${defenderTribe.tribeName} at ${encounterLocation} and fought their way through! **Your losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons. **Enemy losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. Movement continues.`
+        });
+
+        defenderTribe.lastTurnResults.push({
+            id: `movement-encounter-def-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🛡️ **AMBUSH FAILED!** ${attackerTribe.tribeName} forces broke through your position at ${encounterLocation}! **Your losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. **Enemy losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons.`
+        });
+
+        // Journey continues if any forces remain
+        if (journey.force.troops <= 0 && (journey.force.weapons || 0) <= 0) {
+            // Force completely destroyed - remove journey
+            const journeyIndex = state.journeys.findIndex((j: any) => j.id === journey.id);
+            if (journeyIndex >= 0) {
+                state.journeys.splice(journeyIndex, 1);
+            }
+
+            attackerTribe.lastTurnResults.push({
+                id: `movement-destroyed-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `💀 Your forces were completely destroyed in the encounter at ${encounterLocation}. The mission has failed.`
+            });
+        }
+
+    } else {
+        // Defender wins - attacking force retreats or is destroyed
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, encounterLocation) }
+        );
+
+        // Apply losses
+        journey.force.troops -= atkLosses;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
+        defenderGarrison.troops -= defLosses;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+
+        // Battle narrative
+        attackerTribe.lastTurnResults.push({
+            id: `movement-encounter-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `💀 **MOVEMENT BLOCKED!** Your forces were defeated by ${defenderTribe.tribeName} at ${encounterLocation}! **Your losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons. **Enemy losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. Forces retreat.`
+        });
+
+        defenderTribe.lastTurnResults.push({
+            id: `movement-encounter-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🛡️ **SUCCESSFUL AMBUSH!** Your forces at ${encounterLocation} defeated ${attackerTribe.tribeName}'s advancing army! **Your losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. **Enemy losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons.`
+        });
+
+        // Remove the journey (force retreats/destroyed)
+        const journeyIndex = state.journeys.findIndex((j: any) => j.id === journey.id);
+        if (journeyIndex >= 0) {
+            state.journeys.splice(journeyIndex, 1);
+        }
+
+        // Return survivors to origin if any remain
+        if (journey.force.troops > 0 || (journey.force.weapons || 0) > 0) {
+            const originGarrison = attackerTribe.garrisons[journey.origin];
+            if (originGarrison) {
+                originGarrison.troops += journey.force.troops;
+                originGarrison.weapons = (originGarrison.weapons || 0) + (journey.force.weapons || 0);
+                if (journey.force.chiefs && journey.force.chiefs.length > 0) {
+                    if (!originGarrison.chiefs) originGarrison.chiefs = [];
+                    originGarrison.chiefs.push(...journey.force.chiefs);
+                }
+
+                attackerTribe.lastTurnResults.push({
+                    id: `movement-retreat-${Date.now()}`,
+                    actionType: ActionType.Move,
+                    actionData: {},
+                    result: `🏃‍♂️ Surviving forces retreated to ${journey.origin}: ${journey.force.troops} troops, ${journey.force.weapons || 0} weapons returned.`
+                });
+            }
+        }
+    }
 }
 
 function resolveMoveArrival(journey: any, tribe: any, state: any): void {

@@ -1147,6 +1147,20 @@ function processRecruitAction(tribe: any, action: any): string {
         troopsRecruited += 1;
     }
 
+    // Recruit troops
+    tribe.globalResources.food -= foodOffered;
+    garrison.troops += troopsRecruited;
+
+    let efficiencyMessage = '';
+    if (recruitmentEfficiency > 1.0) {
+        efficiencyMessage = ` (Generous rations: +${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency${troopsRecruited > baseTroopsRecruited ? ', bonus recruit!' : ''})`;
+    } else if (recruitmentEfficiency < 1.0) {
+        efficiencyMessage = ` (Poor conditions: ${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency)`;
+    }
+
+    return `✅ Successfully recruited ${troopsRecruited} troop${troopsRecruited > 1 ? 's' : ''} at ${location}! Cost: ${foodOffered} food${efficiencyMessage}. Garrison now has ${garrison.troops} troops.`;
+}
+
 
 // Build Outpost: require 5 troops, 20 scrap; builders travel along path; on arrival they found an Outpost and remain as garrison.
 function processBuildOutpostAction(tribe: any, action: any, state: any): string {

@@ -1,5 +1,6 @@
 import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus } from '../types.js';
 import { getAsset } from '../data/assetData.js';
+import { getTechnology } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 import { computeCasualties } from './_combatCasualtyModel.js';
 
@@ -409,6 +410,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
                     break;
                 case ActionType.SetRations:
                     result = processSetRationAction(tribe, action);
+                    break;
+                case ActionType.StartResearch:
+                    result = processStartResearchAction(tribe, action);
                     break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
@@ -2557,6 +2561,27 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         upkeepMessage += ` ${moraleEffects.message}`;
     }
 
+    // RESEARCH PROGRESS PROCESSING
+    if (tribe.currentResearch) {
+        const researchResult = processTechnologyProgress(tribe);
+        if (researchResult.message) {
+            tribe.lastTurnResults.push({
+                id: `research-progress-${tribe.id}`,
+                actionType: ActionType.Technology,
+                actionData: {},
+                result: researchResult.message
+            });
+        }
+        // Update tribe research state
+        if (researchResult.completed) {
+            tribe.completedTechs = tribe.completedTechs || [];
+            tribe.completedTechs.push(tribe.currentResearch.techId);
+            tribe.currentResearch = null;
+        } else if (researchResult.newProgress !== undefined) {
+            tribe.currentResearch.progress = researchResult.newProgress;
+        }
+    }
+
     // Add upkeep result
     tribe.lastTurnResults.push({
         id: `upkeep-${tribe.id}`,
@@ -2883,4 +2908,139 @@ function processExchangePrisonersAction(tribe: any, action: any, state: any): st
     tribe.lastTurnResults.push({ id: `px-sent-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: action.actionData, result: `📜 Proposed a prisoner exchange to ${toTribe.tribeName}.` });
     toTribe.lastTurnResults.push({ id: `px-recv-${proposal.id}`, actionType: ActionType.ExchangePrisoners, actionData: {}, result: `📜 ${tribe.tribeName} proposed a prisoner exchange.` });
     return 'Prisoner exchange proposed';
+}
+
+function processStartResearchAction(tribe: any, action: any): string {
+    const { techId, location, assignedTroops } = action.actionData;
+
+    if (!techId) return `❌ Start Research failed: No technology specified.`;
+    if (!location) return `❌ Start Research failed: No research location specified.`;
+    if (!assignedTroops || assignedTroops < 1) return `❌ Start Research failed: Must assign at least 1 researcher.`;
+
+    const tech = getTechnology(techId);
+    if (!tech) return `❌ Start Research failed: Technology '${techId}' not found.`;
+
+    if (tribe.currentResearch) {
+        const currentTech = getTechnology(tribe.currentResearch.techId);
+        return `❌ Start Research failed: Already researching ${currentTech?.name || 'unknown technology'}.`;
+    }
+
+    if (tribe.globalResources.scrap < tech.cost.scrap) {
+        return `❌ Start Research failed: Need ${tech.cost.scrap} scrap, have ${tribe.globalResources.scrap}.`;
+    }
+
+    const garrison = tribe.garrisons[location];
+    if (!garrison || (garrison.troops || 0) < assignedTroops) {
+        return `❌ Start Research failed: Not enough troops at ${location}. Need ${assignedTroops}, have ${garrison?.troops || 0}.`;
+    }
+
+    if (assignedTroops < tech.requiredTroops) {
+        return `❌ Start Research failed: ${tech.name} requires at least ${tech.requiredTroops} researchers.`;
+    }
+
+    // Check prerequisites
+    if (tech.prerequisites && tech.prerequisites.length > 0) {
+        const missingPrereqs = tech.prerequisites.filter((prereq: string) => !tribe.completedTechs.includes(prereq));
+        if (missingPrereqs.length > 0) {
+            const missingTechNames = missingPrereqs.map((id: string) => getTechnology(id)?.name || id).join(', ');
+            return `❌ Start Research failed: Missing prerequisites: ${missingTechNames}.`;
+        }
+    }
+
+    // Start research
+    tribe.globalResources.scrap -= tech.cost.scrap;
+    tribe.currentResearch = {
+        techId,
+        progress: 0,
+        assignedTroops,
+        location
+    };
+
+    return `🔬 Research commenced on ${tech.name} at ${location}. ${assignedTroops} researchers assigned. Cost: ${tech.cost.scrap} scrap.`;
+}
+
+function processTechnologyProgress(tribe: any): { message?: string, completed?: boolean, newProgress?: number } {
+    if (!tribe.currentResearch) return {};
+
+    const project = tribe.currentResearch;
+    const tech = getTechnology(project.techId);
+    if (!tech) {
+        // Research cancelled due to missing tech data
+        tribe.currentResearch = null;
+        return { message: `❌ Research cancelled: Technology data not found.`, completed: true };
+    }
+
+    const progressThisTurn = Math.floor(project.assignedTroops * 1);
+    const newProgress = project.progress + progressThisTurn;
+
+    if (newProgress >= tech.researchPoints) {
+        // Research completed! Generate narrative description
+        const completionNarrative = generateResearchCompletionNarrative(tech, project);
+        return {
+            message: completionNarrative,
+            completed: true
+        };
+    } else {
+        // Research continues
+        const progressNarrative = generateResearchProgressNarrative(tech, project, newProgress);
+        return {
+            message: progressNarrative,
+            newProgress: newProgress
+        };
+    }
+}
+
+function generateResearchCompletionNarrative(tech: any, project: any): string {
+    const narratives: { [key: string]: string } = {
+        'basic-farming': `🌱 **BREAKTHROUGH!** After weeks of careful experimentation, your researchers at ${project.location} have successfully cultivated the first hardy wasteland crops. The barren soil now yields sustenance, and your tribe has mastered the art of **Basic Farming**. Fields of resilient plants now provide a steady source of food, ensuring your people will never go hungry again.`,
+
+        'crop-rotation': `🌾 **AGRICULTURAL REVOLUTION!** Your farming experts at ${project.location} have discovered the ancient secrets of **Crop Rotation**. By alternating different crops and allowing fields to rest, soil fertility has dramatically improved. The harvest yields are now abundant, and your agricultural knowledge rivals that of the old world.`,
+
+        'basic-scavenging': `🔍 **SCAVENGING MASTERY!** Your scouts at ${project.location} have developed systematic techniques for **Basic Scavenging**. They now know exactly where to look in ruins, how to identify valuable materials, and which debris holds the most promise. Every expedition returns with significantly more useful scrap.`,
+
+        'advanced-scavenging': `⚙️ **SALVAGE EXPERTISE!** The scavenging teams at ${project.location} have perfected **Advanced Scavenging** techniques. They can now disassemble complex machinery, extract rare components, and identify valuable materials that others would overlook. The wasteland's treasures are no longer hidden from your tribe.`,
+
+        'basic-weapons': `⚔️ **WEAPONS FORGED!** The smiths at ${project.location} have mastered **Basic Weapons** crafting. Using scavenged materials and ancient techniques, they can now forge reliable blades, spears, and simple firearms. Your warriors are better equipped than ever to defend the tribe.`,
+
+        'advanced-weapons': `🗡️ **MASTER WEAPONSMITH!** Your weapon crafters at ${project.location} have achieved **Advanced Weapons** mastery. They can now create sophisticated firearms, explosive devices, and precision instruments of war. Your tribe's military might has reached new heights.`,
+
+        'basic-medicine': `💊 **HEALING ARTS!** The healers at ${project.location} have unlocked the secrets of **Basic Medicine**. Using wasteland herbs and recovered medical knowledge, they can now treat injuries more effectively and keep your people healthy in this harsh world.`,
+
+        'advanced-medicine': `🏥 **MEDICAL BREAKTHROUGH!** Your medical researchers at ${project.location} have achieved **Advanced Medicine** capabilities. They can now perform complex procedures, create powerful remedies, and even extend the natural lifespan of your people.`
+    };
+
+    const specificNarrative = narratives[tech.id];
+    if (specificNarrative) {
+        return specificNarrative;
+    }
+
+    // Generic completion message with effects
+    const effectMessages: string[] = [];
+    tech.effects?.forEach((effect: any) => {
+        if (effect.type === 'PassiveFoodGeneration') {
+            effectMessages.push(`+${effect.value} Food/turn`);
+        } else if (effect.type === 'ScavengeYieldBonus') {
+            effectMessages.push(`+${effect.value * 100}% ${effect.resource || 'Scavenging'} yield`);
+        } else if (effect.type === 'WeaponsCraftingEfficiency') {
+            effectMessages.push(`+${effect.value * 100}% Weapons crafting efficiency`);
+        } else if (effect.type === 'CombatStrengthBonus') {
+            effectMessages.push(`+${effect.value * 100}% Combat strength`);
+        }
+    });
+
+    const effectText = effectMessages.length > 0 ? ` **Effects:** ${effectMessages.join(', ')}.` : '';
+    return `🎓 **RESEARCH COMPLETE!** Your scholars at ${project.location} have successfully mastered **${tech.name}**. ${tech.description}${effectText}`;
+}
+
+function generateResearchProgressNarrative(tech: any, project: any, newProgress: number): string {
+    const progressPercent = Math.floor((newProgress / tech.researchPoints) * 100);
+
+    const progressNarratives: string[] = [
+        `🔬 Research on ${tech.name} progresses steadily at ${project.location}. Your ${project.assignedTroops} researchers work tirelessly, making incremental discoveries. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
+        `📚 The research team at ${project.location} continues their work on ${tech.name}. Ancient texts are studied, experiments conducted, and knowledge slowly accumulates. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
+        `🧪 Your scholars at ${project.location} delve deeper into the mysteries of ${tech.name}. Each day brings new insights and brings them closer to a breakthrough. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
+        `📖 The research into ${tech.name} at ${project.location} shows promising results. Your ${project.assignedTroops} dedicated researchers are methodically unlocking its secrets. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`
+    ];
+
+    return progressNarratives[Math.floor(Math.random() * progressNarratives.length)];
 }

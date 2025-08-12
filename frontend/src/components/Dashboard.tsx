@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tribe, GameAction, HexData, User, GamePhase, Garrison, ChiefRequest, AssetRequest, ActionType, Journey, DiplomaticProposal, TurnDeadline as TurnDeadlineType } from '@radix-tribes/shared';
+import { Tribe, GameAction, HexData, User, GamePhase, Garrison, ChiefRequest, AssetRequest, ActionType, Journey, DiplomaticProposal, TurnDeadline as TurnDeadlineType, getTechnology } from '@radix-tribes/shared';
 import Header from './Header';
 import ResourcePanel from './ResourcePanel';
 import TurnDeadlineBadge from './TurnDeadline';
@@ -964,15 +964,36 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     // Show local planned actions (normal planning mode)
                     plannedActions.length > 0 ? (
                       <div className="space-y-3 min-h-[240px]">
-                        {plannedActions.map((action, index) => (
-                        <div key={action.id} className="bg-slate-800 p-3 rounded-lg border border-slate-600">
-                          <div className="font-bold text-amber-400 text-sm mb-1">{action.actionType}</div>
-                          <div className="text-slate-300 text-xs mb-2 break-words">
-                            {Object.entries(action.actionData)
+                        {plannedActions.map((action, index) => {
+                          // Enhanced display for research actions
+                          const getActionDisplayName = (action: GameAction) => {
+                            if (action.actionType === ActionType.StartResearch && action.actionData.techId) {
+                              const tech = getTechnology(action.actionData.techId);
+                              return `Start Research: ${tech?.name || 'Unknown Technology'}`;
+                            }
+                            return action.actionType;
+                          };
+
+                          const getActionDetails = (action: GameAction) => {
+                            if (action.actionType === ActionType.StartResearch) {
+                              const tech = getTechnology(action.actionData.techId);
+                              return [
+                                `Location: ${action.actionData.location}`,
+                                `Researchers: ${action.actionData.assignedTroops}`,
+                                tech ? `Cost: ${tech.cost.scrap} scrap` : ''
+                              ].filter(Boolean).join(' • ');
+                            }
+                            return Object.entries(action.actionData)
                               .filter(([key, value]) => value && key !== 'id')
                               .map(([key, value]) => `${key}: ${value}`)
-                              .join(' • ')
-                            }
+                              .join(' • ');
+                          };
+
+                          return (
+                        <div key={action.id} className="bg-slate-800 p-3 rounded-lg border border-slate-600">
+                          <div className="font-bold text-amber-400 text-sm mb-1">{getActionDisplayName(action)}</div>
+                          <div className="text-slate-300 text-xs mb-2 break-words">
+                            {getActionDetails(action)}
                           </div>
                           <button
                             onClick={() => handleDeleteAction(action.id)}
@@ -983,7 +1004,8 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                             {turnSubmitted ? '🔒 Locked' : '🗑️ Remove'}
                           </button>
                         </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-slate-400 text-sm italic text-center py-8 min-h-[240px] flex items-center justify-center">

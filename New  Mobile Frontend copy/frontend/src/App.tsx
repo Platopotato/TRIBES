@@ -64,35 +64,12 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [view, setView] = useState<View>('login');
 
-  // Debug state changes
-  useEffect(() => {
-    addDebugMessage(`🔄 USER: ${currentUser?.username || 'null'}`);
-  }, [currentUser]);
-
-  useEffect(() => {
-    addDebugMessage(`🔄 GAMESTATE: ${gameState?.tribes?.length || 0} tribes`);
-  }, [gameState]);
-
-  useEffect(() => {
-    addDebugMessage(`🔄 VIEW: ${view}`);
-  }, [view]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loginError, setLoginError] = useState<string>('');
   const [registeredUsername, setRegisteredUsername] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showNewsletterModal, setShowNewsletterModal] = useState(false);
-
-  // Debug state for mobile
-  const [debugMessages, setDebugMessages] = useState<string[]>([]);
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-
-  const addDebugMessage = useCallback((message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const fullMessage = `${timestamp}: ${message}`;
-    setDebugMessages(prev => [...prev.slice(-9), fullMessage]); // Keep last 10 messages
-    console.log(fullMessage); // Still log to console too
-  }, []);
   
   useEffect(() => {
     const user = Auth.getCurrentUser();
@@ -140,35 +117,15 @@ const App: React.FC = () => {
   
   const playerTribe = useMemo(() => {
     if (!currentUser || !gameState) {
-      addDebugMessage(`🔍 TRIBE: Missing data - user:${!!currentUser} state:${!!gameState}`);
       return undefined;
     }
-
-    addDebugMessage(`🔍 TRIBE: Looking for ${currentUser.username} (ID: ${currentUser.id})`);
-
-    // Debug: Show all tribe playerIds
-    const tribeInfo = gameState.tribes.map(t => `${t.tribeName}:${t.playerId}`).join(', ');
-    addDebugMessage(`🏘️ TRIBES: ${tribeInfo}`);
 
     // First try to find by user ID
     let tribe = gameState.tribes.find(t => t.playerId === currentUser.id);
 
     // If not found by ID, try to find by username (fallback for ID mismatches)
     if (!tribe) {
-      addDebugMessage(`🔍 TRIBE: ID lookup failed, trying username fallback...`);
       tribe = gameState.tribes.find(t => t.playerName === currentUser.username);
-      if (tribe) {
-        addDebugMessage(`✅ TRIBE: Found by username! ${tribe.tribeName} (playerName: ${tribe.playerName}, playerID: ${tribe.playerId})`);
-        addDebugMessage(`🔧 TRIBE: ID mismatch detected - tribe has ${tribe.playerId}, user has ${currentUser.id}`);
-      } else {
-        addDebugMessage(`❌ TRIBE: Username fallback failed - no tribe with playerName: ${currentUser.username}`);
-      }
-    }
-
-    addDebugMessage(`🎯 TRIBE: ${tribe ? tribe.tribeName : 'NONE FOUND'}`);
-
-    if (!tribe && currentUser.role !== 'admin') {
-      addDebugMessage(`⚠️ TRIBE: No tribe for non-admin! Will redirect!`);
     }
 
     return tribe;
@@ -476,12 +433,10 @@ const App: React.FC = () => {
       case 'game':
       default:
         if (!currentUser) {
-          addDebugMessage('🚨 REDIRECT: No currentUser → login');
           setView('login');
           return null;
         }
         if (!playerTribe && currentUser.role !== 'admin') {
-          addDebugMessage(`🚨 REDIRECT: No tribe for ${currentUser.username} → create_tribe`);
           setView('create_tribe');
           return null;
         }

@@ -1874,7 +1874,50 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
     buildGarrison.chiefs = (buildGarrison.chiefs || []).filter((c: any) => !chiefsToMove.includes(c.name));
 
     const arrivalTurn = Math.max(1, Math.ceil(pathInfo.cost / getCombinedEffects(tribe).movementSpeedBonus));
-    const journey = {
+
+    // FAST-TRACK LOGIC: Same-turn outpost construction (≤1 turn) is instant
+    const FAST_TRACK_THRESHOLD = 1;
+    const isFastTrackable = arrivalTurn <= FAST_TRACK_THRESHOLD;
+
+    if (isFastTrackable) {
+        // Immediate outpost construction for short distances
+        const destKey = convertToStandardFormat(target);
+        const { q, r } = parseHexCoords(destKey);
+        const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+        if (!hex) {
+            return `❌ Build Outpost failed: hex not found at ${destKey}.`;
+        }
+
+        // Establish outpost immediately - preserve existing POI if present, or create new outpost
+        if (hex.poi) {
+            // Fortify existing POI - preserve original type and properties, add outpost ownership
+            hex.poi.id = `poi-fortified-${hex.poi.type}-${tribe.id}-${destKey}`;
+            // Add outpost properties while preserving original POI functionality
+            (hex.poi as any).outpostOwner = tribe.id;
+            (hex.poi as any).fortified = true;
+
+            // For fortified POIs, builders become additional garrison at the location
+            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            tribe.garrisons[destKey].troops += 5;
+            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+            tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+
+            return `🛡️ ${hex.poi.type} at ${destKey} instantly fortified with outpost defenses! 5 builders established garrison. Original POI benefits preserved.`;
+        } else {
+            // Create new standalone outpost
+            hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
+
+            // For standalone outposts, builders become the garrison
+            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            tribe.garrisons[destKey].troops += 5;
+            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+            tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+
+            return `🛡️ Outpost instantly established at ${destKey}! 5 builders remain as the garrison.`;
+        }
+    } else {
+        // MULTI-TURN JOURNEY for long distances
+        const journey = {
         id: `outpost-${Date.now()}-${tribe.id}`,
         ownerTribeId: tribe.id,
         type: JourneyType.BuildOutpost,
@@ -1891,7 +1934,8 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
     if (journey.arrivalTurn > 1 && journey.path.length > 1) { journey.path.shift(); journey.currentLocation = journey.path[0]; }
     state.journeys.push(journey);
 
-    return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. Cost: 20 scrap. Those 5 builders are removed from ${start} and will remain as the outpost’s garrison on arrival. ETA: ${arrivalTurn} turn(s).`;
+        return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. Cost: 20 scrap. Those 5 builders are removed from ${start} and will remain as the outpost’s garrison on arrival. ETA: ${arrivalTurn} turn(s).`;
+    }
 }
 
 

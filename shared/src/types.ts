@@ -198,6 +198,18 @@ export interface Tribe {
   lastStateUpdate?: number; // Timestamp for frontend state synchronization
   forceUIReset?: boolean; // Flag to force frontend UI reset after turn processing
   forceRefreshApplied?: boolean; // Flag indicating Force Refresh logic was applied
+  abandonmentTracking?: {
+    lastActiveActions: number;
+    turnsInactive: number;
+    lastActionTurn: number;
+    isPotentiallyAbandoned?: boolean;
+    homeBaseResources?: {
+      weapons: number;
+      scrap: number;
+      food: number;
+      recordedOnTurn: number;
+    } | null;
+  };
 }
 
 export interface InjuredChief {

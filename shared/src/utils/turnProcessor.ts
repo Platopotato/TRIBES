@@ -494,6 +494,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // Process prisoner exchange proposals (expiry)
     processPrisonerExchanges(state);
 
+    // ABANDONMENT TRACKING: Track inactive tribes for admin visibility
+    trackTribeAbandonment(state);
+
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
@@ -518,6 +521,54 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     }
 
     return state;
+}
+
+function trackTribeAbandonment(state: any): void {
+    state.tribes.forEach((tribe: any) => {
+        // Skip AI tribes
+        if (tribe.isAI) return;
+
+        // Initialize abandonment tracking if not present
+        if (!tribe.abandonmentTracking) {
+            tribe.abandonmentTracking = {
+                lastActiveActions: 0,
+                turnsInactive: 0,
+                lastActionTurn: state.turn
+            };
+        }
+
+        // Check if tribe submitted any meaningful actions this turn
+        const hasActions = tribe.actions && tribe.actions.length > 0;
+        const hasNonRestActions = hasActions && tribe.actions.some((action: any) =>
+            action.actionType !== 'Rest' && action.actionType !== 'Upkeep'
+        );
+
+        if (hasNonRestActions) {
+            // Tribe is active - reset tracking
+            tribe.abandonmentTracking.lastActiveActions = tribe.actions.length;
+            tribe.abandonmentTracking.turnsInactive = 0;
+            tribe.abandonmentTracking.lastActionTurn = state.turn;
+        } else {
+            // Tribe is inactive - increment counter
+            tribe.abandonmentTracking.turnsInactive++;
+        }
+
+        // Mark as potentially abandoned after 3+ turns of inactivity
+        tribe.abandonmentTracking.isPotentiallyAbandoned = tribe.abandonmentTracking.turnsInactive >= 3;
+
+        // Store home base resources for potential scavenging
+        if (tribe.abandonmentTracking.turnsInactive >= 2) {
+            const homeBase = tribe.garrisons[tribe.location];
+            if (homeBase && !tribe.abandonmentTracking.homeBaseResources) {
+                tribe.abandonmentTracking.homeBaseResources = {
+                    weapons: homeBase.weapons || 0,
+                    scrap: tribe.globalResources.scrap || 0,
+                    food: tribe.globalResources.food || 0,
+                    recordedOnTurn: state.turn
+                };
+            }
+        }
+    });
 }
 
 // --- SOPHISTICATED JOURNEY PROCESSING ---
@@ -995,6 +1046,9 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
         return;
     }
 
+    // Check for abandoned home base scavenging opportunity
+    const scavengedResources = checkForAbandonedHomeBaseScavenging(tribe, destKey, state);
+
     // Otherwise, stack with allies or empty hex: create/update your garrison
     if (!tribe.garrisons[destKey]) {
         tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
@@ -1021,6 +1075,83 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     if (!tribe.exploredHexes.includes(destKey)) {
         tribe.exploredHexes.push(destKey);
     }
+
+    // Add scavenging results if any
+    if (scavengedResources.message) {
+        tribe.lastTurnResults.push({
+            id: `scavenging-${Date.now()}`,
+            actionType: ActionType.Move,
+            actionData: {},
+            result: scavengedResources.message
+        });
+    }
+}
+
+function checkForAbandonedHomeBaseScavenging(tribe: any, location: string, state: any): { message: string } {
+    // Check if this location was the home base of any abandoned tribe
+    const abandonedTribe = state.tribes.find((t: any) =>
+        !t.isAI &&
+        t.location === location &&
+        t.id !== tribe.id &&
+        t.abandonmentTracking?.isPotentiallyAbandoned &&
+        t.abandonmentTracking?.homeBaseResources
+    );
+
+    if (!abandonedTribe) {
+        return { message: '' };
+    }
+
+    // Check if the abandoned tribe still has forces at their home base
+    const abandonedHomeGarrison = abandonedTribe.garrisons[location];
+    const hasDefenders = abandonedHomeGarrison && (
+        (abandonedHomeGarrison.troops || 0) > 0 ||
+        (abandonedHomeGarrison.weapons || 0) > 0 ||
+        (abandonedHomeGarrison.chiefs?.length || 0) > 0
+    );
+
+    // Only scavenge if the home base is truly abandoned (no defenders)
+    if (hasDefenders) {
+        return { message: '' };
+    }
+
+    const resources = abandonedTribe.abandonmentTracking.homeBaseResources;
+    let scavengedWeapons = 0;
+    let scavengedScrap = 0;
+    let scavengedFood = 0;
+
+    // Scavenge weapons from the abandoned garrison
+    if (resources.weapons > 0) {
+        scavengedWeapons = Math.floor(resources.weapons * 0.7); // 70% recovery rate
+        tribe.garrisons[location].weapons = (tribe.garrisons[location].weapons || 0) + scavengedWeapons;
+    }
+
+    // Scavenge stored resources (lower recovery rates due to spoilage/looting)
+    if (resources.scrap > 0) {
+        scavengedScrap = Math.floor(resources.scrap * 0.5); // 50% recovery rate
+        tribe.globalResources.scrap = (tribe.globalResources.scrap || 0) + scavengedScrap;
+    }
+
+    if (resources.food > 0) {
+        scavengedFood = Math.floor(resources.food * 0.3); // 30% recovery rate (spoilage)
+        tribe.globalResources.food = (tribe.globalResources.food || 0) + scavengedFood;
+    }
+
+    // Clear the scavenged resources to prevent double-scavenging
+    abandonedTribe.abandonmentTracking.homeBaseResources = null;
+
+    // Generate scavenging message
+    if (scavengedWeapons > 0 || scavengedScrap > 0 || scavengedFood > 0) {
+        const scavengedItems = [];
+        if (scavengedWeapons > 0) scavengedItems.push(`${scavengedWeapons} weapons`);
+        if (scavengedScrap > 0) scavengedItems.push(`${scavengedScrap} scrap`);
+        if (scavengedFood > 0) scavengedItems.push(`${scavengedFood} food`);
+
+        return {
+            message: `🏚️ **ABANDONED SETTLEMENT SCAVENGED!** Your forces found the abandoned home of ${abandonedTribe.tribeName} and recovered: ${scavengedItems.join(', ')}. The settlement shows signs of recent abandonment.`
+        };
+    }
+
+    return { message: '' };
 }
 
 // Deterministic random from seed string (FNV-1a hash -> [0,1))

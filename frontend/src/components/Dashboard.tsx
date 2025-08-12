@@ -23,6 +23,7 @@ import PendingTradesPanel from './PendingTradesPanel';
 import JourneysPanel from './JourneysPanel';
 import DiplomacyPanel from './DiplomacyPanel';
 import Leaderboard from './Leaderboard';
+import PrisonerManagementModal from './PrisonerManagementModal';
 
 import { formatHexCoords, parseHexCoords } from '../lib/mapUtils';
 
@@ -83,6 +84,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [isChiefsModalOpen, setIsChiefsModalOpen] = useState(false);
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
   const [isStandingsModalOpen, setIsStandingsModalOpen] = useState(false);
+  const [isPrisonerModalOpen, setIsPrisonerModalOpen] = useState(false);
   const [mapSelectionMode, setMapSelectionMode] = useState<{ active: boolean; onSelect: ((location: string) => void) | null }>({ active: false, onSelect: null });
   const [draftAction, setDraftAction] = useState<Partial<GameAction> | null>(null);
   const [showEndTurnConfirm, setShowEndTurnConfirm] = useState(false);
@@ -576,7 +578,10 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     rationLevel={playerTribe.rationLevel}
                   />
                   <TribeStats stats={playerTribe.stats} />
-                  <ChiefStatusPanel tribe={playerTribe} />
+                  <ChiefStatusPanel
+                    tribe={playerTribe}
+                    onManagePrisoners={() => setIsPrisonerModalOpen(true)}
+                  />
                   <ActionPanel
                     actions={turnSubmitted ? (playerTribe?.actions || []) : plannedActions}
                     maxActions={maxActions}
@@ -1700,6 +1705,17 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             />
           )}
         </>
+      )}
+
+      {/* Prisoner Management Modal */}
+      {isPrisonerModalOpen && playerTribe && (
+        <PrisonerManagementModal
+          isOpen={isPrisonerModalOpen}
+          onClose={() => setIsPrisonerModalOpen(false)}
+          tribe={playerTribe}
+          allTribes={allTribes}
+          onAddAction={handleAddAction}
+        />
       )}
 
       {/* Actions Finalize Confirmation Modal */}

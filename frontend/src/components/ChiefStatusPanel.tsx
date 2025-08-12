@@ -1,13 +1,15 @@
 /** @jsxImportSource react */
 import React from 'react';
 import Card from './ui/Card';
+import Button from './ui/Button';
 import { Tribe, InjuredChief, PrisonerChief } from '@radix-tribes/shared';
 
 interface ChiefStatusPanelProps {
   tribe: Tribe;
+  onManagePrisoners?: () => void;
 }
 
-const ChiefStatusPanel: React.FC<ChiefStatusPanelProps> = ({ tribe }) => {
+const ChiefStatusPanel: React.FC<ChiefStatusPanelProps> = ({ tribe, onManagePrisoners }) => {
   const injured: InjuredChief[] = tribe.injuredChiefs || [];
   const prisoners: PrisonerChief[] = tribe.prisoners || [];
 
@@ -36,7 +38,17 @@ const ChiefStatusPanel: React.FC<ChiefStatusPanelProps> = ({ tribe }) => {
         )}
         {prisoners.length > 0 && (
           <div>
-            <div className="text-slate-300 font-semibold mb-2">🎗️ Prisoners</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-slate-300 font-semibold">🎗️ Prisoners</div>
+              {onManagePrisoners && (
+                <Button
+                  onClick={onManagePrisoners}
+                  className="text-xs px-2 py-1 bg-amber-700/80 hover:bg-amber-600 text-amber-100"
+                >
+                  Manage
+                </Button>
+              )}
+            </div>
             <ul className="space-y-1">
               {prisoners.map((p, idx) => (
                 <li key={`pr-${idx}`} className="text-sm text-slate-300 bg-slate-900/50 p-2 rounded border border-slate-700/50 flex items-center justify-between">

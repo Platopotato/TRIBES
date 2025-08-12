@@ -90,37 +90,41 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
 
         {/* Far Mountains - Layer 1 */}
         <div
-          className="absolute bottom-0 w-full h-2/3 bg-black opacity-60"
+          className="absolute bottom-0 w-full h-2/3 bg-black"
           style={{
             transform: `translateX(${mousePos.x * 0.05}px)`,
-            clipPath: 'polygon(0 100%, 0 40%, 8% 45%, 15% 35%, 22% 40%, 30% 30%, 38% 35%, 45% 25%, 52% 30%, 60% 20%, 68% 25%, 75% 15%, 82% 20%, 90% 10%, 100% 15%, 100% 100%)'
+            clipPath: 'polygon(0 100%, 0 40%, 8% 45%, 15% 35%, 22% 40%, 30% 30%, 38% 35%, 45% 25%, 52% 30%, 60% 20%, 68% 25%, 75% 15%, 82% 20%, 90% 10%, 100% 15%, 100% 100%)',
+            opacity: 0.9
           }}
         ></div>
 
         {/* Mid Mountains - Layer 2 */}
         <div
-          className="absolute bottom-0 w-full h-1/2 bg-black opacity-70"
+          className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-black to-gray-800"
           style={{
             transform: `translateX(${mousePos.x * 0.1}px)`,
-            clipPath: 'polygon(0 100%, 0 60%, 12% 65%, 20% 50%, 28% 55%, 35% 45%, 42% 50%, 50% 40%, 58% 45%, 65% 35%, 72% 40%, 80% 30%, 88% 35%, 95% 25%, 100% 30%, 100% 100%)'
+            clipPath: 'polygon(0 100%, 0 60%, 12% 65%, 20% 50%, 28% 55%, 35% 45%, 42% 50%, 50% 40%, 58% 45%, 65% 35%, 72% 40%, 80% 30%, 88% 35%, 95% 25%, 100% 30%, 100% 100%)',
+            opacity: 0.95
           }}
         ></div>
 
         {/* Ruined City Skyline */}
         <div
-          className="absolute bottom-0 w-full h-1/3 bg-black opacity-80"
+          className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-gray-700"
           style={{
             transform: `translateX(${mousePos.x * 0.15}px)`,
-            clipPath: 'polygon(0 100%, 0 70%, 5% 75%, 8% 65%, 12% 70%, 15% 60%, 18% 65%, 22% 55%, 25% 60%, 30% 50%, 35% 55%, 40% 45%, 45% 50%, 50% 40%, 55% 45%, 60% 35%, 65% 40%, 70% 30%, 75% 35%, 80% 25%, 85% 30%, 90% 20%, 95% 25%, 100% 15%, 100% 100%)'
+            clipPath: 'polygon(0 100%, 0 70%, 5% 75%, 8% 65%, 12% 70%, 15% 60%, 18% 65%, 22% 55%, 25% 60%, 30% 50%, 35% 55%, 40% 45%, 45% 50%, 50% 40%, 55% 45%, 60% 35%, 65% 40%, 70% 30%, 75% 35%, 80% 25%, 85% 30%, 90% 20%, 95% 25%, 100% 15%, 100% 100%)',
+            opacity: 1
           }}
         ></div>
 
         {/* Foreground Wasteland */}
         <div
-          className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-black/90 to-transparent"
+          className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-black via-gray-800 to-transparent"
           style={{
             transform: `translateX(${mousePos.x * 0.3}px)`,
-            clipPath: 'polygon(0 100%, 0 85%, 10% 80%, 15% 85%, 25% 75%, 35% 80%, 45% 70%, 55% 75%, 65% 65%, 75% 70%, 85% 60%, 95% 65%, 100% 55%, 100% 100%)'
+            clipPath: 'polygon(0 100%, 0 85%, 10% 80%, 15% 85%, 25% 75%, 35% 80%, 45% 70%, 55% 75%, 65% 65%, 75% 70%, 85% 60%, 95% 65%, 100% 55%, 100% 100%)',
+            opacity: 1
           }}
         ></div>
 
@@ -129,60 +133,121 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
           className="absolute bottom-0 left-0 w-full h-1/5"
           style={{ transform: `translateX(${mousePos.x * 0.4}px)` }}
         >
-          {/* Large Tribal Totems with Glow */}
-          <div className="absolute bottom-0 left-1/6 w-4 h-24 bg-gradient-to-t from-amber-900 via-amber-700 to-amber-500 transform rotate-12 shadow-2xl animate-glow"></div>
-          <div className="absolute bottom-0 right-1/4 w-5 h-32 bg-gradient-to-t from-red-900 via-red-700 to-red-500 transform -rotate-6 shadow-2xl animate-shimmer"></div>
-          <div className="absolute bottom-0 left-1/3 w-3 h-20 bg-gradient-to-t from-orange-900 via-orange-700 to-orange-500 transform rotate-3 shadow-xl animate-glow"></div>
+          {/* Massive Tribal Totems with Dramatic Glow */}
+          <div className="absolute bottom-0 left-1/6 w-8 h-40 bg-gradient-to-t from-amber-900 via-amber-600 to-amber-400 transform rotate-12 shadow-2xl animate-glow"
+               style={{ boxShadow: '0 0 20px rgba(251, 146, 60, 0.8), 0 0 40px rgba(251, 146, 60, 0.4)' }}></div>
+          <div className="absolute bottom-0 right-1/4 w-10 h-48 bg-gradient-to-t from-red-900 via-red-600 to-red-400 transform -rotate-6 shadow-2xl animate-shimmer"
+               style={{ boxShadow: '0 0 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(239, 68, 68, 0.4)' }}></div>
+          <div className="absolute bottom-0 left-1/3 w-6 h-32 bg-gradient-to-t from-orange-900 via-orange-600 to-orange-400 transform rotate-3 shadow-xl animate-glow"
+               style={{ boxShadow: '0 0 15px rgba(249, 115, 22, 0.8), 0 0 30px rgba(249, 115, 22, 0.4)' }}></div>
 
-          {/* Weapon Racks and Structures */}
-          <div className="absolute bottom-0 left-1/8 w-2 h-16 bg-gray-700 shadow-lg"></div>
-          <div className="absolute bottom-0 left-1/8 w-12 h-2 bg-gray-600 transform rotate-45 translate-y-4 shadow-md"></div>
-          <div className="absolute bottom-0 right-1/6 w-2 h-14 bg-gray-700 shadow-lg"></div>
-          <div className="absolute bottom-0 right-1/6 w-10 h-2 bg-gray-600 transform -rotate-45 translate-y-3 shadow-md"></div>
+          {/* Large Weapon Racks and Structures */}
+          <div className="absolute bottom-0 left-1/8 w-4 h-24 bg-gray-600 shadow-lg"></div>
+          <div className="absolute bottom-0 left-1/8 w-16 h-3 bg-gray-500 transform rotate-45 translate-y-6 shadow-md"></div>
+          <div className="absolute bottom-0 right-1/6 w-4 h-20 bg-gray-600 shadow-lg"></div>
+          <div className="absolute bottom-0 right-1/6 w-14 h-3 bg-gray-500 transform -rotate-45 translate-y-5 shadow-md"></div>
 
-          {/* Campfire Glow */}
-          <div className="absolute bottom-0 left-1/2 w-8 h-8 bg-orange-500 rounded-full opacity-60 animate-pulse shadow-2xl"></div>
-          <div className="absolute bottom-0 left-1/2 w-4 h-4 bg-yellow-400 rounded-full opacity-80 animate-pulse shadow-xl"></div>
+          {/* Dramatic Campfire */}
+          <div className="absolute bottom-0 left-1/2 w-16 h-16 bg-orange-500 rounded-full opacity-80 animate-pulse shadow-2xl"
+               style={{ boxShadow: '0 0 30px rgba(249, 115, 22, 1), 0 0 60px rgba(249, 115, 22, 0.6), 0 0 90px rgba(249, 115, 22, 0.3)' }}></div>
+          <div className="absolute bottom-0 left-1/2 w-8 h-8 bg-yellow-400 rounded-full opacity-90 animate-pulse shadow-xl"
+               style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 1), 0 0 40px rgba(250, 204, 21, 0.8)' }}></div>
+
+          {/* Tribal Banners */}
+          <div className="absolute bottom-0 left-1/5 w-1 h-28 bg-gray-700"></div>
+          <div className="absolute bottom-20 left-1/5 w-8 h-12 bg-red-800 opacity-80 animate-pulse transform origin-left"
+               style={{ clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)' }}></div>
+          <div className="absolute bottom-0 right-1/5 w-1 h-24 bg-gray-700"></div>
+          <div className="absolute bottom-16 right-1/5 w-6 h-10 bg-amber-800 opacity-80 animate-pulse transform origin-left"
+               style={{ clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)' }}></div>
         </div>
 
         {/* Atmospheric Haze */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
       </div>
 
-      {/* Enhanced Floating Particles */}
+      {/* Dramatic Floating Particles */}
       <div className="absolute inset-0 pointer-events-none z-20">
         {particles.map(particle => (
           <div
             key={particle.id}
-            className="absolute bg-orange-400 rounded-full"
+            className="absolute rounded-full"
             style={{
               left: `${particle.x}%`,
               bottom: `${particle.y}%`,
               opacity: particle.opacity,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              boxShadow: `0 0 ${particle.size * 2}px rgba(251, 146, 60, 0.9), 0 0 ${particle.size * 4}px rgba(251, 146, 60, 0.5)`,
-              background: `radial-gradient(circle, rgba(251, 146, 60, 1) 0%, rgba(251, 146, 60, 0.8) 50%, rgba(251, 146, 60, 0.3) 100%)`,
-              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite alternate`
+              width: `${particle.size * 2}px`,
+              height: `${particle.size * 2}px`,
+              boxShadow: `0 0 ${particle.size * 4}px rgba(251, 146, 60, 1), 0 0 ${particle.size * 8}px rgba(251, 146, 60, 0.8), 0 0 ${particle.size * 12}px rgba(251, 146, 60, 0.4)`,
+              background: `radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(251, 146, 60, 1) 30%, rgba(251, 146, 60, 0.8) 70%, rgba(251, 146, 60, 0.2) 100%)`,
+              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite alternate`,
+              filter: 'blur(0.5px)'
             }}
           />
         ))}
       </div>
 
-      {/* Additional Atmospheric Effects */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        {/* Heat Shimmer Effect */}
-        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-orange-500/10 via-transparent to-transparent animate-pulse"></div>
+      {/* Large Ember Particles */}
+      <div className="absolute inset-0 pointer-events-none z-25">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={`ember-${i}`}
+            className="absolute rounded-full animate-pulse"
+            style={{
+              left: `${20 + i * 10}%`,
+              bottom: `${10 + (i % 3) * 15}%`,
+              width: '8px',
+              height: '8px',
+              background: 'radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(251, 146, 60, 1) 50%, rgba(239, 68, 68, 0.8) 100%)',
+              boxShadow: '0 0 15px rgba(251, 146, 60, 1), 0 0 30px rgba(251, 146, 60, 0.6)',
+              animationDelay: `${i * 0.5}s`,
+              animationDuration: `${2 + i * 0.3}s`
+            }}
+          />
+        ))}
+      </div>
 
-        {/* Dust Clouds */}
+      {/* Dramatic Atmospheric Effects */}
+      <div className="absolute inset-0 pointer-events-none z-15">
+        {/* Intense Heat Shimmer */}
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-orange-500/30 via-orange-400/10 to-transparent animate-pulse"
+             style={{ animationDuration: '3s' }}></div>
+
+        {/* Large Dust Clouds */}
         <div
-          className="absolute bottom-1/4 left-1/4 w-32 h-16 bg-orange-300/20 rounded-full blur-xl animate-pulse"
-          style={{ transform: `translateX(${mousePos.x * 0.2}px)` }}
+          className="absolute bottom-1/4 left-1/6 w-48 h-24 bg-orange-400/40 rounded-full blur-2xl animate-pulse"
+          style={{
+            transform: `translateX(${mousePos.x * 0.3}px)`,
+            animationDuration: '4s'
+          }}
         ></div>
         <div
-          className="absolute bottom-1/3 right-1/3 w-24 h-12 bg-red-300/15 rounded-full blur-lg animate-pulse"
-          style={{ transform: `translateX(${mousePos.x * -0.15}px)` }}
+          className="absolute bottom-1/3 right-1/4 w-40 h-20 bg-red-400/35 rounded-full blur-xl animate-pulse"
+          style={{
+            transform: `translateX(${mousePos.x * -0.25}px)`,
+            animationDuration: '5s'
+          }}
         ></div>
+        <div
+          className="absolute bottom-1/5 center w-36 h-18 bg-amber-400/30 rounded-full blur-xl animate-pulse"
+          style={{
+            left: '40%',
+            transform: `translateX(${mousePos.x * 0.15}px)`,
+            animationDuration: '3.5s'
+          }}
+        ></div>
+
+        {/* Smoke Effects */}
+        <div
+          className="absolute bottom-1/6 left-1/2 w-20 h-40 bg-gray-600/20 rounded-full blur-lg animate-pulse"
+          style={{
+            transform: `translateX(${mousePos.x * 0.1}px) translateY(-10px)`,
+            animationDuration: '6s'
+          }}
+        ></div>
+
+        {/* Atmospheric Haze */}
+        <div className="absolute bottom-0 left-0 w-full h-3/4 bg-gradient-to-t from-black/20 via-orange-900/10 to-transparent"></div>
       </div>
 
       {/* Main Content */}

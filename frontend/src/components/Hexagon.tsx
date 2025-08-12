@@ -145,75 +145,88 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         )
     }
 
-    // Advanced rendering for multiple tribes
-    const iconSize = size * 0.8;
-    const totalWidth = tribesOnHex.length * iconSize - (tribesOnHex.length - 1) * (iconSize / 2);
-    const startX = -totalWidth / 2;
+    // Advanced rendering for multiple tribes with better spacing
+    const iconSize = Math.min(size * 0.5, 16); // Smaller icons for better visibility
 
-    // For multiple tribes, if an Outpost is present, skip the large multi-tribe icons to reduce clutter
-    if (poi?.type === POIType.Outpost) {
-      return <g className="pointer-events-none" />;
-    }
+    // Arrange tribes in a more spread out pattern for better visibility
+    const arrangeTribes = (count: number) => {
+        if (count === 1) return [{ x: 0, y: 0 }];
+        if (count === 2) return [{ x: -iconSize * 0.7, y: 0 }, { x: iconSize * 0.7, y: 0 }];
+        if (count === 3) return [
+            { x: 0, y: -iconSize * 0.5 },
+            { x: -iconSize * 0.7, y: iconSize * 0.5 },
+            { x: iconSize * 0.7, y: iconSize * 0.5 }
+        ];
+        // For 4+ tribes, arrange in a 2x2 grid
+        return [
+            { x: -iconSize * 0.6, y: -iconSize * 0.4 },
+            { x: iconSize * 0.6, y: -iconSize * 0.4 },
+            { x: -iconSize * 0.6, y: iconSize * 0.6 },
+            { x: iconSize * 0.6, y: iconSize * 0.6 }
+        ].slice(0, count);
+    };
+
+    const positions = arrangeTribes(tribesOnHex.length);
     return (
         <g className="pointer-events-none">
             {tribesOnHex.map((tribe, index) => {
                 const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
-                const xOffset = startX + index * (iconSize / 1.8);
+                const position = positions[index] || { x: 0, y: 0 };
                 const garrison = tribe.garrisons[hexCoords];
                 const troops = garrison?.troops ?? 0;
                 const weapons = garrison?.weapons ?? 0;
                 const chiefCount = garrison?.chiefs?.length ?? 0;
 
                 return (
-                    <g key={tribe.id} transform={`translate(${xOffset}, 0)`}>
+                    <g key={tribe.id} transform={`translate(${position.x}, ${position.y})`}>
                         <circle
                             cx="0"
-                            cy={iconSize * 0.1}
+                            cy="0"
                             r={iconSize * 0.4}
                             fill={tribe.color}
-                            stroke="rgba(0,0,0,0.3)"
-                            strokeWidth="0.5"
-                            style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }}
+                            stroke="rgba(0,0,0,0.5)"
+                            strokeWidth="1"
+                            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}
                         />
-                        <text x="0" y={iconSize * 0.1} textAnchor="middle" className="select-none" fontSize={iconSize * 0.5} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
+                        <text x="0" y="0" textAnchor="middle" dominantBaseline="central" className="select-none" fontSize={iconSize * 0.5} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}>
                             {icon}
                         </text>
 
-                        {/* Garrison size display under tribe icon */}
+                        {/* Always show garrison size if troops > 0 */}
                         {troops > 0 && (
                             <g>
                                 <rect
-                                    x={-iconSize * 0.25}
-                                    y={iconSize * 0.45}
-                                    width={iconSize * 0.5}
-                                    height={iconSize * 0.25}
-                                    fill="rgba(0,0,0,0.7)"
-                                    stroke="rgba(255,255,255,0.3)"
+                                    x={-iconSize * 0.35}
+                                    y={iconSize * 0.5}
+                                    width={iconSize * 0.7}
+                                    height={iconSize * 0.3}
+                                    fill="rgba(0,0,0,0.85)"
+                                    stroke="rgba(255,255,255,0.5)"
                                     strokeWidth="0.5"
                                     rx={iconSize * 0.05}
                                 />
                                 <text
                                     x="0"
-                                    y={iconSize * 0.62}
+                                    y={iconSize * 0.7}
                                     textAnchor="middle"
                                     className="select-none font-bold fill-white"
-                                    fontSize={iconSize * 0.2}
-                                    style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}
+                                    fontSize={iconSize * 0.22}
+                                    style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.9))' }}
                                 >
                                     {troops}{weapons > 0 ? `+${weapons}` : ''}
                                 </text>
                             </g>
                         )}
 
-                        {/* Chief indicator */}
+                        {/* Chief indicator - positioned above icon */}
                         {chiefCount > 0 && (
                             <text
                                 x="0"
-                                y={-iconSize * 0.25}
+                                y={-iconSize * 0.6}
                                 textAnchor="middle"
                                 className="select-none fill-yellow-300"
-                                fontSize={iconSize * 0.3}
-                                style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}
+                                fontSize={iconSize * 0.35}
+                                style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.9))' }}
                             >
                                 ★
                             </text>

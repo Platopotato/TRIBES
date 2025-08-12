@@ -1222,7 +1222,7 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
     if (journey.arrivalTurn > 1 && journey.path.length > 1) { journey.path.shift(); journey.currentLocation = journey.path[0]; }
     state.journeys.push(journey);
 
-    return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. ETA: ${arrivalTurn} turn(s).`;
+    return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. Cost: 20 scrap. Those 5 builders are removed from ${start} and will remain as the outpost’s garrison on arrival. ETA: ${arrivalTurn} turn(s).`;
 }
 
 

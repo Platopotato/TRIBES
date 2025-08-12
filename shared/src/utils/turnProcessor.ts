@@ -826,6 +826,19 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         if (!destGarrison.chiefs) destGarrison.chiefs = [];
         destGarrison.chiefs.push(...journey.force.chiefs);
 
+        // Transfer outpost ownership if defenders are wiped out
+        if (defHex?.poi?.type === POIType.Outpost) {
+            const defendersRemain = (defenderGarrison.troops || 0) > 0;
+            if (!defendersRemain) {
+                const prevOwnerId = getOutpostOwnerTribeId(defHex);
+                setOutpostOwner(defHex, attackerTribe.id, destKey);
+                const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+                const captureMsg = `🏴‍☠️ Outpost at ${destKey} captured by ${attackerTribe.tribeName}. Banner torn down and replaced.`;
+                attackerTribe.lastTurnResults.push({ id: `outpost-capture-arrival-${destKey}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: captureMsg });
+                if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-arrival-${destKey}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${destKey} was seized by ${attackerTribe.tribeName}.` });
+            }
+        }
+
         // Clear journey (done by caller via early return)
 
 

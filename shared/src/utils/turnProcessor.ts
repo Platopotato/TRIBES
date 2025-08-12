@@ -2218,26 +2218,18 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     if (attackerRoll > defenderRoll) {
 
-        tribe.lastTurnResults.push({
-          id: `battle-header-${Date.now()}`,
-          actionType: ActionType.Attack,
-          actionData: action.actionData,
-          result: `⚔️ Battle occurred at ${targetLocation}`
-        });
-        defendingTribe.lastTurnResults.push({
-          id: `battle-header-${Date.now()}`,
-          actionType: ActionType.Attack,
-          actionData: {},
-          result: `⚔️ Battle occurred at ${targetLocation}`
-        });
+        const battleIntro = `⚔️ Battle for ${targetLocation}! War cries echo as the outworks are stormed.`;
+        tribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: action.actionData, result: battleIntro });
+        defendingTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
 
-        // Attacker wins — use casualty model for higher lethality
+        // Attacker wins — use casualty model for higher lethality, then occupy/capture
         {
             const outpostHere = defHex?.poi?.type === POIType.Outpost;
             const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
                 troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
                 { terrainDefBonus, outpost: outpostHere }
             );
+            // Apply losses
             attackerGarrison.troops -= atkLosses;
             defenderGarrison.troops -= defLosses;
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
@@ -2245,6 +2237,27 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             const capturedWeapons = Math.floor(defWeaponsLoss * 0.5);
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
             tribe.lastTurnResults.push({ id: `attack-weapons-${Date.now()}`, actionType: ActionType.Attack, actionData: action.actionData, result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${defWeaponsLoss}, captured ${capturedWeapons}.` });
+
+            // Move surviving committed attackers into the destination hex
+            const committedSurvivors = Math.max(0, troopsToAttack - atkLosses);
+            if (!tribe.garrisons[targetLocation]) tribe.garrisons[targetLocation] = { troops: 0, weapons: 0, chiefs: [] };
+            const destGarrison = tribe.garrisons[targetLocation];
+            const movedTroops = Math.min(committedSurvivors, attackerGarrison.troops);
+            destGarrison.troops += movedTroops;
+            attackerGarrison.troops -= movedTroops;
+            const moveWeapons = Math.min(attackerGarrison.weapons || 0, movedTroops);
+            destGarrison.weapons = (destGarrison.weapons || 0) + moveWeapons;
+            attackerGarrison.weapons = (attackerGarrison.weapons || 0) - moveWeapons;
+
+            // If there is an Outpost here, transfer ownership
+            if (defHex?.poi?.type === POIType.Outpost) {
+                const prevOwnerId = getOutpostOwnerTribeId(defHex);
+                setOutpostOwner(defHex, tribe.id, targetLocation);
+                const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+                const captureMsg = `🏴‍☠️ Outpost at ${targetLocation} captured by ${tribe.tribeName}. Banner torn down and replaced.`;
+                tribe.lastTurnResults.push({ id: `outpost-capture-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: captureMsg });
+                if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${targetLocation} was seized by ${tribe.tribeName}.` });
+            }
         }
 
         // Narrative summary for win

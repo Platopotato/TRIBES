@@ -52,6 +52,25 @@ const JourneysPanel: React.FC<JourneysPanelProps> = ({ allJourneys, playerTribeI
                           Force: {formatForce(journey.force)}
                           {(journey.force?.chiefs?.length || 0) > 0 && <span title="Chiefs present">★</span>}
                         </p>
+
+                        {/* Trade-specific details */}
+                        {journey.type === 'Trade' && journey.payload && (
+                          <div className="text-xs text-blue-300 mt-1">
+                            <div>🎁 Offering: {[
+                              journey.payload.food > 0 && `${journey.payload.food} food`,
+                              journey.payload.scrap > 0 && `${journey.payload.scrap} scrap`,
+                              journey.payload.weapons > 0 && `${journey.payload.weapons} weapons`
+                            ].filter(Boolean).join(', ') || 'Nothing'}</div>
+                            {journey.tradeOffer && (
+                              <div>🎯 Requesting: {[
+                                journey.tradeOffer.request.food > 0 && `${journey.tradeOffer.request.food} food`,
+                                journey.tradeOffer.request.scrap > 0 && `${journey.tradeOffer.request.scrap} scrap`,
+                                journey.tradeOffer.request.weapons > 0 && `${journey.tradeOffer.request.weapons} weapons`
+                              ].filter(Boolean).join(', ') || 'Nothing'}</div>
+                            )}
+                          </div>
+                        )}
+
                         {journey.status === 'returning' && <p className="text-xs italic text-green-400">Returning home...</p>}
                         {journey.status === 'awaiting_response' && <p className="text-xs italic text-yellow-400">Awaiting response...</p>}
                     </li>

@@ -2229,7 +2229,7 @@ function processTradeAction(tribe: any, action: any, state: any): string {
     const journey = {
         id: `trade-${Date.now()}-${tribe.id}`,
         ownerTribeId: tribe.id,
-        type: 'Trade',
+        type: JourneyType.Trade,
         origin: startLocation,
         destination: targetLocation,
         path: [startLocation, targetLocation], // Simple path for now

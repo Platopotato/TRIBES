@@ -891,13 +891,35 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         // Clear journey (done by caller via early return)
 
 
-        const battleIntro = `⚔️ Battle for ${destKey}! The air filled with dust and war cries as lines clashed.`;
-        attackerTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
-        defenderTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
+        // Generate epic battle narrative
+        const battleNarrative = generateEpicBattleNarrative({
+            location: destKey,
+            attackerTribe: attackerTribe.tribeName,
+            defenderTribe: defenderTribe.tribeName,
+            attackerForce: journey.force.troops,
+            defenderForce: defenderGarrison.troops,
+            attackerLosses: atkLosses,
+            defenderLosses: defLosses,
+            attackerWeaponLoss: atkWeaponsLoss,
+            defenderWeaponLoss: defWeaponsLoss,
+            winner: 'attacker',
+            terrain: defHex?.terrain,
+            hasOutpost: hasOutpostDefenses(defHex)
+        });
 
-        // Notify both tribes
-        attackerTribe.lastTurnResults.push({ id: `combat-arrival-win-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🏴‍☠️ Assault on ${destKey} succeeded! You lost ${atkLosses} troops; the defenders lost ${defLosses}. The banner changes hands amid cheers and smoke.` });
-        defenderTribe.lastTurnResults.push({ id: `combat-arrival-defeat-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🚨 ${destKey} stands scarred. Your garrison was overwhelmed. Losses: ${defLosses}. Survivors fall back under cover of ruin.` });
+        // Single comprehensive message for each side
+        attackerTribe.lastTurnResults.push({
+            id: `battle-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.attackerMessage
+        });
+        defenderTribe.lastTurnResults.push({
+            id: `battle-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.defenderMessage
+        });
 
         // Weapons attrition/capture on arrival win
         const destWeaponsLoss = Math.min(defenderGarrison.weapons || 0, Math.floor(defLosses * 0.5));
@@ -926,8 +948,35 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
         journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
 
-        attackerTribe.lastTurnResults.push({ id: `combat-arrival-loss-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🛑 Assault on ${destKey} was repelled in brutal fighting. Losses — You: ${atkLosses}, Enemy: ${defLosses}. The field is littered with broken steel.` });
-        defenderTribe.lastTurnResults.push({ id: `combat-arrival-defend-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🛡️ ${destKey} holds. You lost ${defLosses} troops, but the line did not break.` });
+        // Generate epic battle narrative for defender victory
+        const battleNarrative = generateEpicBattleNarrative({
+            location: destKey,
+            attackerTribe: attackerTribe.tribeName,
+            defenderTribe: defenderTribe.tribeName,
+            attackerForce: journey.force.troops + atkLosses, // Original force size
+            defenderForce: defenderGarrison.troops + defLosses, // Original garrison size
+            attackerLosses: atkLosses,
+            defenderLosses: defLosses,
+            attackerWeaponLoss: atkWeaponsLoss,
+            defenderWeaponLoss: defWeaponsLoss,
+            winner: 'defender',
+            terrain: defHex?.terrain,
+            hasOutpost: hasOutpostDefenses(defHex)
+        });
+
+        // Single comprehensive message for each side
+        attackerTribe.lastTurnResults.push({
+            id: `battle-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.attackerMessage
+        });
+        defenderTribe.lastTurnResults.push({
+            id: `battle-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.defenderMessage
+        });
         // No capture; journey effectively spent.
     }
 
@@ -2186,53 +2235,40 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     const attackerGarrison = tribe.garrisons[attackerLocation] || tribe.garrisons[convertToStandardFormat(attackerLocation)];
 
-    // Add combat badge line to attacker (defender gets its separate message already)
-    const combatBadgesEarly = (typeof buildAssetBadges === 'function') ? buildAssetBadges(tribe, { phase: 'combat', terrain: undefined }) : [];
-    if (combatBadgesEarly.length > 0) {
-
-	// Multi-turn journey: Attack dispatch when ETA > 1
-	const origin = attackerLocation;
-	const dest = targetLocation;
-	const pathInfo = findPath(parseHexCoords(origin), parseHexCoords(dest), state.mapData);
-	if (!pathInfo) {
-	    return `❌ Could not find a path from ${origin} to ${dest}.`;
-	}
-	const effAtk = getCombinedEffects(tribe);
-	const etaAtk = Math.ceil(pathInfo.cost / effAtk.movementSpeedBonus);
-	if (etaAtk > 1) {
-	    const weaponsToSend = Math.max(0, action.actionData.weapons || 0);
-	    if ((attackerGarrison.weapons || 0) < weaponsToSend) return `Insufficient weapons at ${origin}.`;
-	    const chiefsToMove: string[] = action.actionData.chiefsToMove || [];
-	    const availableChiefs = attackerGarrison.chiefs || [];
-	    const movingChiefs = availableChiefs.filter((c: any) => chiefsToMove.includes(c.name));
-	    // Deduct
-	    attackerGarrison.troops -= troopsToAttack;
-	    attackerGarrison.weapons = (attackerGarrison.weapons || 0) - weaponsToSend;
-	    attackerGarrison.chiefs = availableChiefs.filter((c: any) => !chiefsToMove.includes(c.name));
-	    if (!state.journeys) state.journeys = [];
-	    state.journeys.push({
-	        id: `attack-${Date.now()}-${tribe.id}`,
-	        ownerTribeId: tribe.id,
-	        type: JourneyType.Attack,
-	        origin,
-	        destination: dest,
-	        path: pathInfo.path,
-	        currentLocation: pathInfo.path[0],
-	        force: { troops: troopsToAttack, weapons: weaponsToSend, chiefs: movingChiefs },
-	        payload: { food: 0, scrap: 0, weapons: 0 },
-	        arrivalTurn: etaAtk,
-	        status: 'en_route',
-	    });
-	    return `⚔️ Assault force dispatched from ${origin} to ${dest}. Arrival in ${etaAtk} turn(s).`;
-	}
-
-        tribe.lastTurnResults.push({
-            id: `combat-mods-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: action.actionData,
-            result: `⚔️ Combat modifiers:${combatBadgesEarly.map((b: any) => ` ${b.emoji || ''} ${b.label}`).join('')}`,
-            meta: { assetBadges: combatBadgesEarly }
+    // Multi-turn journey: Attack dispatch when ETA > 1
+    const origin = attackerLocation;
+    const dest = targetLocation;
+    const pathInfo = findPath(parseHexCoords(origin), parseHexCoords(dest), state.mapData);
+    if (!pathInfo) {
+        return `❌ Could not find a path from ${origin} to ${dest}.`;
+    }
+    const effAtk = getCombinedEffects(tribe);
+    const etaAtk = Math.ceil(pathInfo.cost / effAtk.movementSpeedBonus);
+    if (etaAtk > 1) {
+        const weaponsToSend = Math.max(0, action.actionData.weapons || 0);
+        if ((attackerGarrison.weapons || 0) < weaponsToSend) return `Insufficient weapons at ${origin}.`;
+        const chiefsToMove: string[] = action.actionData.chiefsToMove || [];
+        const availableChiefs = attackerGarrison.chiefs || [];
+        const movingChiefs = availableChiefs.filter((c: any) => chiefsToMove.includes(c.name));
+        // Deduct
+        attackerGarrison.troops -= troopsToAttack;
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) - weaponsToSend;
+        attackerGarrison.chiefs = availableChiefs.filter((c: any) => !chiefsToMove.includes(c.name));
+        if (!state.journeys) state.journeys = [];
+        state.journeys.push({
+            id: `attack-${Date.now()}-${tribe.id}`,
+            ownerTribeId: tribe.id,
+            type: JourneyType.Attack,
+            origin,
+            destination: dest,
+            path: pathInfo.path,
+            currentLocation: pathInfo.path[0],
+            force: { troops: troopsToAttack, weapons: weaponsToSend, chiefs: movingChiefs },
+            payload: { food: 0, scrap: 0, weapons: 0 },
+            arrivalTurn: etaAtk,
+            status: 'en_route',
         });
+        return `⚔️ Assault force dispatched from ${origin} to ${dest}. Arrival in ${etaAtk} turn(s).`;
     }
 
     if (!attackerGarrison || attackerGarrison.troops < troopsToAttack) {
@@ -2271,17 +2307,8 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         const terr = defHex.terrain as TerrainType;
         terrainDefBonus += (effects.terrainDefenseBonus[terr] || 0);
 
-        // Add combat badge line to attacker (defender gets its separate message already)
+        // Store combat badges for inclusion in battle narrative
         const combatBadges = buildAssetBadges(tribe, { phase: 'combat', terrain: terr });
-        if (combatBadges.length > 0) {
-            tribe.lastTurnResults.push({
-                id: `combat-mods-${Date.now()}`,
-                actionType: ActionType.Attack,
-                actionData: action.actionData,
-                result: `⚔️ Combat modifiers:${combatBadges.map((b: any) => ` ${b.emoji || ''} ${b.label}`).join('')}`,
-                meta: { assetBadges: combatBadges }
-            });
-        }
     }
 
     // Apply ration-based combat modifiers if present (percentages)
@@ -2304,77 +2331,123 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     if (attackerRoll > defenderRoll) {
 
-        const battleIntro = `⚔️ Battle for ${targetLocation}! War cries echo as the outworks are stormed.`;
-        tribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: action.actionData, result: battleIntro });
-        defendingTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
-
         // Attacker wins — use casualty model for higher lethality, then occupy/capture
-        {
-            const outpostHere = hasOutpostDefenses(defHex);
-            const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
-                troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-                { terrainDefBonus, outpost: outpostHere }
-            );
-            // Apply losses
-            attackerGarrison.troops -= atkLosses;
-            defenderGarrison.troops -= defLosses;
-            attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
-            defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
-            const capturedWeapons = Math.floor(defWeaponsLoss * 0.5);
-            attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
-            tribe.lastTurnResults.push({ id: `attack-weapons-${Date.now()}`, actionType: ActionType.Attack, actionData: action.actionData, result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${defWeaponsLoss}, captured ${capturedWeapons}.` });
+        const outpostHere = hasOutpostDefenses(defHex);
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+            { terrainDefBonus, outpost: outpostHere }
+        );
+        // Apply losses
+        attackerGarrison.troops -= atkLosses;
+        defenderGarrison.troops -= defLosses;
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+        const capturedWeapons = Math.floor(defWeaponsLoss * 0.5);
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
 
-            // Move surviving committed attackers into the destination hex
-            const committedSurvivors = Math.max(0, troopsToAttack - atkLosses);
-            if (!tribe.garrisons[targetLocation]) tribe.garrisons[targetLocation] = { troops: 0, weapons: 0, chiefs: [] };
-            const destGarrison = tribe.garrisons[targetLocation];
-            const movedTroops = Math.min(committedSurvivors, attackerGarrison.troops);
-            destGarrison.troops += movedTroops;
-            attackerGarrison.troops -= movedTroops;
-            const moveWeapons = Math.min(attackerGarrison.weapons || 0, movedTroops);
-            destGarrison.weapons = (destGarrison.weapons || 0) + moveWeapons;
-            attackerGarrison.weapons = (attackerGarrison.weapons || 0) - moveWeapons;
+        // Move surviving committed attackers into the destination hex
+        const committedSurvivors = Math.max(0, troopsToAttack - atkLosses);
+        if (!tribe.garrisons[targetLocation]) tribe.garrisons[targetLocation] = { troops: 0, weapons: 0, chiefs: [] };
+        const destGarrison = tribe.garrisons[targetLocation];
+        const movedTroops = Math.min(committedSurvivors, attackerGarrison.troops);
+        destGarrison.troops += movedTroops;
+        attackerGarrison.troops -= movedTroops;
+        const moveWeapons = Math.min(attackerGarrison.weapons || 0, movedTroops);
+        destGarrison.weapons = (destGarrison.weapons || 0) + moveWeapons;
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) - moveWeapons;
 
-            // Only transfer Outpost ownership if defenders are wiped out; otherwise mark as contested breach
-            if (hasOutpostDefenses(defHex)) {
-                const defendersRemain = (defenderGarrison.troops || 0) > 0;
-                if (!defendersRemain) {
-                    const prevOwnerId = getOutpostOwnerTribeId(defHex);
-                    setOutpostOwner(defHex, tribe.id, targetLocation);
-                    const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
-                    const captureMsg = `🏴‍☠️ Outpost at ${targetLocation} captured by ${tribe.tribeName}. Banner torn down and replaced.`;
-                    tribe.lastTurnResults.push({ id: `outpost-capture-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: captureMsg });
-                    if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${targetLocation} was seized by ${tribe.tribeName}.` });
-                } else {
-                    tribe.lastTurnResults.push({ id: `outpost-contested-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: `⚔️ Foothold secured inside the outpost at ${targetLocation}, but defenders remain entrenched. No capture yet.` });
-                    defendingTribe.lastTurnResults.push({ id: `outpost-contested-def-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Enemy breached the outpost at ${targetLocation} and holds ground within, but your defenders still fight. Banner holds for now.` });
-                }
+        // Only transfer Outpost ownership if defenders are wiped out; otherwise mark as contested breach
+        if (hasOutpostDefenses(defHex)) {
+            const defendersRemain = (defenderGarrison.troops || 0) > 0;
+            if (!defendersRemain) {
+                const prevOwnerId = getOutpostOwnerTribeId(defHex);
+                setOutpostOwner(defHex, tribe.id, targetLocation);
+                const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+                const captureMsg = `🏴‍☠️ Outpost at ${targetLocation} captured by ${tribe.tribeName}. Banner torn down and replaced.`;
+                tribe.lastTurnResults.push({ id: `outpost-capture-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: captureMsg });
+                if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${targetLocation} was seized by ${tribe.tribeName}.` });
+            } else {
+                tribe.lastTurnResults.push({ id: `outpost-contested-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: `⚔️ Foothold secured inside the outpost at ${targetLocation}, but defenders remain entrenched. No capture yet.` });
+                defendingTribe.lastTurnResults.push({ id: `outpost-contested-def-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Enemy breached the outpost at ${targetLocation} and holds ground within, but your defenders still fight. Banner holds for now.` });
             }
         }
 
-        // Narrative summary for win
-        if ((defenderGarrison.troops || 0) > 0) {
-            defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} assaulted your outpost at ${targetLocation}. They established a foothold, but you still hold inner defenses.` });
-            return `Victory! Assault on ${defendingTribe.tribeName} at ${targetLocation} succeeded, but defenders remain. Foothold secured; no capture yet.`;
-        } else {
-            defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} overran your defenses at ${targetLocation}. The outpost is lost.` });
-            return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. Outpost captured after fierce fighting.`;
-        }
+        // Generate epic battle narrative for attacker victory
+        const battleNarrative = generateEpicBattleNarrative({
+            location: targetLocation,
+            attackerTribe: tribe.tribeName,
+            defenderTribe: defendingTribe.tribeName,
+            attackerForce: troopsToAttack,
+            defenderForce: defenderGarrison.troops + defLosses, // Original garrison size
+            attackerLosses: atkLosses,
+            defenderLosses: defLosses,
+            attackerWeaponLoss: atkWeaponsLoss,
+            defenderWeaponLoss: defWeaponsLoss,
+            capturedWeapons: capturedWeapons,
+            winner: 'attacker',
+            terrain: defHex?.terrain,
+            hasOutpost: hasOutpostDefenses(defHex),
+            defendersRemain: (defenderGarrison.troops || 0) > 0
+        });
+
+        // Single comprehensive message for each side
+        tribe.lastTurnResults.push({
+            id: `battle-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: action.actionData,
+            result: battleNarrative.attackerMessage
+        });
+        defendingTribe.lastTurnResults.push({
+            id: `battle-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.defenderMessage
+        });
+
+        return battleNarrative.returnMessage;
     } else {
         // Defender wins — use casualty model
-        {
-            const outpostHere = hasOutpostDefenses(defHex);
-            const { atkLosses: attackerLosses, defLosses: defenderLosses } = computeCasualties(
-                troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-                { terrainDefBonus, outpost: outpostHere }
-            );
-            attackerGarrison.troops -= attackerLosses;
-            defenderGarrison.troops -= defenderLosses;
-        }
+        const outpostHere = hasOutpostDefenses(defHex);
+        const { atkLosses: attackerLosses, defLosses: defenderLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+            { terrainDefBonus, outpost: outpostHere }
+        );
+        attackerGarrison.troops -= attackerLosses;
+        defenderGarrison.troops -= defenderLosses;
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) - (atkWeaponsLoss || 0);
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - (defWeaponsLoss || 0);
 
-        // Add result to defender
-        defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You held the line.` });
-        return `Defeat! Attack on ${defendingTribe.tribeName} at ${targetLocation} failed after brutal exchanges.`;
+        // Generate epic battle narrative for defender victory
+        const battleNarrative = generateEpicBattleNarrative({
+            location: targetLocation,
+            attackerTribe: tribe.tribeName,
+            defenderTribe: defendingTribe.tribeName,
+            attackerForce: troopsToAttack,
+            defenderForce: defenderGarrison.troops + defenderLosses, // Original garrison size
+            attackerLosses: attackerLosses,
+            defenderLosses: defenderLosses,
+            attackerWeaponLoss: atkWeaponsLoss || 0,
+            defenderWeaponLoss: defWeaponsLoss || 0,
+            winner: 'defender',
+            terrain: defHex?.terrain,
+            hasOutpost: hasOutpostDefenses(defHex)
+        });
+
+        // Single comprehensive message for each side
+        tribe.lastTurnResults.push({
+            id: `battle-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: action.actionData,
+            result: battleNarrative.attackerMessage
+        });
+        defendingTribe.lastTurnResults.push({
+            id: `battle-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: battleNarrative.defenderMessage
+        });
+
+        return battleNarrative.returnMessage;
     }
 }
 
@@ -3043,4 +3116,101 @@ function generateResearchProgressNarrative(tech: any, project: any, newProgress:
     ];
 
     return progressNarratives[Math.floor(Math.random() * progressNarratives.length)];
+}
+
+function generateEpicBattleNarrative(params: {
+    location: string,
+    attackerTribe: string,
+    defenderTribe: string,
+    attackerForce: number,
+    defenderForce: number,
+    attackerLosses: number,
+    defenderLosses: number,
+    attackerWeaponLoss?: number,
+    defenderWeaponLoss?: number,
+    capturedWeapons?: number,
+    winner: 'attacker' | 'defender',
+    terrain?: string,
+    hasOutpost?: boolean,
+    defendersRemain?: boolean
+}): { attackerMessage: string, defenderMessage: string, returnMessage: string } {
+
+    const { location, attackerTribe, defenderTribe, attackerForce, defenderForce,
+            attackerLosses, defenderLosses, attackerWeaponLoss = 0, defenderWeaponLoss = 0,
+            capturedWeapons = 0, winner, terrain, hasOutpost, defendersRemain } = params;
+
+    // Terrain-specific battle descriptions
+    const terrainDescriptions: { [key: string]: { setting: string, combat: string } } = {
+        'Plains': {
+            setting: 'across the open wasteland',
+            combat: 'Lines of warriors charged across the barren ground, kicking up clouds of dust as steel met steel'
+        },
+        'Forest': {
+            setting: 'through the twisted trees',
+            combat: 'Combat raged between the gnarled trunks, with warriors using fallen logs as cover while arrows whistled through the canopy'
+        },
+        'Desert': {
+            setting: 'amid the scorching dunes',
+            combat: 'The battle erupted under the merciless sun, sand turning crimson as fighters struggled for footing on the shifting ground'
+        },
+        'Wasteland': {
+            setting: 'among the radioactive ruins',
+            combat: 'Warriors clashed amid the twisted metal and broken concrete, their battle cries echoing off the skeletal remains of the old world'
+        },
+        'Mountains': {
+            setting: 'on the rocky heights',
+            combat: 'The fight raged across treacherous slopes, with combatants using the rocky terrain to their advantage in brutal close combat'
+        }
+    };
+
+    const terrainDesc = terrainDescriptions[terrain || 'Plains'] || terrainDescriptions['Plains'];
+    const outpostDesc = hasOutpost ? 'fortified outpost' : 'garrison';
+
+    // Calculate battle intensity
+    const totalCasualties = attackerLosses + defenderLosses;
+    const casualtyRate = totalCasualties / (attackerForce + defenderForce);
+    const isBloodbath = casualtyRate > 0.6;
+    const isBrutal = casualtyRate > 0.4;
+
+    // Generate opening
+    const battleOpening = `⚔️ **BATTLE FOR ${location.toUpperCase()}!** ${attackerTribe} forces (${attackerForce} strong) launched a fierce assault on the ${defenderTribe} ${outpostDesc} (${defenderForce} defenders) ${terrainDesc.setting}. ${terrainDesc.combat}.`;
+
+    // Generate casualties description
+    const casualtyDesc = isBloodbath ?
+        `The carnage was absolute - bodies littered the battlefield as both sides paid a terrible price.` :
+        isBrutal ?
+        `Blood soaked the ground as the battle raged with devastating intensity.` :
+        `Steel rang against steel in fierce but measured combat.`;
+
+    // Weapon-specific details
+    const weaponDetails = (attackerWeaponLoss > 0 || defenderWeaponLoss > 0) ?
+        ` Weapons were shattered in the melee - ${attackerWeaponLoss} pieces of ${attackerTribe} equipment destroyed, ${defenderWeaponLoss} ${defenderTribe} weapons lost.${capturedWeapons > 0 ? ` ${capturedWeapons} weapons were claimed as spoils of war.` : ''}` : '';
+
+    if (winner === 'attacker') {
+        const victoryType = defendersRemain ? 'FOOTHOLD SECURED' : 'TOTAL VICTORY';
+        const victoryDesc = defendersRemain ?
+            `${attackerTribe} warriors stormed the outer defenses and established a foothold within the ${outpostDesc}, but ${defenderTribe} defenders still hold the inner sanctum. The battle is not over.` :
+            `${attackerTribe} forces overwhelmed the defenders completely. The ${outpostDesc} banner was torn down and replaced amid the smoke of victory.`;
+
+        const attackerMessage = `🏴‍☠️ **${victoryType}** ${battleOpening} ${casualtyDesc} **Your losses:** ${attackerLosses} warriors fell in the assault. **Enemy losses:** ${defenderLosses} defenders were cut down. ${victoryDesc}${weaponDetails}`;
+
+        const defenderMessage = `🚨 **UNDER SIEGE** ${battleOpening} ${casualtyDesc} **Your losses:** ${defenderLosses} brave defenders gave their lives. **Enemy losses:** ${attackerLosses} attackers fell to your weapons. ${victoryDesc.replace(attackerTribe, 'The enemy').replace(defenderTribe, 'Your')}${weaponDetails}`;
+
+        const returnMessage = defendersRemain ?
+            `⚔️ Assault partially successful! Foothold secured at ${location}, but defenders remain entrenched.` :
+            `🏴‍☠️ Victory! ${location} captured after epic battle. ${defenderTribe} garrison eliminated.`;
+
+        return { attackerMessage, defenderMessage, returnMessage };
+
+    } else {
+        const defenseDesc = `${defenderTribe} defenders held their ground with unwavering courage. ${attackerTribe} forces were repelled, their assault broken against the stalwart defense.`;
+
+        const attackerMessage = `💀 **ASSAULT REPELLED** ${battleOpening} ${casualtyDesc} **Your losses:** ${attackerLosses} warriors fell in the failed assault. **Enemy losses:** ${defenderLosses} defenders died holding the line. ${defenseDesc}${weaponDetails}`;
+
+        const defenderMessage = `🛡️ **HEROIC DEFENSE** ${battleOpening} ${casualtyDesc} **Your losses:** ${defenderLosses} heroes fell defending your home. **Enemy losses:** ${attackerLosses} attackers were slain. ${defenseDesc.replace(defenderTribe, 'Your').replace(attackerTribe, 'Enemy')}${weaponDetails}`;
+
+        const returnMessage = `💀 Assault failed! ${attackerTribe} forces repelled at ${location} with heavy casualties.`;
+
+        return { attackerMessage, defenderMessage, returnMessage };
+    }
 }

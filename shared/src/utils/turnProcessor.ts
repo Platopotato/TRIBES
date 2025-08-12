@@ -2249,20 +2249,31 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             destGarrison.weapons = (destGarrison.weapons || 0) + moveWeapons;
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) - moveWeapons;
 
-            // If there is an Outpost here, transfer ownership
+            // Only transfer Outpost ownership if defenders are wiped out; otherwise mark as contested breach
             if (defHex?.poi?.type === POIType.Outpost) {
-                const prevOwnerId = getOutpostOwnerTribeId(defHex);
-                setOutpostOwner(defHex, tribe.id, targetLocation);
-                const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
-                const captureMsg = `🏴‍☠️ Outpost at ${targetLocation} captured by ${tribe.tribeName}. Banner torn down and replaced.`;
-                tribe.lastTurnResults.push({ id: `outpost-capture-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: captureMsg });
-                if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${targetLocation} was seized by ${tribe.tribeName}.` });
+                const defendersRemain = (defenderGarrison.troops || 0) > 0;
+                if (!defendersRemain) {
+                    const prevOwnerId = getOutpostOwnerTribeId(defHex);
+                    setOutpostOwner(defHex, tribe.id, targetLocation);
+                    const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+                    const captureMsg = `🏴‍☠️ Outpost at ${targetLocation} captured by ${tribe.tribeName}. Banner torn down and replaced.`;
+                    tribe.lastTurnResults.push({ id: `outpost-capture-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: captureMsg });
+                    if (prevOwner) prevOwner.lastTurnResults.push({ id: `outpost-lost-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Outpost at ${targetLocation} was seized by ${tribe.tribeName}.` });
+                } else {
+                    tribe.lastTurnResults.push({ id: `outpost-contested-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: action.actionData, result: `⚔️ Foothold secured inside the outpost at ${targetLocation}, but defenders remain entrenched. No capture yet.` });
+                    defendingTribe.lastTurnResults.push({ id: `outpost-contested-def-${targetLocation}-${state.turn}`, actionType: ActionType.Attack, actionData: {}, result: `⚠️ Enemy breached the outpost at ${targetLocation} and holds ground within, but your defenders still fight. Banner holds for now.` });
+                }
             }
         }
 
         // Narrative summary for win
-        defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! Heavy fighting; your forces took losses and were forced to fall back.` });
-        return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. Hex captured after fierce fighting.`;
+        if ((defenderGarrison.troops || 0) > 0) {
+            defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} assaulted your outpost at ${targetLocation}. They established a foothold, but you still hold inner defenses.` });
+            return `Victory! Assault on ${defendingTribe.tribeName} at ${targetLocation} succeeded, but defenders remain. Foothold secured; no capture yet.`;
+        } else {
+            defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} overran your defenses at ${targetLocation}. The outpost is lost.` });
+            return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. Outpost captured after fierce fighting.`;
+        }
     } else {
         // Defender wins — use casualty model
         {

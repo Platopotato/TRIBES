@@ -296,8 +296,30 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         <g className="pointer-events-none" style={poi.rarity === 'Very Rare' ? { filter: 'url(#poi-glow)' } : {}}>
             <polygon
                 points={diamondPoints}
-                className={`${POI_COLORS[poi.type].bg} stroke-black/50 stroke-1`}
+                className={`${POI_COLORS[poi.type].bg} ${(poi as any).fortified ? 'stroke-amber-400 stroke-2' : 'stroke-black/50 stroke-1'}`}
             />
+            {/* Fortification indicator - defensive spikes around the POI */}
+            {(poi as any).fortified && (
+              <g className="pointer-events-none">
+                {/* Defensive spikes/walls around the POI */}
+                <polygon
+                  points={diamondPoints}
+                  className="fill-none stroke-amber-300 stroke-1"
+                  strokeDasharray="2,1"
+                  transform="scale(1.2)"
+                />
+                {/* Small fortress symbol in corner */}
+                <text
+                  x={size * 0.25}
+                  y={-size * 0.25}
+                  textAnchor="middle"
+                  className="text-amber-300 font-bold"
+                  style={{ fontSize: `${size * 0.2}px` }}
+                >
+                  🛡️
+                </text>
+              </g>
+            )}
             <text
                 x="0"
                 y="0"

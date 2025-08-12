@@ -554,17 +554,27 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         // Add outpost properties while preserving original POI functionality
         (hex.poi as any).outpostOwner = tribe.id;
         (hex.poi as any).fortified = true;
-        tribe.lastTurnResults.push({ id: `outpost-fortified-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ ${hex.poi.type} at ${destKey} fortified with outpost defenses. Original benefits preserved.` });
+        tribe.lastTurnResults.push({ id: `outpost-fortified-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ ${hex.poi.type} at ${destKey} fortified with outpost defenses! 5 builders consumed to create fortifications. Original POI benefits preserved.` });
+
+        // Builders are consumed to create the fortification - no garrison created
+        // Only add chiefs if any were sent (they become the garrison commanders)
+        if (journey.force.chiefs && journey.force.chiefs.length > 0) {
+            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+            tribe.garrisons[destKey].chiefs.push(...journey.force.chiefs);
+        }
     } else {
         // Create new standalone outpost
         hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
         tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders remain as the garrison.` });
+
+        // For standalone outposts, builders become the garrison
+        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        tribe.garrisons[destKey].troops += (journey.force.troops || 0);
+        tribe.garrisons[destKey].weapons += (journey.force.weapons || 0);
+        if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+        tribe.garrisons[destKey].chiefs.push(...(journey.force.chiefs || []));
     }
-    if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-    tribe.garrisons[destKey].troops += (journey.force.troops || 0);
-    tribe.garrisons[destKey].weapons += (journey.force.weapons || 0);
-    if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
-    tribe.garrisons[destKey].chiefs.push(...(journey.force.chiefs || []));
 }
 
     const arrivalsByDest: Record<string, Array<{ journey: any, tribe: any }>> = {};

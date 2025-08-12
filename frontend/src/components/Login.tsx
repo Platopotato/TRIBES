@@ -133,33 +133,58 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
           className="absolute bottom-0 left-0 w-full h-1/5"
           style={{ transform: `translateX(${mousePos.x * 0.4}px)` }}
         >
-          {/* Massive Tribal Totems with Dramatic Glow */}
-          <div className="absolute bottom-0 left-1/6 w-8 h-40 bg-gradient-to-t from-amber-900 via-amber-600 to-amber-400 transform rotate-12 shadow-2xl animate-glow"
-               style={{ boxShadow: '0 0 20px rgba(251, 146, 60, 0.8), 0 0 40px rgba(251, 146, 60, 0.4)' }}></div>
-          <div className="absolute bottom-0 right-1/4 w-10 h-48 bg-gradient-to-t from-red-900 via-red-600 to-red-400 transform -rotate-6 shadow-2xl animate-shimmer"
-               style={{ boxShadow: '0 0 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(239, 68, 68, 0.4)' }}></div>
-          <div className="absolute bottom-0 left-1/3 w-6 h-32 bg-gradient-to-t from-orange-900 via-orange-600 to-orange-400 transform rotate-3 shadow-xl animate-glow"
-               style={{ boxShadow: '0 0 15px rgba(249, 115, 22, 0.8), 0 0 30px rgba(249, 115, 22, 0.4)' }}></div>
+          {/* MASSIVE Tribal Totems - Much Larger and More Visible */}
+          <div className="absolute bottom-0 left-1/6 w-16 h-64 bg-gradient-to-t from-amber-900 via-amber-600 to-amber-300 transform rotate-12 shadow-2xl animate-glow"
+               style={{
+                 boxShadow: '0 0 40px rgba(251, 146, 60, 1), 0 0 80px rgba(251, 146, 60, 0.8), 0 0 120px rgba(251, 146, 60, 0.4)',
+                 filter: 'drop-shadow(0 0 20px rgba(251, 146, 60, 0.8))'
+               }}></div>
+          <div className="absolute bottom-0 right-1/4 w-20 h-80 bg-gradient-to-t from-red-900 via-red-600 to-red-300 transform -rotate-6 shadow-2xl animate-shimmer"
+               style={{
+                 boxShadow: '0 0 50px rgba(239, 68, 68, 1), 0 0 100px rgba(239, 68, 68, 0.8), 0 0 150px rgba(239, 68, 68, 0.4)',
+                 filter: 'drop-shadow(0 0 25px rgba(239, 68, 68, 0.8))'
+               }}></div>
+          <div className="absolute bottom-0 left-1/3 w-12 h-56 bg-gradient-to-t from-orange-900 via-orange-600 to-orange-300 transform rotate-3 shadow-xl animate-glow"
+               style={{
+                 boxShadow: '0 0 30px rgba(249, 115, 22, 1), 0 0 60px rgba(249, 115, 22, 0.8), 0 0 90px rgba(249, 115, 22, 0.4)',
+                 filter: 'drop-shadow(0 0 15px rgba(249, 115, 22, 0.8))'
+               }}></div>
 
-          {/* Large Weapon Racks and Structures */}
-          <div className="absolute bottom-0 left-1/8 w-4 h-24 bg-gray-600 shadow-lg"></div>
-          <div className="absolute bottom-0 left-1/8 w-16 h-3 bg-gray-500 transform rotate-45 translate-y-6 shadow-md"></div>
-          <div className="absolute bottom-0 right-1/6 w-4 h-20 bg-gray-600 shadow-lg"></div>
-          <div className="absolute bottom-0 right-1/6 w-14 h-3 bg-gray-500 transform -rotate-45 translate-y-5 shadow-md"></div>
+          {/* HUGE Weapon Racks and Structures */}
+          <div className="absolute bottom-0 left-1/8 w-8 h-48 bg-gradient-to-t from-gray-800 to-gray-600 shadow-2xl"></div>
+          <div className="absolute bottom-0 left-1/8 w-32 h-6 bg-gradient-to-r from-gray-700 to-gray-500 transform rotate-45 translate-y-12 shadow-xl"></div>
+          <div className="absolute bottom-0 right-1/6 w-8 h-40 bg-gradient-to-t from-gray-800 to-gray-600 shadow-2xl"></div>
+          <div className="absolute bottom-0 right-1/6 w-28 h-6 bg-gradient-to-r from-gray-700 to-gray-500 transform -rotate-45 translate-y-10 shadow-xl"></div>
 
-          {/* Dramatic Campfire */}
-          <div className="absolute bottom-0 left-1/2 w-16 h-16 bg-orange-500 rounded-full opacity-80 animate-pulse shadow-2xl"
-               style={{ boxShadow: '0 0 30px rgba(249, 115, 22, 1), 0 0 60px rgba(249, 115, 22, 0.6), 0 0 90px rgba(249, 115, 22, 0.3)' }}></div>
-          <div className="absolute bottom-0 left-1/2 w-8 h-8 bg-yellow-400 rounded-full opacity-90 animate-pulse shadow-xl"
-               style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 1), 0 0 40px rgba(250, 204, 21, 0.8)' }}></div>
+          {/* MASSIVE Campfire with Towering Flames */}
+          <div className="absolute bottom-0 left-1/2 w-32 h-32 bg-orange-500 rounded-full opacity-90 animate-pulse shadow-2xl"
+               style={{
+                 boxShadow: '0 0 60px rgba(249, 115, 22, 1), 0 0 120px rgba(249, 115, 22, 0.8), 0 0 180px rgba(249, 115, 22, 0.4)',
+                 filter: 'drop-shadow(0 0 30px rgba(249, 115, 22, 1))'
+               }}></div>
+          <div className="absolute bottom-0 left-1/2 w-16 h-16 bg-yellow-300 rounded-full opacity-95 animate-pulse shadow-xl"
+               style={{
+                 boxShadow: '0 0 40px rgba(250, 204, 21, 1), 0 0 80px rgba(250, 204, 21, 0.9)',
+                 filter: 'drop-shadow(0 0 20px rgba(250, 204, 21, 1))'
+               }}></div>
 
-          {/* Tribal Banners */}
-          <div className="absolute bottom-0 left-1/5 w-1 h-28 bg-gray-700"></div>
-          <div className="absolute bottom-20 left-1/5 w-8 h-12 bg-red-800 opacity-80 animate-pulse transform origin-left"
-               style={{ clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)' }}></div>
-          <div className="absolute bottom-0 right-1/5 w-1 h-24 bg-gray-700"></div>
-          <div className="absolute bottom-16 right-1/5 w-6 h-10 bg-amber-800 opacity-80 animate-pulse transform origin-left"
-               style={{ clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)' }}></div>
+          {/* TALL Tribal Banners */}
+          <div className="absolute bottom-0 left-1/5 w-3 h-56 bg-gradient-to-t from-gray-800 to-gray-600 shadow-xl"></div>
+          <div className="absolute bottom-40 left-1/5 w-16 h-24 bg-red-700 opacity-90 animate-pulse transform origin-left shadow-lg"
+               style={{
+                 clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)',
+                 filter: 'drop-shadow(0 0 10px rgba(185, 28, 28, 0.8))'
+               }}></div>
+          <div className="absolute bottom-0 right-1/5 w-3 h-48 bg-gradient-to-t from-gray-800 to-gray-600 shadow-xl"></div>
+          <div className="absolute bottom-32 right-1/5 w-12 h-20 bg-amber-700 opacity-90 animate-pulse transform origin-left shadow-lg"
+               style={{
+                 clipPath: 'polygon(0 0, 100% 0, 80% 50%, 100% 100%, 0 100%)',
+                 filter: 'drop-shadow(0 0 8px rgba(180, 83, 9, 0.8))'
+               }}></div>
+
+          {/* Additional Tribal Structures */}
+          <div className="absolute bottom-0 left-2/3 w-6 h-36 bg-gradient-to-t from-stone-800 to-stone-600 transform rotate-6 shadow-xl"></div>
+          <div className="absolute bottom-0 left-3/4 w-4 h-28 bg-gradient-to-t from-stone-800 to-stone-600 transform -rotate-12 shadow-lg"></div>
         </div>
 
         {/* Atmospheric Haze */}

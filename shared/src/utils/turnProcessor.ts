@@ -1244,20 +1244,6 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
     return `🏗️ Build Outpost expedition dispatched from ${start} to ${target} with 5 builders. ETA: ${arrivalTurn} turn(s).`;
 }
 
-    // Recruit troops
-    tribe.globalResources.food -= foodOffered;
-    garrison.troops += troopsRecruited;
-
-    let efficiencyMessage = '';
-    if (recruitmentEfficiency > 1.0) {
-        efficiencyMessage = ` (Generous rations: +${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency${troopsRecruited > baseTroopsRecruited ? ', bonus recruit!' : ''})`;
-    } else if (recruitmentEfficiency < 1.0) {
-        efficiencyMessage = ` (Poor conditions: ${Math.round((recruitmentEfficiency - 1) * 100)}% efficiency)`;
-    }
-
-    return `✅ Successfully recruited ${troopsRecruited} troop${troopsRecruited > 1 ? 's' : ''} at ${location}! Cost: ${foodOffered} food${efficiencyMessage}. Garrison now has ${garrison.troops} troops.`;
-}
-
 
 // NOTE: Legacy immediate Build Outpost implementation removed; journey-based version above is authoritative.
 function processRestAction(tribe: any, action: any): string {

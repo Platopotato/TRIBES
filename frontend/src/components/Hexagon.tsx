@@ -159,6 +159,11 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             {tribesOnHex.map((tribe, index) => {
                 const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
                 const xOffset = startX + index * (iconSize / 1.8);
+                const garrison = tribe.garrisons[hexCoords];
+                const troops = garrison?.troops ?? 0;
+                const weapons = garrison?.weapons ?? 0;
+                const chiefCount = garrison?.chiefs?.length ?? 0;
+
                 return (
                     <g key={tribe.id} transform={`translate(${xOffset}, 0)`}>
                         <circle
@@ -173,6 +178,46 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                         <text x="0" y={iconSize * 0.1} textAnchor="middle" className="select-none" fontSize={iconSize * 0.5} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                             {icon}
                         </text>
+
+                        {/* Garrison size display under tribe icon */}
+                        {troops > 0 && (
+                            <g>
+                                <rect
+                                    x={-iconSize * 0.25}
+                                    y={iconSize * 0.45}
+                                    width={iconSize * 0.5}
+                                    height={iconSize * 0.25}
+                                    fill="rgba(0,0,0,0.7)"
+                                    stroke="rgba(255,255,255,0.3)"
+                                    strokeWidth="0.5"
+                                    rx={iconSize * 0.05}
+                                />
+                                <text
+                                    x="0"
+                                    y={iconSize * 0.62}
+                                    textAnchor="middle"
+                                    className="select-none font-bold fill-white"
+                                    fontSize={iconSize * 0.2}
+                                    style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}
+                                >
+                                    {troops}{weapons > 0 ? `+${weapons}` : ''}
+                                </text>
+                            </g>
+                        )}
+
+                        {/* Chief indicator */}
+                        {chiefCount > 0 && (
+                            <text
+                                x="0"
+                                y={-iconSize * 0.25}
+                                textAnchor="middle"
+                                className="select-none fill-yellow-300"
+                                fontSize={iconSize * 0.3}
+                                style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}
+                            >
+                                ★
+                            </text>
+                        )}
                     </g>
                 );
             })}

@@ -70,7 +70,15 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         scavengeBonuses: { Food: 0, Scrap: 0, Weapons: 0 },
         globalCombatAttackBonus: 0,
         globalCombatDefenseBonus: 0,
-        terrainDefenseBonus: {},
+        terrainDefenseBonus: {
+            // Base terrain defense bonuses
+            [TerrainType.Mountains]: 0.30,    // +30% defense - highly defensible peaks
+            [TerrainType.Forest]: 0.15,       // +15% defense - cover and concealment
+            [TerrainType.Ruins]: 0.10,        // +10% defense - urban warfare advantages
+            [TerrainType.Desert]: 0.0,        // 0% - harsh but no tactical advantage
+            [TerrainType.Wasteland]: 0.0,     // 0% - barren, no advantage
+            [TerrainType.Plains]: -0.05,      // -5% defense penalty - open ground
+        },
     };
 
 
@@ -759,9 +767,10 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     const effects = getCombinedEffects(attackerTribe);
 
     // Compute base strengths from journey force and defending garrison
-    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0);
+    // Weapons provide 1.5x combat effectiveness
+    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0) * 1.5;
     const defenderGarrison = defenderTribe.garrisons[destKey];
-    const defenderStrength = (defenderGarrison?.troops || 0) + (defenderGarrison?.weapons || 0);
+    const defenderStrength = (defenderGarrison?.troops || 0) + (defenderGarrison?.weapons || 0) * 1.5;
 
     // Terrain and ration effects
     let terrainDefBonus = 0;
@@ -791,8 +800,11 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
     const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
 
+    // Add explicit outpost defensive bonus to win/loss calculation
+    const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
+
     const attackerRoll = Math.random() * (attackerStrength * atkMult * atkRation);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * defRation * (1 + terrainDefBonus));
+    const defenderRoll = Math.random() * (defenderStrength * defMult * defRation * (1 + terrainDefBonus) * outpostDefBonus);
 
     if (attackerRoll > defenderRoll) {
         // Attacker wins: reduce both sides with higher lethality, capture hex
@@ -2183,8 +2195,9 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
     const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
 
-    const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0);
-    const defenderStrength = defenderGarrison.troops + (defenderGarrison.weapons || 0);
+    // Weapons provide 1.5x combat effectiveness
+    const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0) * 1.5;
+    const defenderStrength = defenderGarrison.troops + (defenderGarrison.weapons || 0) * 1.5;
 
     // Terrain-specific defense bonuses for defender
     let terrainDefBonus = 0;
@@ -2213,8 +2226,11 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const attackerRationMod = tribe.rationEffects?.combatModifier ? (1 + (tribe.rationEffects.combatModifier / 100)) : 1;
     const defenderRationMod = defendingTribe.rationEffects?.combatModifier ? (1 + (defendingTribe.rationEffects.combatModifier / 100)) : 1;
 
+    // Add explicit outpost defensive bonus to win/loss calculation
+    const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
+
     const attackerRoll = Math.random() * (attackerStrength * atkMult * attackerRationMod);
-    const defenderRoll = Math.random() * (defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus));
+    const defenderRoll = Math.random() * (defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * outpostDefBonus);
 
     if (attackerRoll > defenderRoll) {
 

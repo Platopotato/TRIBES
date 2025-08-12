@@ -1,4 +1,4 @@
-import { User } from '../../../shared/dist/index.js';
+import { User } from '@radix-tribes/shared';
 import * as client from './client';
 
 export function register(username: string, password: string, securityQuestion: string, securityAnswer: string) {

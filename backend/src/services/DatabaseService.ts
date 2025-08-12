@@ -8,7 +8,8 @@ import {
   Tribe,
   generateMapData,
   SECURITY_QUESTIONS,
-  NewsletterState
+  NewsletterState,
+  TurnDeadline
 } from '../../../shared/dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +21,7 @@ export class DatabaseService {
   private dataDir: string;
   private dataFile: string;
   private newsletterFile: string;
+  private deadlineFile: string;
 
 
   constructor() {
@@ -27,6 +29,7 @@ export class DatabaseService {
     this.dataFile = path.join(this.dataDir, 'game-data.json');
 
     this.newsletterFile = path.join(this.dataDir, 'newsletters.json');
+    this.deadlineFile = path.join(this.dataDir, 'turn-deadline.json');
   }
 
   async initialize(): Promise<void> {
@@ -41,13 +44,16 @@ export class DatabaseService {
       this.useDatabase = true;
       console.log('✅ Connected to PostgreSQL database');
 
-      // Ensure newsletters file exists even in DB mode
+      // Ensure newsletters and deadline files exist even in DB mode
       try {
         if (!fs.existsSync(this.newsletterFile)) {
           fs.writeFileSync(this.newsletterFile, JSON.stringify({ newsletters: [], currentNewsletter: undefined }));
         }
+        if (!fs.existsSync(this.deadlineFile)) {
+          fs.writeFileSync(this.deadlineFile, JSON.stringify({ turnDeadline: undefined }));
+        }
       } catch (e) {
-        console.warn('⚠️ Could not initialize newsletters file:', e);
+        console.warn('⚠️ Could not initialize newsletters/deadline files:', e);
       }
 
       // Test a simple query
@@ -69,13 +75,16 @@ export class DatabaseService {
       this.useDatabase = false;
       this.prisma = null;
 
-      // Ensure newsletters file exists in either mode
+      // Ensure newsletters and deadline files exist in either mode
       try {
         if (!fs.existsSync(this.newsletterFile)) {
           fs.writeFileSync(this.newsletterFile, JSON.stringify({ newsletters: [], currentNewsletter: undefined }));
         }
+        if (!fs.existsSync(this.deadlineFile)) {
+          fs.writeFileSync(this.deadlineFile, JSON.stringify({ turnDeadline: undefined }));
+        }
       } catch (e) {
-        console.warn('⚠️ Could not initialize newsletters file:', e);
+        console.warn('⚠️ Could not initialize newsletters/deadline files:', e);
       }
 
 
@@ -212,10 +221,13 @@ export class DatabaseService {
       // Convert database format back to GameState format
       const converted = this.convertDbGameStateToGameState(gameState);
       const news = this.getNewsletterState();
-      return { ...converted, newsletter: news };
+      const turnDeadline = this.getTurnDeadlineState();
+      return { ...converted, newsletter: news, turnDeadline };
     } else {
       // File-based fallback
-      return this.getGameStateFromFile();
+      const state = this.getGameStateFromFile();
+      const turnDeadline = this.getTurnDeadlineState();
+      return state ? { ...state, turnDeadline: state.turnDeadline ?? turnDeadline } : state;
     }
   }
 
@@ -244,10 +256,35 @@ export class DatabaseService {
   public getNewsletterState(): NewsletterState { return this.readNewsletterState(); }
   public setNewsletterState(n: NewsletterState): void { this.writeNewsletterState(n); }
 
+  // Turn deadline persistence (file-based in both modes)
+  private readTurnDeadlineState(): TurnDeadline | undefined {
+    try {
+      if (fs.existsSync(this.deadlineFile)) {
+        const raw = fs.readFileSync(this.deadlineFile, 'utf-8');
+        const data = JSON.parse(raw);
+        return data?.turnDeadline;
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not read turn deadline file:', e);
+    }
+    return undefined;
+  }
+  private writeTurnDeadlineState(deadline: TurnDeadline | undefined): void {
+    try {
+      fs.writeFileSync(this.deadlineFile, JSON.stringify({ turnDeadline: deadline }, null, 2));
+    } catch (e) {
+      console.warn('⚠️ Could not write turn deadline file:', e);
+    }
+  }
+  public getTurnDeadlineState(): TurnDeadline | undefined { return this.readTurnDeadlineState(); }
+  public setTurnDeadlineState(d?: TurnDeadline): void { this.writeTurnDeadlineState(d); }
+
   async updateGameState(gameState: GameState, skipValidation: boolean = false): Promise<void> {
     if (this.useDatabase && this.prisma) {
       // Update database
       await this.updateGameStateInDb(gameState);
+      // Persist turn deadline separately in file (since DB schema doesn’t include it)
+      this.setTurnDeadlineState(gameState.turnDeadline);
     } else {
       // File-based fallback
       if (skipValidation) {

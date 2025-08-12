@@ -25,25 +25,53 @@ function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'comba
 import { generateAIActions } from '../ai/aiActions.js';
 
 // Outpost helpers (module scope)
+function hasOutpostDefenses(hex: any): boolean {
+  return hex?.poi && (hex.poi.type === POIType.Outpost || (hex.poi as any).fortified);
+}
 function getOutpostOwnerTribeId(hex: any): string | null {
   const poi = hex?.poi;
-  if (!poi || poi.type !== POIType.Outpost) return null;
-  const s = String(poi.id || '');
-  const idx = s.indexOf('poi-outpost-');
-  if (idx === -1) return null;
-  const rest = s.slice(idx + 'poi-outpost-'.length);
-  return rest.split('-')[0] || null;
+  if (!poi) return null;
+
+  // Check for standalone outpost
+  if (poi.type === POIType.Outpost) {
+    const s = String(poi.id || '');
+    const idx = s.indexOf('poi-outpost-');
+    if (idx === -1) return null;
+    const rest = s.slice(idx + 'poi-outpost-'.length);
+    return rest.split('-')[0] || null;
+  }
+
+  // Check for fortified POI with outpost properties
+  if ((poi as any).fortified && (poi as any).outpostOwner) {
+    return (poi as any).outpostOwner;
+  }
+
+  return null;
 }
 function setOutpostOwner(hex: any, ownerId: string, hexKey: string) {
-  if (!hex?.poi || hex.poi.type !== POIType.Outpost) return;
-  hex.poi.id = `poi-outpost-${ownerId}-${hexKey}`;
+  if (!hex?.poi) return;
+
+  // Handle standalone outpost
+  if (hex.poi.type === POIType.Outpost) {
+    hex.poi.id = `poi-outpost-${ownerId}-${hexKey}`;
+    return;
+  }
+
+  // Handle fortified POI
+  if ((hex.poi as any).fortified) {
+    (hex.poi as any).outpostOwner = ownerId;
+    hex.poi.id = `poi-fortified-${hex.poi.type}-${ownerId}-${hexKey}`;
+    return;
+  }
 }
 function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ignoreKey?: string): { blockedAt: string, ownerId: string } | null {
   for (const key of path) {
     if (ignoreKey && convertToStandardFormat(key) === convertToStandardFormat(ignoreKey)) continue;
     const { q, r } = parseHexCoords(key);
     const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
-    if (!hex?.poi || hex.poi.type !== POIType.Outpost) continue;
+    // Check if hex has outpost (standalone or fortified POI)
+    const hasOutpost = hex?.poi && (hex.poi.type === POIType.Outpost || (hex.poi as any).fortified);
+    if (!hasOutpost) continue;
     const ownerId = getOutpostOwnerTribeId(hex);
     if (!ownerId) continue;
     const owner = state.tribes.find((t: any) => t.id === ownerId);
@@ -452,15 +480,24 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         tribe.lastTurnResults.push({ id: `outpost-arrival-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `❌ Outpost arrival failed: another outpost already exists at ${destKey}.` });
         return;
     }
-    // Found the outpost
-    hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
+    // Establish outpost - preserve existing POI if present, or create new outpost
+    if (hex.poi) {
+        // Fortify existing POI - preserve original type and properties, add outpost ownership
+        hex.poi.id = `poi-fortified-${hex.poi.type}-${tribe.id}-${destKey}`;
+        // Add outpost properties while preserving original POI functionality
+        (hex.poi as any).outpostOwner = tribe.id;
+        (hex.poi as any).fortified = true;
+        tribe.lastTurnResults.push({ id: `outpost-fortified-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ ${hex.poi.type} at ${destKey} fortified with outpost defenses. Original benefits preserved.` });
+    } else {
+        // Create new standalone outpost
+        hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
+        tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders remain as the garrison.` });
+    }
     if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
     tribe.garrisons[destKey].troops += (journey.force.troops || 0);
     tribe.garrisons[destKey].weapons += (journey.force.weapons || 0);
     if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
     tribe.garrisons[destKey].chiefs.push(...(journey.force.chiefs || []));
-
-    tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders remain as the garrison.` });
 }
 
     const arrivalsByDest: Record<string, Array<{ journey: any, tribe: any }>> = {};
@@ -801,7 +838,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
 
     // Add explicit outpost defensive bonus to win/loss calculation
-    const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
+    const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
     // Calculate final effective strengths
     const finalAttackerStrength = attackerStrength * atkMult * atkRation;
@@ -816,7 +853,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
 
     if (attackerRoll > defenderRoll) {
         // Attacker wins: reduce both sides with higher lethality, capture hex
-        const outpostHere = defHex?.poi?.type === POIType.Outpost;
+        const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
             { terrainDefBonus, outpost: outpostHere }
@@ -835,7 +872,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         destGarrison.chiefs.push(...journey.force.chiefs);
 
         // Transfer outpost ownership if defenders are wiped out
-        if (defHex?.poi?.type === POIType.Outpost) {
+        if (hasOutpostDefenses(defHex)) {
             const defendersRemain = (defenderGarrison.troops || 0) > 0;
             if (!defendersRemain) {
                 const prevOwnerId = getOutpostOwnerTribeId(defHex);
@@ -875,7 +912,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         // If defender garrison is wiped out, keep as zero or consider removing; keeping entry maintains occupancy history
     } else {
         // Defender wins: higher lethality against attackers; no capture
-        const outpostHere = defHex?.poi?.type === POIType.Outpost;
+        const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
             { terrainDefBonus, outpost: outpostHere }
@@ -2248,7 +2285,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const defenderRationMod = defendingTribe.rationEffects?.combatModifier ? (1 + (defendingTribe.rationEffects.combatModifier / 100)) : 1;
 
     // Add explicit outpost defensive bonus to win/loss calculation
-    const outpostDefBonus = (defHex?.poi?.type === POIType.Outpost) ? 1.25 : 1.0; // +25% strength for outpost defenders
+    const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
     // Calculate final effective strengths
     const finalAttackerStrength = attackerStrength * atkMult * attackerRationMod;
@@ -2269,7 +2306,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
         // Attacker wins — use casualty model for higher lethality, then occupy/capture
         {
-            const outpostHere = defHex?.poi?.type === POIType.Outpost;
+            const outpostHere = hasOutpostDefenses(defHex);
             const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
                 troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
                 { terrainDefBonus, outpost: outpostHere }
@@ -2295,7 +2332,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) - moveWeapons;
 
             // Only transfer Outpost ownership if defenders are wiped out; otherwise mark as contested breach
-            if (defHex?.poi?.type === POIType.Outpost) {
+            if (hasOutpostDefenses(defHex)) {
                 const defendersRemain = (defenderGarrison.troops || 0) > 0;
                 if (!defendersRemain) {
                     const prevOwnerId = getOutpostOwnerTribeId(defHex);
@@ -2322,7 +2359,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     } else {
         // Defender wins — use casualty model
         {
-            const outpostHere = defHex?.poi?.type === POIType.Outpost;
+            const outpostHere = hasOutpostDefenses(defHex);
             const { atkLosses: attackerLosses, defLosses: defenderLosses } = computeCasualties(
                 troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
                 { terrainDefBonus, outpost: outpostHere }

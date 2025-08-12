@@ -140,10 +140,14 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     const definition = ACTION_DEFINITIONS[actionType];
     const initialData: { [key: string]: any } = {};
 
-    const validGarrisonLocations = Object.keys(availableGarrisons).filter(loc => {
+    let validGarrisonLocations = Object.keys(availableGarrisons).filter(loc => {
         const g = availableGarrisons[loc];
         return g.troops > 0 || (g.chiefs?.length || 0) > 0;
     });
+    // For Build Outpost, require at least 5 troops at the starting garrison
+    if (actionType === ActionType.BuildOutpost) {
+        validGarrisonLocations = validGarrisonLocations.filter(loc => (availableGarrisons[loc]?.troops || 0) >= 5);
+    }
     const firstGarrison = validGarrisonLocations[0] || Object.keys(tribe.garrisons)[0] || tribe.location;
 
     if (definition) {
@@ -171,6 +175,10 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
               initialData['target_location'] = otherTribesWithGarrisons[0].location;
               initialData['target_tribe_id'] = otherTribesWithGarrisons[0].tribeId;
             }
+        }
+        // Ensure Build Outpost always pre-fills 5 builders in the draft
+        if (actionType === ActionType.BuildOutpost) {
+          initialData['troops'] = 5;
         }
       });
     } else {
@@ -305,6 +313,11 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       console.log('✅ Using selected location:', selectedHexForDisplay, 'for action:', draftAction.actionType);
     }
 
+    // Ensure Build Outpost always passes 5 builders
+    if (draftAction.actionType === ActionType.BuildOutpost) {
+      finalActionData.troops = 5;
+    }
+
     const { troops, chiefsToMove } = finalActionData;
     const actionsRequiringCarriers = [
       ActionType.Move, ActionType.Attack, ActionType.Scout,
@@ -347,10 +360,11 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
     switch (field.type) {
         case 'garrison_select': {
-             const validGarrisonEntries = Object.entries(availableGarrisons).filter(([, g]) => g.troops > 0 || g.chiefs.length > 0);
+             const requireFiveForBuildOutpost = draftAction?.actionType === ActionType.BuildOutpost;
+             const validGarrisonEntries = Object.entries(availableGarrisons).filter(([, g]) => requireFiveForBuildOutpost ? (g.troops >= 5) : (g.troops > 0 || g.chiefs.length > 0));
 
              if (validGarrisonEntries.length === 0) {
-                 return <p className="text-sm text-red-500 italic bg-slate-800/50 p-2 rounded-md">No garrisons with available units.</p>;
+                 return <p className="text-sm text-red-500 italic bg-slate-800/50 p-2 rounded-md">{requireFiveForBuildOutpost ? 'No garrison has the required 5 troops to build an outpost.' : 'No garrisons with available units.'}</p>;
              }
 
              return (

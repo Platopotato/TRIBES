@@ -29,6 +29,25 @@ import { generateAIActions } from '../ai/aiActions.js';
 function hasOutpostDefenses(hex: any): boolean {
   return hex?.poi && (hex.poi.type === POIType.Outpost || (hex.poi as any).fortified);
 }
+
+function isHomeBase(tribe: any, location: string): boolean {
+  return tribe.location === location;
+}
+
+function getHomeBaseDefensiveBonus(tribe: any, location: string): number {
+  if (!isHomeBase(tribe, location)) return 1.0;
+
+  // Base home fortification: +50% defensive bonus
+  let bonus = 1.5;
+
+  // Last Stand: Additional +25% if this is the only remaining garrison
+  const garrisonCount = Object.keys(tribe.garrisons || {}).length;
+  if (garrisonCount === 1) {
+    bonus += 0.25; // Total +75% for last stand
+  }
+
+  return bonus;
+}
 function getOutpostOwnerTribeId(hex: any): string | null {
   const poi = hex?.poi;
   if (!poi) return null;
@@ -454,6 +473,25 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
 
+    // ELIMINATION CLEANUP: Remove eliminated tribes from the game
+    const eliminatedTribes = state.tribes.filter((tribe: any) => tribe.eliminated);
+    if (eliminatedTribes.length > 0) {
+        // Remove eliminated tribes from the game state
+        state.tribes = state.tribes.filter((tribe: any) => !tribe.eliminated);
+
+        // Clean up their garrisons from the map
+        eliminatedTribes.forEach((tribe: any) => {
+            Object.keys(tribe.garrisons || {}).forEach(location => {
+                delete tribe.garrisons[location];
+            });
+        });
+
+        // Clean up any journeys belonging to eliminated tribes
+        state.journeys = (state.journeys || []).filter((journey: any) =>
+            !eliminatedTribes.some((tribe: any) => tribe.id === journey.ownerTribeId || tribe.id === journey.tribeId)
+        );
+    }
+
     return state;
 }
 
@@ -844,9 +882,15 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     // Add explicit outpost defensive bonus to win/loss calculation
     const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
+    // Add home base defensive bonus (+50% base, +25% more for last stand)
+    const homeDefBonus = getHomeBaseDefensiveBonus(defenderTribe, destKey);
+
+    // Combine all defensive bonuses
+    const totalDefBonus = outpostDefBonus * homeDefBonus;
+
     // Calculate final effective strengths
     const finalAttackerStrength = attackerStrength * atkMult * atkRation;
-    const finalDefenderStrength = defenderStrength * defMult * defRation * (1 + terrainDefBonus) * outpostDefBonus;
+    const finalDefenderStrength = defenderStrength * defMult * defRation * (1 + terrainDefBonus) * totalDefBonus;
 
     // For very lopsided battles (>3:1 ratio), reduce randomness to ensure decisive outcomes
     const strengthRatio = finalAttackerStrength / finalDefenderStrength;
@@ -860,7 +904,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: outpostHere }
+            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defenderTribe, destKey) }
         );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
@@ -941,7 +985,7 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: outpostHere }
+            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defenderTribe, destKey) }
         );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
@@ -2318,9 +2362,15 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     // Add explicit outpost defensive bonus to win/loss calculation
     const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
+    // Add home base defensive bonus (+50% base, +25% more for last stand)
+    const homeDefBonus = getHomeBaseDefensiveBonus(defendingTribe, targetLocation);
+
+    // Combine all defensive bonuses
+    const totalDefBonus = outpostDefBonus * homeDefBonus;
+
     // Calculate final effective strengths
     const finalAttackerStrength = attackerStrength * atkMult * attackerRationMod;
-    const finalDefenderStrength = defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * outpostDefBonus;
+    const finalDefenderStrength = defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * totalDefBonus;
 
     // For very lopsided battles (>3:1 ratio), reduce randomness to ensure decisive outcomes
     const strengthRatio = finalAttackerStrength / finalDefenderStrength;
@@ -2335,7 +2385,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: outpostHere }
+            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
         );
         // Apply losses
         attackerGarrison.troops -= atkLosses;
@@ -2410,7 +2460,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         const outpostHere = hasOutpostDefenses(defHex);
         const { atkLosses: attackerLosses, defLosses: defenderLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: outpostHere }
+            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
         );
         attackerGarrison.troops -= attackerLosses;
         defenderGarrison.troops -= defenderLosses;
@@ -2634,8 +2684,31 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         upkeepMessage += ` ${moraleEffects.message}`;
     }
 
-    // RESEARCH PROGRESS PROCESSING
-    if (tribe.currentResearch) {
+    // HOME BASE STRATEGIC IMPORTANCE CHECK
+    const hasHomeBase = tribe.garrisons[tribe.location];
+    if (!hasHomeBase) {
+        // Lost home base - apply strategic penalties
+        tribe.lastTurnResults.push({
+            id: `home-base-lost-${tribe.id}`,
+            actionType: ActionType.Upkeep,
+            actionData: {},
+            result: `🏚️ **HOME BASE LOST!** Without your ancestral home, research has halted and resource generation is severely reduced. Reclaim your home to restore full capabilities.`
+        });
+
+        // Cancel ongoing research
+        if (tribe.currentResearch) {
+            tribe.currentResearch = null;
+            tribe.lastTurnResults.push({
+                id: `research-halted-${tribe.id}`,
+                actionType: ActionType.Technology,
+                actionData: {},
+                result: `🔬 Research halted due to loss of home base. All progress lost.`
+            });
+        }
+    }
+
+    // RESEARCH PROGRESS PROCESSING (only if home base exists)
+    if (tribe.currentResearch && hasHomeBase) {
         const researchResult = processTechnologyProgress(tribe);
         if (researchResult.message) {
             tribe.lastTurnResults.push({
@@ -2653,6 +2726,37 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         } else if (researchResult.newProgress !== undefined) {
             tribe.currentResearch.progress = researchResult.newProgress;
         }
+    }
+
+    // Check for tribe elimination (no garrisons remaining)
+    const remainingGarrisons = Object.keys(tribe.garrisons || {}).filter(loc => {
+        const garrison = tribe.garrisons[loc];
+        return garrison && (garrison.troops > 0 || garrison.weapons > 0 || (garrison.chiefs?.length || 0) > 0);
+    });
+
+    if (remainingGarrisons.length === 0) {
+        // Tribe is eliminated - mark for removal
+        tribe.eliminated = true;
+        tribe.lastTurnResults.push({
+            id: `elimination-${tribe.id}`,
+            actionType: ActionType.Upkeep,
+            actionData: {},
+            result: `💀 **TRIBE ELIMINATED!** ${tribe.tribeName} has lost all territories and been eliminated from the game. Their legacy ends here in the wasteland.`
+        });
+
+        // Notify all other tribes
+        state.tribes.forEach((otherTribe: any) => {
+            if (otherTribe.id !== tribe.id) {
+                otherTribe.lastTurnResults.push({
+                    id: `elimination-notice-${tribe.id}`,
+                    actionType: ActionType.Upkeep,
+                    actionData: {},
+                    result: `📰 **TRIBE ELIMINATED:** ${tribe.tribeName} has been eliminated from the game.`
+                });
+            }
+        });
+
+        return; // Skip normal upkeep for eliminated tribes
     }
 
     // Add upkeep result
@@ -2912,6 +3016,24 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
                     incomeMessages.push(`🔬 Research Lab at ${location}: ${troopCount} troops salvaged ${techScrap} tech components`);
                 }
                 break;
+        }
+    }
+
+    // Apply home base loss penalty to resource generation
+    const hasHomeBase = tribe.garrisons[tribe.location];
+    if (!hasHomeBase && (totalFoodIncome > 0 || totalScrapIncome > 0)) {
+        // Reduce resource generation by 50% without home base
+        const foodPenalty = Math.floor(totalFoodIncome * 0.5);
+        const scrapPenalty = Math.floor(totalScrapIncome * 0.5);
+
+        tribe.globalResources.food -= foodPenalty;
+        tribe.globalResources.scrap -= scrapPenalty;
+
+        if (foodPenalty > 0 || scrapPenalty > 0) {
+            const penaltyParts = [];
+            if (foodPenalty > 0) penaltyParts.push(`-${foodPenalty} food`);
+            if (scrapPenalty > 0) penaltyParts.push(`-${scrapPenalty} scrap`);
+            incomeMessages.push(`🏚️ Home base loss penalty: ${penaltyParts.join(', ')} (50% reduction)`);
         }
     }
 

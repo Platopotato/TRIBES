@@ -23,7 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, opacity: number, size: number, speed: number}>>([]);
+  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, opacity: number, size: number, speed: number, drift: number}>>([]);
 
   // Mouse tracking for parallax effect
   useEffect(() => {
@@ -37,18 +37,19 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Particle system
+  // Enhanced particle system
   useEffect(() => {
     const createParticle = () => ({
       id: Math.random(),
       x: Math.random() * 100,
       y: 100,
-      opacity: Math.random() * 0.6 + 0.2,
-      size: Math.random() * 3 + 1,
-      speed: Math.random() * 0.5 + 0.2
+      opacity: Math.random() * 0.8 + 0.3,
+      size: Math.random() * 4 + 2,
+      speed: Math.random() * 0.8 + 0.3,
+      drift: (Math.random() - 0.5) * 0.2
     });
 
-    const initialParticles = Array.from({ length: 15 }, createParticle);
+    const initialParticles = Array.from({ length: 25 }, createParticle);
     setParticles(initialParticles);
 
     const interval = setInterval(() => {
@@ -56,17 +57,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
         const updated = prev.map(p => ({
           ...p,
           y: p.y - p.speed,
-          opacity: p.y < 20 ? p.opacity - 0.01 : p.opacity
-        })).filter(p => p.y > -10 && p.opacity > 0);
+          x: p.x + p.drift,
+          opacity: p.y < 30 ? p.opacity - 0.02 : p.opacity
+        })).filter(p => p.y > -10 && p.opacity > 0 && p.x > -5 && p.x < 105);
 
-        // Add new particles occasionally
-        if (Math.random() < 0.3 && updated.length < 20) {
+        // Add new particles more frequently
+        if (Math.random() < 0.4 && updated.length < 30) {
           updated.push(createParticle());
         }
 
         return updated;
       });
-    }, 100);
+    }, 80);
 
     return () => clearInterval(interval);
   }, []);
@@ -86,55 +88,101 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
         {/* Sky Gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-orange-400 via-red-500 to-purple-900"></div>
 
-        {/* Mountain Silhouettes - Far Background */}
+        {/* Far Mountains - Layer 1 */}
         <div
-          className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black/80 to-transparent"
+          className="absolute bottom-0 w-full h-2/3 bg-black opacity-60"
+          style={{
+            transform: `translateX(${mousePos.x * 0.05}px)`,
+            clipPath: 'polygon(0 100%, 0 40%, 8% 45%, 15% 35%, 22% 40%, 30% 30%, 38% 35%, 45% 25%, 52% 30%, 60% 20%, 68% 25%, 75% 15%, 82% 20%, 90% 10%, 100% 15%, 100% 100%)'
+          }}
+        ></div>
+
+        {/* Mid Mountains - Layer 2 */}
+        <div
+          className="absolute bottom-0 w-full h-1/2 bg-black opacity-70"
           style={{
             transform: `translateX(${mousePos.x * 0.1}px)`,
-            clipPath: 'polygon(0 100%, 0 60%, 15% 65%, 25% 45%, 40% 55%, 60% 35%, 75% 50%, 90% 40%, 100% 45%, 100% 100%)'
+            clipPath: 'polygon(0 100%, 0 60%, 12% 65%, 20% 50%, 28% 55%, 35% 45%, 42% 50%, 50% 40%, 58% 45%, 65% 35%, 72% 40%, 80% 30%, 88% 35%, 95% 25%, 100% 30%, 100% 100%)'
           }}
         ></div>
 
-        {/* Distant Ruins */}
+        {/* Ruined City Skyline */}
         <div
-          className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-black/60 to-transparent"
+          className="absolute bottom-0 w-full h-1/3 bg-black opacity-80"
           style={{
-            transform: `translateX(${mousePos.x * 0.2}px)`,
-            clipPath: 'polygon(0 100%, 0 80%, 10% 75%, 12% 70%, 18% 72%, 25% 65%, 35% 70%, 45% 60%, 55% 65%, 70% 55%, 80% 60%, 90% 50%, 100% 55%, 100% 100%)'
+            transform: `translateX(${mousePos.x * 0.15}px)`,
+            clipPath: 'polygon(0 100%, 0 70%, 5% 75%, 8% 65%, 12% 70%, 15% 60%, 18% 65%, 22% 55%, 25% 60%, 30% 50%, 35% 55%, 40% 45%, 45% 50%, 50% 40%, 55% 45%, 60% 35%, 65% 40%, 70% 30%, 75% 35%, 80% 25%, 85% 30%, 90% 20%, 95% 25%, 100% 15%, 100% 100%)'
           }}
         ></div>
 
-        {/* Foreground Elements */}
+        {/* Foreground Wasteland */}
+        <div
+          className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-black/90 to-transparent"
+          style={{
+            transform: `translateX(${mousePos.x * 0.3}px)`,
+            clipPath: 'polygon(0 100%, 0 85%, 10% 80%, 15% 85%, 25% 75%, 35% 80%, 45% 70%, 55% 75%, 65% 65%, 75% 70%, 85% 60%, 95% 65%, 100% 55%, 100% 100%)'
+          }}
+        ></div>
+
+        {/* Tribal Settlement Elements */}
         <div
           className="absolute bottom-0 left-0 w-full h-1/5"
-          style={{ transform: `translateX(${mousePos.x * 0.5}px)` }}
+          style={{ transform: `translateX(${mousePos.x * 0.4}px)` }}
         >
-          {/* Tribal Totems */}
-          <div className="absolute bottom-0 left-1/4 w-2 h-16 bg-gradient-to-t from-amber-800 to-amber-600 transform rotate-12"></div>
-          <div className="absolute bottom-0 right-1/3 w-3 h-20 bg-gradient-to-t from-red-900 to-red-700 transform -rotate-6"></div>
+          {/* Large Tribal Totems with Glow */}
+          <div className="absolute bottom-0 left-1/6 w-4 h-24 bg-gradient-to-t from-amber-900 via-amber-700 to-amber-500 transform rotate-12 shadow-2xl animate-glow"></div>
+          <div className="absolute bottom-0 right-1/4 w-5 h-32 bg-gradient-to-t from-red-900 via-red-700 to-red-500 transform -rotate-6 shadow-2xl animate-shimmer"></div>
+          <div className="absolute bottom-0 left-1/3 w-3 h-20 bg-gradient-to-t from-orange-900 via-orange-700 to-orange-500 transform rotate-3 shadow-xl animate-glow"></div>
 
-          {/* Weapon Racks */}
-          <div className="absolute bottom-0 left-1/6 w-1 h-12 bg-gray-600"></div>
-          <div className="absolute bottom-0 left-1/6 w-8 h-1 bg-gray-700 transform rotate-45 translate-y-2"></div>
+          {/* Weapon Racks and Structures */}
+          <div className="absolute bottom-0 left-1/8 w-2 h-16 bg-gray-700 shadow-lg"></div>
+          <div className="absolute bottom-0 left-1/8 w-12 h-2 bg-gray-600 transform rotate-45 translate-y-4 shadow-md"></div>
+          <div className="absolute bottom-0 right-1/6 w-2 h-14 bg-gray-700 shadow-lg"></div>
+          <div className="absolute bottom-0 right-1/6 w-10 h-2 bg-gray-600 transform -rotate-45 translate-y-3 shadow-md"></div>
+
+          {/* Campfire Glow */}
+          <div className="absolute bottom-0 left-1/2 w-8 h-8 bg-orange-500 rounded-full opacity-60 animate-pulse shadow-2xl"></div>
+          <div className="absolute bottom-0 left-1/2 w-4 h-4 bg-yellow-400 rounded-full opacity-80 animate-pulse shadow-xl"></div>
         </div>
+
+        {/* Atmospheric Haze */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
       </div>
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* Enhanced Floating Particles */}
+      <div className="absolute inset-0 pointer-events-none z-20">
         {particles.map(particle => (
           <div
             key={particle.id}
-            className="absolute w-1 h-1 bg-orange-300 rounded-full animate-pulse"
+            className="absolute bg-orange-400 rounded-full"
             style={{
               left: `${particle.x}%`,
               bottom: `${particle.y}%`,
               opacity: particle.opacity,
               width: `${particle.size}px`,
               height: `${particle.size}px`,
-              boxShadow: '0 0 4px rgba(251, 146, 60, 0.8)'
+              boxShadow: `0 0 ${particle.size * 2}px rgba(251, 146, 60, 0.9), 0 0 ${particle.size * 4}px rgba(251, 146, 60, 0.5)`,
+              background: `radial-gradient(circle, rgba(251, 146, 60, 1) 0%, rgba(251, 146, 60, 0.8) 50%, rgba(251, 146, 60, 0.3) 100%)`,
+              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite alternate`
             }}
           />
         ))}
+      </div>
+
+      {/* Additional Atmospheric Effects */}
+      <div className="absolute inset-0 pointer-events-none z-10">
+        {/* Heat Shimmer Effect */}
+        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-orange-500/10 via-transparent to-transparent animate-pulse"></div>
+
+        {/* Dust Clouds */}
+        <div
+          className="absolute bottom-1/4 left-1/4 w-32 h-16 bg-orange-300/20 rounded-full blur-xl animate-pulse"
+          style={{ transform: `translateX(${mousePos.x * 0.2}px)` }}
+        ></div>
+        <div
+          className="absolute bottom-1/3 right-1/3 w-24 h-12 bg-red-300/15 rounded-full blur-lg animate-pulse"
+          style={{ transform: `translateX(${mousePos.x * -0.15}px)` }}
+        ></div>
       </div>
 
       {/* Main Content */}
@@ -258,6 +306,40 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
 
       {/* Atmospheric Effects */}
       <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+
+      {/* CSS Animations */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(180deg); }
+            100% { transform: translateY(0px) rotate(360deg); }
+          }
+
+          @keyframes shimmer {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.3; }
+          }
+
+          @keyframes glow {
+            0%, 100% {
+              box-shadow: 0 0 5px rgba(251, 146, 60, 0.5), 0 0 10px rgba(251, 146, 60, 0.3), 0 0 15px rgba(251, 146, 60, 0.1);
+            }
+            50% {
+              box-shadow: 0 0 10px rgba(251, 146, 60, 0.8), 0 0 20px rgba(251, 146, 60, 0.6), 0 0 30px rgba(251, 146, 60, 0.4);
+            }
+          }
+
+          .animate-shimmer {
+            animation: shimmer 4s ease-in-out infinite;
+          }
+
+          .animate-glow {
+            animation: glow 3s ease-in-out infinite;
+          }
+        `
+      }} />
     </div>
   );
 };

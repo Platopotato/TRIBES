@@ -1,6 +1,8 @@
 import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
+import { computeCasualties } from './_combatCasualtyModel.js';
+
 
 // Create asset badges for UI from combined effects and present assets (module scope)
 function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'combat', resource?: string, terrain?: TerrainType }): { name?: string; label: string; emoji?: string }[] {
@@ -793,12 +795,16 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     const defenderRoll = Math.random() * (defenderStrength * defMult * defRation * (1 + terrainDefBonus));
 
     if (attackerRoll > defenderRoll) {
-        // Attacker wins: reduce both sides, capture hex
-        const atkLosses = Math.min(journey.force.troops, Math.max(1, Math.floor(Math.random() * 3)));
-        const defLosses = Math.min(defenderGarrison.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
-
+        // Attacker wins: reduce both sides with higher lethality, capture hex
+        const outpostHere = defHex?.poi?.type === POIType.Outpost;
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+            { terrainDefBonus, outpost: outpostHere }
+        );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
 
         // Transfer surviving attackers into destination garrison
         if (!attackerTribe.garrisons[destKey]) attackerTribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
@@ -811,68 +817,43 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         // Clear journey (done by caller via early return)
 
 
-        attackerTribe.lastTurnResults.push({
-            id: `battle-header-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `⚔️ Battle occurred at ${destKey}`
-        });
-        defenderTribe.lastTurnResults.push({
-            id: `battle-header-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `⚔️ Battle occurred at ${destKey}`
-        });
+        const battleIntro = `⚔️ Battle for ${destKey}! The air filled with dust and war cries as lines clashed.`;
+        attackerTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
+        defenderTribe.lastTurnResults.push({ id: `battle-header-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: battleIntro });
 
         // Notify both tribes
-        attackerTribe.lastTurnResults.push({
-            id: `combat-arrival-win-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `🏴‍☠️ Assault on ${destKey} succeeded! Casualties — You: ${atkLosses}, Enemy: ${defLosses}. Hex captured and secured.`
-        });
-        defenderTribe.lastTurnResults.push({
-            id: `combat-arrival-defeat-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `🚨 Your garrison at ${destKey} was assaulted and pushed back! You lost ${defLosses} troops.`
-        });
+        attackerTribe.lastTurnResults.push({ id: `combat-arrival-win-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🏴‍☠️ Assault on ${destKey} succeeded! You lost ${atkLosses} troops; the defenders lost ${defLosses}. The banner changes hands amid cheers and smoke.` });
+        defenderTribe.lastTurnResults.push({ id: `combat-arrival-defeat-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🚨 ${destKey} stands scarred. Your garrison was overwhelmed. Losses: ${defLosses}. Survivors fall back under cover of ruin.` });
 
         // Weapons attrition/capture on arrival win
         const destWeaponsLoss = Math.min(defenderGarrison.weapons || 0, Math.floor(defLosses * 0.5));
-        const atkWeaponsLoss = Math.min(journey.force.weapons || 0, Math.floor(atkLosses * 0.3));
+        const atkWeaponsLoss2 = Math.min(journey.force.weapons || 0, Math.floor(atkLosses * 0.3));
         defenderGarrison.weapons = (defenderGarrison.weapons || 0) - destWeaponsLoss;
-        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss2;
         const captured = Math.floor(destWeaponsLoss * 0.5);
         journey.force.weapons = (journey.force.weapons || 0) + captured;
         attackerTribe.lastTurnResults.push({
             id: `combat-arrival-weapons-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: {},
-            result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${destWeaponsLoss}, captured ${captured}.`
+            result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss2}, enemy lost ${destWeaponsLoss}, captured ${captured}.`
         });
 
         // If defender garrison is wiped out, keep as zero or consider removing; keeping entry maintains occupancy history
     } else {
-        // Defender wins: reduce attackers; they do not capture hex
-        const atkLosses = Math.min(journey.force.troops, Math.max(1, Math.floor(Math.random() * 4) + 1));
-        const defLosses = Math.min(defenderGarrison.troops, Math.max(0, Math.floor(Math.random() * 2)));
-
+        // Defender wins: higher lethality against attackers; no capture
+        const outpostHere = defHex?.poi?.type === POIType.Outpost;
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+            { terrainDefBonus, outpost: outpostHere }
+        );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+        journey.force.weapons = (journey.force.weapons || 0) - atkWeaponsLoss;
 
-        attackerTribe.lastTurnResults.push({
-            id: `combat-arrival-loss-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `🛑 Assault on ${destKey} was repelled. Casualties — You: ${atkLosses}, Enemy: ${defLosses}.`
-        });
-        defenderTribe.lastTurnResults.push({
-            id: `combat-arrival-defend-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `🛡️ Successfully defended ${destKey}. You lost ${defLosses} troops.`
-        });
+        attackerTribe.lastTurnResults.push({ id: `combat-arrival-loss-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🛑 Assault on ${destKey} was repelled in brutal fighting. Losses — You: ${atkLosses}, Enemy: ${defLosses}. The field is littered with broken steel.` });
+        defenderTribe.lastTurnResults.push({ id: `combat-arrival-defend-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `🛡️ ${destKey} holds. You lost ${defLosses} troops, but the line did not break.` });
         // No capture; journey effectively spent.
     }
 
@@ -2250,56 +2231,40 @@ function processAttackAction(tribe: any, action: any, state: any): string {
           result: `⚔️ Battle occurred at ${targetLocation}`
         });
 
-        // Attacker wins
-        const troopsLost = Math.min(troopsToAttack, Math.floor(Math.random() * 3) + 1);
-        const defenderLosses = Math.min(defenderGarrison.troops, Math.floor(Math.random() * 4) + 2);
-
-        attackerGarrison.troops -= troopsLost;
-        defenderGarrison.troops -= defenderLosses;
-
-
-            // Weapon attrition and capture: proportional to troop losses
-            const atkWeaponsLoss = Math.min(attackerGarrison.weapons || 0, Math.floor(troopsLost * 0.5));
-            const defWeaponsLoss = Math.min(defenderGarrison.weapons || 0, Math.floor(defenderLosses * 0.5));
+        // Attacker wins — use casualty model for higher lethality
+        {
+            const outpostHere = defHex?.poi?.type === POIType.Outpost;
+            const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+                troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+                { terrainDefBonus, outpost: outpostHere }
+            );
+            attackerGarrison.troops -= atkLosses;
+            defenderGarrison.troops -= defLosses;
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
             defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
-            // Capture some defender weapons on win
             const capturedWeapons = Math.floor(defWeaponsLoss * 0.5);
             attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
+            tribe.lastTurnResults.push({ id: `attack-weapons-${Date.now()}`, actionType: ActionType.Attack, actionData: action.actionData, result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${defWeaponsLoss}, captured ${capturedWeapons}.` });
+        }
 
-            tribe.lastTurnResults.push({
-              id: `attack-weapons-${Date.now()}`,
-              actionType: ActionType.Attack,
-              actionData: action.actionData,
-              result: `🗡️ Weapons attrition: You lost ${atkWeaponsLoss}, enemy lost ${defWeaponsLoss}, captured ${capturedWeapons}.`
-            });
-
-        // Add result to defender
-        defendingTribe.lastTurnResults.push({
-            id: `attack-defense-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You lost ${defenderLosses} troops defending.`
-        });
-
-        return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. You lost ${troopsLost} troops, enemy lost ${defenderLosses} troops.`;
+        // Narrative summary for win
+        defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! Heavy fighting; your forces took losses and were forced to fall back.` });
+        return `Victory! Attacked ${defendingTribe.tribeName} at ${targetLocation}. Hex captured after fierce fighting.`;
     } else {
-        // Defender wins
-        const attackerLosses = Math.min(troopsToAttack, Math.floor(Math.random() * 4) + 2);
-        const defenderLosses = Math.min(defenderGarrison.troops, Math.floor(Math.random() * 2) + 1);
-
-        attackerGarrison.troops -= attackerLosses;
-        defenderGarrison.troops -= defenderLosses;
+        // Defender wins — use casualty model
+        {
+            const outpostHere = defHex?.poi?.type === POIType.Outpost;
+            const { atkLosses: attackerLosses, defLosses: defenderLosses } = computeCasualties(
+                troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+                { terrainDefBonus, outpost: outpostHere }
+            );
+            attackerGarrison.troops -= attackerLosses;
+            defenderGarrison.troops -= defenderLosses;
+        }
 
         // Add result to defender
-        defendingTribe.lastTurnResults.push({
-            id: `attack-defense-${Date.now()}`,
-            actionType: ActionType.Attack,
-            actionData: {},
-            result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You successfully defended, losing ${defenderLosses} troops.`
-        });
-
-        return `Defeat! Attack on ${defendingTribe.tribeName} at ${targetLocation} failed. You lost ${attackerLosses} troops, enemy lost ${defenderLosses} troops.`;
+        defendingTribe.lastTurnResults.push({ id: `attack-defense-${Date.now()}`, actionType: ActionType.Attack, actionData: {}, result: `${tribe.tribeName} attacked your garrison at ${targetLocation}! You held the line.` });
+        return `Defeat! Attack on ${defendingTribe.tribeName} at ${targetLocation} failed after brutal exchanges.`;
     }
 }
 

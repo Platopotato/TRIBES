@@ -635,6 +635,9 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
     // Process movement encounters (battles that occur during travel)
     processMovementEncounters(state);
 
+    // Process colocated enemy forces (automatic battles for enemies sharing same hex)
+    processColocatedEnemyBattles(state);
+
     // Second pass: resolve contested arrivals per destination hex
     for (const [destKey, entries] of Object.entries(arrivalsByDest)) {
         // If only one arrival and no non-allied occupant, use existing move arrival
@@ -674,6 +677,161 @@ function processMovementEncounters(state: any): void {
     encountersToResolve.forEach(({ journey, tribe, encounter }) => {
         resolveMovementEncounter(journey, tribe, encounter.enemyTribe, state, encounter.location);
     });
+}
+
+function processColocatedEnemyBattles(state: any): void {
+    // Find all hexes where enemy tribes have garrisons
+    const hexesWithMultipleTribes = new Map<string, any[]>();
+
+    // Group all garrisons by hex location
+    state.tribes.forEach((tribe: any) => {
+        if (!tribe.garrisons) return;
+
+        Object.keys(tribe.garrisons).forEach(hexLocation => {
+            const garrison = tribe.garrisons[hexLocation];
+            // Only consider garrisons with actual forces
+            if (garrison.troops > 0 || garrison.weapons > 0 || (garrison.chiefs?.length || 0) > 0) {
+                if (!hexesWithMultipleTribes.has(hexLocation)) {
+                    hexesWithMultipleTribes.set(hexLocation, []);
+                }
+                hexesWithMultipleTribes.get(hexLocation)!.push({ tribe, garrison, location: hexLocation });
+            }
+        });
+    });
+
+    // Process each hex with multiple tribes
+    hexesWithMultipleTribes.forEach((tribesAtHex, hexLocation) => {
+        if (tribesAtHex.length < 2) return; // Need at least 2 tribes for conflict
+
+        // Find enemy pairs (tribes at war with each other)
+        const conflicts: Array<{attacker: any, defender: any}> = [];
+
+        for (let i = 0; i < tribesAtHex.length; i++) {
+            for (let j = i + 1; j < tribesAtHex.length; j++) {
+                const tribe1 = tribesAtHex[i];
+                const tribe2 = tribesAtHex[j];
+
+                // Check if they're at war (not allied or neutral)
+                const diplomacy1 = tribe1.tribe.diplomacy[tribe2.tribe.id];
+                const diplomacy2 = tribe2.tribe.diplomacy[tribe1.tribe.id];
+                const atWar = (!diplomacy1 || diplomacy1.status === 'War') && (!diplomacy2 || diplomacy2.status === 'War');
+
+                if (atWar) {
+                    // Determine who attacks first (larger force attacks)
+                    const strength1 = tribe1.garrison.troops + (tribe1.garrison.weapons || 0) * 1.5;
+                    const strength2 = tribe2.garrison.troops + (tribe2.garrison.weapons || 0) * 1.5;
+
+                    if (strength1 >= strength2) {
+                        conflicts.push({ attacker: tribe1, defender: tribe2 });
+                    } else {
+                        conflicts.push({ attacker: tribe2, defender: tribe1 });
+                    }
+                }
+            }
+        }
+
+        // Resolve conflicts (one at a time to avoid complex multi-way battles)
+        if (conflicts.length > 0) {
+            const conflict = conflicts[0]; // Take the first conflict
+            resolveColocatedBattle(conflict.attacker, conflict.defender, state, hexLocation);
+        }
+    });
+}
+
+function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLocation: string): void {
+    const attackerTribe = attacker.tribe;
+    const defenderTribe = defender.tribe;
+    const attackerGarrison = attacker.garrison;
+    const defenderGarrison = defender.garrison;
+
+    // Use existing combat resolution logic
+    const defHex = state.mapData.find((h: any) => {
+        const coords = `${String(50 + h.q).padStart(3, '0')}.${String(50 + h.r).padStart(3, '0')}`;
+        return coords === hexLocation;
+    });
+
+    let terrainDefBonus = 0;
+    if (defHex?.terrain) {
+        const defEffects = getCombinedEffects(defenderTribe);
+        terrainDefBonus = (defEffects.terrainDefenseBonus as any)[defHex.terrain] || 0;
+    }
+
+    // Combat strength calculation
+    const attackerStrength = (attackerGarrison.troops || 0) + (attackerGarrison.weapons || 0) * 1.5;
+    const defenderStrength = (defenderGarrison.troops || 0) + (defenderGarrison.weapons || 0) * 1.5;
+
+    // Apply defensive bonuses
+    const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0;
+    const homeDefBonus = getHomeBaseDefensiveBonus(defenderTribe, hexLocation);
+    const totalDefBonus = outpostDefBonus * homeDefBonus;
+
+    const finalAttackerStrength = attackerStrength;
+    const finalDefenderStrength = defenderStrength * (1 + terrainDefBonus) * totalDefBonus;
+
+    const attackerWins = finalAttackerStrength > finalDefenderStrength;
+
+    if (attackerWins) {
+        // Attacker wins - defender is eliminated from this hex
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            attackerGarrison.troops, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, hexLocation) }
+        );
+
+        // Apply losses
+        attackerGarrison.troops -= atkLosses;
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
+
+        // Defender is completely eliminated from this hex
+        delete defenderTribe.garrisons[hexLocation];
+
+        // Capture some weapons
+        const capturedWeapons = Math.floor(defWeaponsLoss * 0.3);
+        attackerGarrison.weapons = (attackerGarrison.weapons || 0) + capturedWeapons;
+
+        // Battle narratives
+        attackerTribe.lastTurnResults.push({
+            id: `colocated-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `⚔️ **TERRITORIAL CONFLICT!** Your forces at ${hexLocation} defeated ${defenderTribe.tribeName} in automatic combat! Enemy forces cannot coexist with yours. **Your losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons. **Enemy eliminated:** ${defLosses} troops, ${defWeaponsLoss} weapons destroyed.`
+        });
+
+        defenderTribe.lastTurnResults.push({
+            id: `colocated-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `💀 **TERRITORIAL CONFLICT!** Your forces at ${hexLocation} were defeated by ${attackerTribe.tribeName} in automatic combat! **Your losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. **Enemy losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons. Position lost.`
+        });
+
+    } else {
+        // Defender wins - attacker is eliminated from this hex
+        const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
+            attackerGarrison.troops, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, hexLocation) }
+        );
+
+        // Apply losses
+        defenderGarrison.troops -= defLosses;
+        defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+
+        // Attacker is completely eliminated from this hex
+        delete attackerTribe.garrisons[hexLocation];
+
+        // Battle narratives
+        attackerTribe.lastTurnResults.push({
+            id: `colocated-defeat-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `💀 **TERRITORIAL CONFLICT!** Your forces at ${hexLocation} were defeated by ${defenderTribe.tribeName} in automatic combat! **Your losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons. **Enemy losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. Position lost.`
+        });
+
+        defenderTribe.lastTurnResults.push({
+            id: `colocated-victory-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `🛡️ **TERRITORIAL CONFLICT!** Your forces at ${hexLocation} defeated ${attackerTribe.tribeName} in automatic combat! Enemy forces cannot coexist with yours. **Your losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. **Enemy eliminated:** ${atkLosses} troops, ${atkWeaponsLoss} weapons destroyed.`
+        });
+    }
 }
 
 function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTribe: any, state: any, encounterLocation: string): void {

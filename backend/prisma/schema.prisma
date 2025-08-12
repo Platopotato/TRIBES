@@ -59,12 +59,14 @@ model Hex {
   poiId        String?
   poiDifficulty Int?
   poiRarity    String? // POIRarity enum as string
+  poiFortified Boolean? // Whether POI is fortified with outpost defenses
+  poiOutpostOwner String? // Tribe ID that owns the fortified POI
   gameStateId  String
-  
+
   // Relations
   gameState    GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
   garrisons    Garrison[]
-  
+
   @@unique([gameStateId, q, r])
   @@map("hexes")
 }

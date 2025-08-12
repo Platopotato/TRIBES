@@ -401,7 +401,9 @@ export class DatabaseService {
               poiType: hex.poi?.type || null,
               poiId: hex.poi?.id || null,
               poiDifficulty: hex.poi?.difficulty || null,
-              poiRarity: hex.poi?.rarity || null
+              poiRarity: hex.poi?.rarity || null,
+              poiFortified: (hex.poi as any)?.fortified || null,
+              poiOutpostOwner: (hex.poi as any)?.outpostOwner || null
             }))
           }
         }
@@ -760,7 +762,9 @@ export class DatabaseService {
           id: hex.poiId,
           type: hex.poiType,
           difficulty: hex.poiDifficulty,
-          rarity: hex.poiRarity
+          rarity: hex.poiRarity,
+          ...(hex.poiFortified ? { fortified: hex.poiFortified } : {}),
+          ...(hex.poiOutpostOwner ? { outpostOwner: hex.poiOutpostOwner } : {})
         } : undefined
       })),
       tribes: dbGameState.tribes.map((tribe: any) => ({
@@ -931,6 +935,8 @@ export class DatabaseService {
           poiId: hex.poi?.id || null,
           poiDifficulty: hex.poi?.difficulty || null,
           poiRarity: hex.poi?.rarity || null,
+          poiFortified: (hex.poi as any)?.fortified || null,
+          poiOutpostOwner: (hex.poi as any)?.outpostOwner || null,
           gameStateId: currentGameState.id
         }));
 

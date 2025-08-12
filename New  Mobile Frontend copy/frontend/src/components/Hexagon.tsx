@@ -26,6 +26,26 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
   const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
 
   const { q, r, terrain, poi } = hexData;
+
+  const outpostOwnerId: string | null = React.useMemo(() => {
+    if (!poi || poi.type !== POIType.Outpost) return null;
+    const s = String(poi.id || '');
+    const prefix = 'poi-outpost-';
+    const idx = s.indexOf(prefix);
+    if (idx === -1) return null;
+    const rest = s.slice(idx + prefix.length);
+    // Tribe IDs may contain hyphens; take everything before the last '-' as tribeId
+    const lastDash = rest.lastIndexOf('-');
+    if (lastDash === -1) return null;
+    return rest.slice(0, lastDash) || null;
+  }, [poi]);
+
+  const ownerTribe: Tribe | undefined = React.useMemo(() => {
+    if (!outpostOwnerId) return undefined;
+    if (playerTribe && String(playerTribe.id) === String(outpostOwnerId)) return playerTribe;
+    const fromVisible = (tribesOnHex || []).find(t => String(t.id) === String(outpostOwnerId));
+    return fromVisible;
+  }, [outpostOwnerId, playerTribe, tribesOnHex]);
   const width = Math.sqrt(3) * size;
   const height = 2 * size;
 
@@ -181,10 +201,32 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
       
       {!isPoliticalMode && poi && !isFogged && (
         <g className="pointer-events-none" style={poi.rarity === 'Very Rare' ? { filter: 'url(#poi-glow)' } : {}}>
-            <polygon 
+            <polygon
                 points={diamondPoints}
-                className={`${POI_COLORS[poi.type].bg} stroke-black/50 stroke-1`}
+                className={`${POI_COLORS[poi.type].bg} ${(poi as any).fortified ? 'stroke-amber-400 stroke-2' : 'stroke-black/50 stroke-1'}`}
             />
+            {/* Fortification indicator - defensive spikes around the POI */}
+            {(poi as any).fortified && (
+              <g className="pointer-events-none">
+                {/* Defensive spikes/walls around the POI */}
+                <polygon
+                  points={diamondPoints}
+                  className="fill-none stroke-amber-300 stroke-1"
+                  strokeDasharray="2,1"
+                  transform="scale(1.2)"
+                />
+                {/* Small fortress symbol in corner */}
+                <text
+                  x={size * 0.25}
+                  y={-size * 0.25}
+                  textAnchor="middle"
+                  className="text-amber-300 font-bold"
+                  style={{ fontSize: `${size * 0.3}px` }}
+                >
+                  🛡️
+                </text>
+              </g>
+            )}
             <text
                 x="0"
                 y="0"
@@ -195,6 +237,37 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
+                {poi.type === POIType.Outpost && (() => {
+              // Render a small stacked overlay for each tribe garrison present on this Outpost
+              const overlays = [] as JSX.Element[];
+              const hexCoords = formatHexCoords(q, r);
+              const yStep = size * 0.3;
+              const startY = -size * 0.45;
+              // start with visible tribes, but ensure ownerTribe is included if not already present (string-safe compare)
+              const base = [...(tribesOnHex || [])];
+              if (ownerTribe && !base.some(t => String(t.id) === String(ownerTribe.id))) base.push(ownerTribe);
+              base.forEach((tribe, idx) => {
+                const g = tribe.garrisons?.[hexCoords];
+                const troops = g?.troops ?? 0;
+                const chiefs = g?.chiefs?.length ?? 0;
+                if (troops <= 0) return;
+                const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
+                overlays.push(
+                  <g key={`op-g-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + overlays.length * yStep})`}>
+                    <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
+                    <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
+                    <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
+                    <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>{troops}</text>
+                    {chiefs > 0 && (
+                      <text x={size*0.3} y={-size*0.15} textAnchor="middle" dy=".05em" className="font-bold" fontSize={size*0.2}>
+                        ★
+                      </text>
+                    )}
+                  </g>
+                );
+              });
+              return <g key="outpost-overlays">{overlays}</g>;
+            })()}
         </g>
       )}
 

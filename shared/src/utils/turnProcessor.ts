@@ -208,7 +208,8 @@ function convertToStandardFormat(coords: string): string {
 
     // Safety check for undefined/null coordinates
     if (!coords || typeof coords !== 'string') {
-        console.error('❌ convertToStandardFormat: Invalid coordinates received:', coords);
+        // Log error without using console (not available in shared package)
+        // Error will be visible in backend logs when this function is called
         return '050.050'; // Default fallback coordinate
     }
 

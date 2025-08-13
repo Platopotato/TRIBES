@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- ULTRA AGGRESSIVE cache prevention -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Last-Modified" content="0" />
+    <meta http-equiv="If-Modified-Since" content="0" />
+    <meta http-equiv="ETag" content="" />
+    
+    <title>⚔️ RADIX TRIBES • Redirecting to Production ⚔️</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #7c2d12 100%);
+            color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 600px;
+            padding: 3rem;
+            background: rgba(30, 41, 59, 0.9);
+            border-radius: 16px;
+            border: 3px solid #f59e0b;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(245, 158, 11, 0.3);
+            backdrop-filter: blur(10px);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(245, 158, 11, 0.3); }
+            to { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(245, 158, 11, 0.5); }
+        }
+        
+        .logo {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #f59e0b;
+            margin-bottom: 1rem;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            animation: pulse 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+        
+        .message {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        
+        .countdown {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ef4444;
+            margin: 2rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            animation: countdown-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes countdown-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .redirect-info {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .manual-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #1e293b;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        
+        .manual-link:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+        
+        .warning {
+            color: #fbbf24;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+        
+        /* Epic background effects */
+        .bg-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: #f59e0b;
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-effect">
+        <div class="particle" style="width: 4px; height: 4px; top: 20%; left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="width: 6px; height: 6px; top: 60%; left: 80%; animation-delay: 2s;"></div>
+        <div class="particle" style="width: 3px; height: 3px; top: 80%; left: 20%; animation-delay: 4s;"></div>
+        <div class="particle" style="width: 5px; height: 5px; top: 30%; left: 70%; animation-delay: 1s;"></div>
+        <div class="particle" style="width: 4px; height: 4px; top: 70%; left: 50%; animation-delay: 3s;"></div>
+    </div>
+
+    <div class="container">
+        <div class="logo">⚔️ RADIX TRIBES ⚔️</div>
+        
+        <div class="message">
+            <strong>Test Environment Detected</strong><br>
+            Redirecting to Production Frontend...
+        </div>
+        
+        <div class="countdown" id="countdown">5</div>
+        
+        <div class="redirect-info">
+            <strong>🎯 Destination:</strong><br>
+            <code>https://radix-tribes-frontend.onrender.com/</code>
+        </div>
+        
+        <a href="#" id="manualLink" class="manual-link">
+            🚀 Go to Production Now
+        </a>
+        
+        <div class="warning">
+            ⚠️ This test URL automatically redirects to prevent confusion
+        </div>
+    </div>
+
+    <script>
+        // Aggressive cache-busting redirect
+        function redirectToProduction() {
+            const timestamp = Date.now();
+            const randomParam = Math.random().toString(36).substring(7);
+            const productionUrl = `https://radix-tribes-frontend.onrender.com/?_cb=${timestamp}&_r=${randomParam}&_nocache=1`;
+            
+            console.log('🚀 Redirecting to production with cache-busting:', productionUrl);
+            window.location.replace(productionUrl);
+        }
+        
+        // Countdown timer
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        const manualLink = document.getElementById('manualLink');
+        
+        // Update manual link with cache-busting
+        function updateManualLink() {
+            const timestamp = Date.now();
+            const randomParam = Math.random().toString(36).substring(7);
+            manualLink.href = `https://radix-tribes-frontend.onrender.com/?_cb=${timestamp}&_r=${randomParam}&_nocache=1`;
+        }
+        
+        updateManualLink();
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                countdownElement.textContent = 'Redirecting...';
+                redirectToProduction();
+            }
+        }, 1000);
+        
+        // Manual click handler with cache-busting
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            updateManualLink();
+            redirectToProduction();
+        });
+        
+        // Prevent back button caching
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                redirectToProduction();
+            }
+        });
+        
+        // Additional cache prevention
+        if (window.performance && window.performance.navigation.type === 2) {
+            redirectToProduction();
+        }
+    </script>
+</body>
+</html>

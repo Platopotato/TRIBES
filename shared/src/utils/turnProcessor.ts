@@ -205,6 +205,13 @@ function isAllied(a: any, b: any): boolean {
 // --- COORDINATE CONVERSION UTILITIES ---
 function convertToStandardFormat(coords: string): string {
     // Handle different coordinate formats and convert to standard "051.044" format
+
+    // Safety check for undefined/null coordinates
+    if (!coords || typeof coords !== 'string') {
+        console.error('❌ convertToStandardFormat: Invalid coordinates received:', coords);
+        return '050.050'; // Default fallback coordinate
+    }
+
     if (coords.includes(',')) {
         // Format: "14,-4" -> "064.046" (add 50 offset and pad)
         const [qStr, rStr] = coords.split(',');

@@ -1,12 +1,12 @@
-# 🚀 Frontend Ready for Deployment
+# 🔄 REDIRECT PAGE - Tribes-Test Repository
 
-## ✅ Backend Connection Fixed
+## ⚠️ IMPORTANT: This is a REDIRECT service, NOT a working frontend
 
-- **Frontend now connects to:** `https://rt-backend-test.onrender.com`
-- **WebSocket connection** will work properly
-- **Real-time game functionality** enabled
+- **Purpose:** Redirect users from test URL to production frontend
+- **Target:** `https://radix-tribes-frontend.onrender.com/`
+- **Cache-busting:** Aggressive cache prevention to ensure redirect works
 
-## 📋 Render Frontend Service Setup
+## 📋 Render Redirect Service Setup
 
 **Service Type:** Static Site
 
@@ -14,17 +14,17 @@
 
 **Build Command:**
 ```bash
-npm install && npm run build:shared && cd frontend && npm install && npm run build
+./build-frontend.sh
 ```
 
 **Publish Directory:**
 ```
-frontend/dist
+dist
 ```
 
 **Environment Variables:**
 ```bash
-VITE_API_URL=https://rt-backend-test.onrender.com
+# No environment variables needed for redirect page
 ```
 
 ## 🎯 Expected Result

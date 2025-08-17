@@ -675,6 +675,10 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <span className="text-sm">📋</span>
                   <span className="text-xs md:text-sm">Results</span>
                 </button>
+              </div>
+
+              {/* Second Row - Secondary Navigation & Actions */}
+              <div className="flex flex-wrap gap-1">
                 <button
                   onClick={() => setActiveTab('trades')}
                   className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'trades' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
@@ -682,10 +686,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <span className="text-sm">🚛</span>
                   <span className="text-xs md:text-sm">Trades</span>
                 </button>
-              </div>
-
-              {/* Second Row - Secondary Navigation & Actions */}
-              <div className="flex flex-wrap gap-1">
                 <button
                   onClick={() => setActiveTab('leaderboard')}
                   className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'leaderboard' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}

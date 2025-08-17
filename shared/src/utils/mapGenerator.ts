@@ -7,7 +7,7 @@ import { POI_RARITY_MAP } from '../constants.js';
 // --- CONFIGURATION ---
 const NOISE_SCALE = 0.05; // Lower numbers = larger features
 const POI_SPAWN_CHANCE = 0.04;
-const STARTING_LOCATION_COUNT = 30;
+const STARTING_LOCATION_COUNT = 50;
 
 // --- TERRAIN PROFILES ---
 // Defines the "ideal" conditions for each terrain type based on noise values (0-1).

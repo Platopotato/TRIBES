@@ -19,7 +19,7 @@ interface MapEditorProps {
 }
 
 const MAP_RADIUS = 40;
-const MAX_START_LOCATIONS = 30;
+const MAX_START_LOCATIONS = 50;
 
 type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location';
 type BrushSize = 'single' | 'cluster';

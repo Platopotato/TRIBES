@@ -1,8 +1,9 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getTechnology } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 import { computeCasualties } from './_combatCasualtyModel.js';
+import { calculateTribeScore } from './statsUtils.js';
 
 
 // Create asset badges for UI from combined effects and present assets (module scope)
@@ -527,6 +528,24 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
             !eliminatedTribes.some((tribe: any) => tribe.id === journey.ownerTribeId || tribe.id === journey.tribeId)
         );
     }
+
+    // --- FINALIZATION & HISTORY RECORDING ---
+    const finalTribesForHistory = state.tribes;
+
+    const newHistoryRecord: TurnHistoryRecord = {
+        turn: state.turn,
+        tribeRecords: finalTribesForHistory.map(tribe => ({
+            tribeId: tribe.id,
+            score: calculateTribeScore(tribe),
+            troops: Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0),
+            garrisons: Object.keys(tribe.garrisons || {}).length,
+        })),
+    };
+
+    if (!state.history) {
+        state.history = [];
+    }
+    state.history.push(newHistoryRecord);
 
     return state;
 }

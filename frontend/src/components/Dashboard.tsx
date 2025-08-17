@@ -91,7 +91,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [showCancelResearchConfirm, setShowCancelResearchConfirm] = useState(false);
   const [view, setView] = useState<DashboardView>('planning');
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'diplomacy' | 'leaderboard'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'diplomacy' | 'leaderboard' | 'results'>('home');
   const [selectedHexInfo, setSelectedHexInfo] = useState<{q: number, r: number, terrain: string} | null>(null);
   const [showMapInModal, setShowMapInModal] = useState(false);
   const [actionModalWithMap, setActionModalWithMap] = useState(false);
@@ -651,6 +651,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <span className="text-sm">🤝</span>
                   <span className="text-xs md:text-sm">Diplomacy</span>
                 </button>
+                <button
+                  onClick={() => setActiveTab('results')}
+                  className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'results' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
+                >
+                  <span className="text-sm">📋</span>
+                  <span className="text-xs md:text-sm">Results</span>
+                </button>
               </div>
 
               {/* Second Row - Secondary Navigation & Actions */}
@@ -1158,6 +1165,37 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 playerTribe={playerTribe}
                 onBack={() => setActiveTab('home')}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'results' && (
+          <div className="space-y-4">
+            <div className="bg-slate-800 rounded-lg p-4">
+              <h2 className="text-lg font-bold text-white mb-4">📋 Previous Turn Results</h2>
+              {playerTribe && playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto scrollbar-thin">
+                  <div className="space-y-3 pr-2">
+                    {playerTribe.lastTurnResults.map(action => (
+                      <div key={action.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
+                        <div className="font-bold text-amber-400 mb-2 flex items-center">
+                          <span className="mr-2">⚡</span>
+                          {action.actionType}
+                        </div>
+                        <p className="text-slate-300 leading-relaxed text-sm">
+                          {action.result || "Action processed successfully."}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📝</div>
+                  <p className="text-slate-400 italic">No results from the previous turn.</p>
+                  <p className="text-slate-500 text-sm mt-2">Results will appear here after turn processing.</p>
+                </div>
+              )}
             </div>
           </div>
         )}

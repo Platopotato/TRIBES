@@ -746,7 +746,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               <h2 className="text-lg font-bold text-white mb-4">🏛️ Tribe Command Center</h2>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div className="bg-slate-700 p-3 rounded">
-                  <div className="text-sm text-slate-400">Actions Available</div>
+                  <div className="text-sm text-slate-400">Actions Done/Available</div>
                   <div className="text-lg font-bold text-amber-400">
                     {turnSubmitted || playerTribe?.turnSubmitted ?
                       `${playerTribe?.actions?.length || 0}/${maxActions}` :

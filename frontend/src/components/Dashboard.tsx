@@ -91,12 +91,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [showCancelResearchConfirm, setShowCancelResearchConfirm] = useState(false);
   const [view, setView] = useState<DashboardView>('planning');
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'diplomacy' | 'leaderboard' | 'results'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'diplomacy' | 'leaderboard' | 'results' | 'trades'>('home');
   const [selectedHexInfo, setSelectedHexInfo] = useState<{q: number, r: number, terrain: string} | null>(null);
   const [showMapInModal, setShowMapInModal] = useState(false);
   const [actionModalWithMap, setActionModalWithMap] = useState(false);
   const [highlightedHex, setHighlightedHex] = useState<{q: number, r: number} | null>(null);
   const [cameFromEnhancedModal, setCameFromEnhancedModal] = useState(false);
+  const [journeyResponses, setJourneyResponses] = useState<{ journeyId: string; response: 'accept' | 'reject' }[]>([]);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [selectedHexForAction, setSelectedHexForAction] = useState<{q: number, r: number} | null>(null);
   const [pendingHexSelection, setPendingHexSelection] = useState<{q: number, r: number} | null>(null);
@@ -336,7 +337,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         turnSubmitted: true
       };
       onUpdateTribe(updatedTribe);
-      onFinalizeTurn(plannedActions, playerTribe.journeyResponses || []);
+      onFinalizeTurn(plannedActions, journeyResponses);
 
       // Mark turn as submitted locally
       setTurnSubmitted(true);
@@ -356,7 +357,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         turnSubmitted: true
       };
       onUpdateTribe(updatedTribe);
-      onFinalizeTurn(plannedActions, playerTribe.journeyResponses || []);
+      onFinalizeTurn(plannedActions, journeyResponses);
     }
     setShowEndTurnConfirm(false);
   };
@@ -375,6 +376,15 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     setSelectedLocationForAction(null);
     setWaitingForLocationSelection(false);
     setCameFromEnhancedModal(false);
+  };
+
+  const handleJourneyResponse = (journeyId: string, response: 'accept' | 'reject') => {
+    setJourneyResponses(prev => {
+      // Remove any existing response for this journey
+      const filtered = prev.filter(r => r.journeyId !== journeyId);
+      // Add the new response
+      return [...filtered, { journeyId, response }];
+    });
   };
 
   const handleSelectHex = (q: number, r: number) => {
@@ -604,6 +614,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     turn={turn}
                     labels={journeyLabels}
                   />
+                  <PendingTradesPanel
+                    allJourneys={journeys}
+                    playerTribeId={playerTribe.id}
+                    turn={turn}
+                    onRespond={handleJourneyResponse}
+                    responses={journeyResponses}
+                  />
                   <ResultsPanel results={playerTribe.lastTurnResults} />
                 </>
               )}
@@ -657,6 +674,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 >
                   <span className="text-sm">📋</span>
                   <span className="text-xs md:text-sm">Results</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('trades')}
+                  className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'trades' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
+                >
+                  <span className="text-sm">🚛</span>
+                  <span className="text-xs md:text-sm">Trades</span>
                 </button>
               </div>
 
@@ -810,6 +834,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               </div>
             )}
 
+            {/* Mobile Pending Trades */}
+            <PendingTradesPanel
+              allJourneys={journeys}
+              playerTribeId={playerTribe.id}
+              turn={turn}
+              onRespond={handleJourneyResponse}
+              responses={journeyResponses}
+            />
 
           </div>
         )}
@@ -1196,6 +1228,33 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <p className="text-slate-500 text-sm mt-2">Results will appear here after turn processing.</p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'trades' && (
+          <div className="space-y-4">
+            <div className="bg-slate-800 rounded-lg p-4">
+              <h2 className="text-lg font-bold text-white mb-4">🚛 Trade Caravans & Journeys</h2>
+
+              {/* Active Journeys */}
+              <JourneysPanel
+                allJourneys={journeys}
+                playerTribeId={playerTribe.id}
+                turn={turn}
+                labels={journeyLabels}
+              />
+
+              {/* Pending Trade Offers */}
+              <div className="mt-4">
+                <PendingTradesPanel
+                  allJourneys={journeys}
+                  playerTribeId={playerTribe.id}
+                  turn={turn}
+                  onRespond={handleJourneyResponse}
+                  responses={journeyResponses}
+                />
+              </div>
             </div>
           </div>
         )}

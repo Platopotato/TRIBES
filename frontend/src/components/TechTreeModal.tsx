@@ -33,15 +33,23 @@ const TechNode: React.FC<{
   if (mobile) {
     return (
       <div className={`${baseClasses} ${statusClasses[status]}`} onClick={status === 'available' ? onClick : undefined}>
-        <div className="text-2xl flex-shrink-0">{tech.icon}</div>
-        <div className="flex-grow">
-          <div className="font-bold text-sm">{tech.name}</div>
+        <div className="text-xl flex-shrink-0">{tech.icon}</div>
+        <div className="flex-grow min-w-0">
+          <div className="font-bold text-sm truncate">{tech.name}</div>
           <div className="text-xs text-slate-400 mt-1">
-            Cost: {tech.cost.scrap} scrap • Troops: {tech.requiredTroops}
+            {tech.cost.scrap}🔧 • {tech.requiredTroops}👥
           </div>
-          {status === 'completed' && <div className="text-xs text-green-400 mt-1">✅ Completed</div>}
-          {status === 'locked' && <div className="text-xs text-red-400 mt-1">🔒 Locked</div>}
-          {status === 'researching' && <div className="text-xs text-blue-400 mt-1">🔬 Researching</div>}
+          <div className="flex items-center justify-between mt-1">
+            {status === 'completed' && <div className="text-xs text-green-400">✅ Done</div>}
+            {status === 'locked' && <div className="text-xs text-red-400">🔒 Locked</div>}
+            {status === 'researching' && <div className="text-xs text-blue-400">🔬 Active</div>}
+            {status === 'available' && <div className="text-xs text-amber-400">⚡ Ready</div>}
+            {tech.prerequisites.length > 0 && (
+              <div className="text-xs text-slate-500">
+                Req: {tech.prerequisites.length}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -63,6 +71,8 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
   const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
   const [assignedTroops, setAssignedTroops] = useState(0);
   const [location, setLocation] = useState(Object.keys(availableGarrisons)[0] || '');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const completedSet = useMemo(() => new Set(tribe.completedTechs), [tribe.completedTechs]);
   const researchingSet = useMemo(() => new Set(tribe.currentResearch?.map(p => p.techId) || []), [tribe.currentResearch]);
@@ -84,6 +94,34 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
       setAssignedTroops(tech.requiredTroops);
     }
   }
+
+  // Filter technologies based on search and category
+  const filteredTechTree = useMemo(() => {
+    const filtered: { [key: string]: Technology[] } = {};
+
+    Object.entries(TECHNOLOGY_TREE).forEach(([category, techs]) => {
+      // Filter by selected category
+      if (selectedCategory && category !== selectedCategory) {
+        return;
+      }
+
+      // Filter by search term
+      const filteredTechs = techs.filter(tech =>
+        searchTerm === '' ||
+        tech.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tech.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      if (filteredTechs.length > 0) {
+        filtered[category] = filteredTechs;
+      }
+    });
+
+    return filtered;
+  }, [selectedCategory, searchTerm]);
+
+  const categories = Object.keys(TECHNOLOGY_TREE);
 
   const handleStart = () => {
     if (!selectedTechId || !location || !garrison || !selectedTech || assignedTroops < selectedTech.requiredTroops || tribe.globalResources.scrap < selectedTech.cost.scrap) return;
@@ -169,10 +207,42 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
       <div className="h-full flex flex-col overflow-hidden">
         {/* Compact tech tree for desktop window */}
         <div className="flex-1 p-3 overflow-auto">
+          {/* Compact filters for desktop window */}
+          <div className="mb-4 space-y-2">
+            <input
+              type="text"
+              placeholder="Search technologies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-2 py-1 text-sm bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+            />
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-2 py-1 rounded text-xs ${
+                  selectedCategory === null ? 'bg-amber-500 text-black' : 'bg-slate-600 text-slate-300'
+                }`}
+              >
+                All
+              </button>
+              {categories.slice(0, 6).map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-2 py-1 rounded text-xs ${
+                    selectedCategory === category ? 'bg-amber-500 text-black' : 'bg-slate-600 text-slate-300'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-4">
-            {Object.entries(TECHNOLOGY_TREE).map(([category, techs]) => (
+            {Object.entries(filteredTechTree).map(([category, techs]) => (
               <div key={category} className="bg-slate-700/30 p-3 rounded">
-                <h4 className="text-sm font-bold text-purple-400 mb-2">{category}</h4>
+                <h4 className="text-sm font-bold text-purple-400 mb-2">{category} ({techs.length})</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {techs.map(tech => (
                     <TechNode
@@ -239,25 +309,87 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
               </button>
             </div>
 
-            {/* Mobile Tech Tree */}
-            <div className="flex-grow p-3 overflow-auto bg-slate-800/50">
-              <div className="space-y-6">
-                {Object.entries(TECHNOLOGY_TREE).map(([category, techs]) => (
-                  <div key={category} className="space-y-3">
-                    <h3 className="text-center font-bold text-lg text-amber-500 tracking-wider uppercase border-b border-amber-500/30 pb-2">{category}</h3>
-                    <div className="space-y-3">
-                      {techs.map((tech) => (
-                        <TechNode
-                          key={tech.id}
-                          tech={tech}
-                          status={getStatus(tech)}
-                          onClick={() => handleSelectTech(tech.id)}
-                          mobile={true}
-                        />
-                      ))}
+            {/* Mobile Tech Tree with Filters */}
+            <div className="flex-grow flex flex-col overflow-hidden bg-slate-800/50">
+              {/* Mobile Filters */}
+              <div className="p-3 border-b border-slate-600 space-y-3">
+                {/* Search Bar */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search technologies..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedCategory === null
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {categories.map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        selectedCategory === category
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtered Tech List */}
+              <div className="flex-grow p-3 overflow-auto">
+                <div className="space-y-6">
+                  {Object.entries(filteredTechTree).map(([category, techs]) => (
+                    <div key={category} className="space-y-3">
+                      <h3 className="text-center font-bold text-lg text-amber-500 tracking-wider uppercase border-b border-amber-500/30 pb-2">
+                        {category} ({techs.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {techs.map((tech) => (
+                          <TechNode
+                            key={tech.id}
+                            tech={tech}
+                            status={getStatus(tech)}
+                            onClick={() => handleSelectTech(tech.id)}
+                            mobile={true}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+
+                  {Object.keys(filteredTechTree).length === 0 && (
+                    <div className="text-center text-slate-400 py-8">
+                      <div className="text-4xl mb-2">🔍</div>
+                      <p>No technologies found</p>
+                      <p className="text-sm">Try adjusting your search or category filter</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -288,10 +420,46 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
           <div className="flex flex-col h-full">
             {/* Tech Tree - Full Width */}
             <div className="flex-grow p-6 overflow-auto bg-slate-800/30">
+              {/* Desktop Filters */}
+              <div className="mb-6 max-w-6xl mx-auto">
+                <div className="flex flex-wrap gap-4 items-center justify-center">
+                  <input
+                    type="text"
+                    placeholder="Search technologies..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedCategory === null ? 'bg-amber-500 text-black' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                      }`}
+                    >
+                      All Categories
+                    </button>
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedCategory === category ? 'bg-amber-500 text-black' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-center items-start gap-12 max-w-6xl mx-auto">
-                {Object.entries(TECHNOLOGY_TREE).map(([category, techs]) => (
+                {Object.entries(filteredTechTree).map(([category, techs]) => (
                   <div key={category} className="space-y-8 relative flex-1 max-w-xs">
-                    <h3 className="text-center font-bold text-xl text-amber-500 tracking-wider uppercase">{category}</h3>
+                    <h3 className="text-center font-bold text-xl text-amber-500 tracking-wider uppercase">
+                      {category} ({techs.length})
+                    </h3>
                     {techs.map((tech, index) => (
                       <React.Fragment key={tech.id}>
                         {index > 0 && <div className="absolute left-1/2 -translate-x-1/2 h-8 border-l-2 border-dashed border-slate-600" style={{ top: `${index * 11.5 - 2}rem`}}></div>}

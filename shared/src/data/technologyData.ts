@@ -1,4 +1,4 @@
-import { Technology, TechnologyEffectType } from '../types.js';
+import { Technology, TechnologyEffectType, TerrainType } from '../types.js';
 
 export const TECHNOLOGY_TREE: { [key: string]: Technology[] } = {
   Farming: [
@@ -433,8 +433,8 @@ export const TECHNOLOGY_TREE: { [key: string]: Technology[] } = {
       requiredTroops: 11,
       prerequisites: ['sharpened-sticks'],
       effects: [
-        { type: TechnologyEffectType.CombatBonusAttack, value: 0.15, terrain: 'Forest' },
-        { type: TechnologyEffectType.CombatBonusDefense, value: 0.10, terrain: 'Mountains' }
+        { type: TechnologyEffectType.CombatBonusAttack, value: 0.15, terrain: TerrainType.Forest },
+        { type: TechnologyEffectType.CombatBonusDefense, value: 0.10, terrain: TerrainType.Mountains }
       ],
       icon: '🥷',
     },

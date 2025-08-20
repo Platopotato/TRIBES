@@ -6,7 +6,7 @@ import { TerrainType, POIType } from '../../types';
 import Card from '../ui/Card';
 import { POI_SYMBOLS, POI_COLORS } from '../../constants';
 
-type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location';
+type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi';
 type BrushSize = 'single' | 'cluster';
 
 interface TerrainToolbarProps {

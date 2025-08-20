@@ -1,4 +1,4 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getTechnology } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
@@ -3747,7 +3747,7 @@ function processStartResearchAction(tribe: any, action: any): string {
     return `🔬 Research commenced on ${tech.name} at ${location}. ${assignedTroops} researchers assigned. Cost: ${tech.cost.scrap} scrap.`;
 }
 
-function processTechnologyProgress(tribe: any, project: any): { message?: string, completed?: boolean, newProgress?: number } {
+function processTechnologyProgress(tribe: any, project: ResearchProject): { message?: string, completed?: boolean, newProgress?: number } {
     if (!project) return {};
     const tech = getTechnology(project.techId);
     if (!tech) {

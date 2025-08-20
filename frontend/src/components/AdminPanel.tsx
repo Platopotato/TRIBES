@@ -694,7 +694,7 @@ ${tribe.lastTurnResults.length > 0 ?
 
 CHIEFS APPEARED THIS TURN:
 ${tribe.chiefsAppearedThisTurn.length > 0 ?
-  tribe.chiefsAppearedThisTurn.map(c => `  👑 ${c.name} (via ${c.type})`).join('\n') :
+  tribe.chiefsAppearedThisTurn.map(c => `  👑 ${c.description} (via ${c.type})`).join('\n') :
   '  No new chiefs this turn'}
 
 TECHNOLOGY:
@@ -1795,7 +1795,7 @@ GAME STATISTICS:
                         <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
                           {tribe.chiefsAppearedThisTurn.length > 0 ? (
                             tribe.chiefsAppearedThisTurn.map((c, i) => (
-                              <p key={i} className="text-green-400">👑 {c.name} <span className="text-neutral-400">(via {c.type})</span></p>
+                              <p key={i} className="text-green-400">👑 {c.description} <span className="text-neutral-400">(via {c.type})</span></p>
                             ))
                           ) : (
                             <p className="text-neutral-500">No new chiefs</p>

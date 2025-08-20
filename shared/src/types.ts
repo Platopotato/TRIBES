@@ -310,6 +310,8 @@ export interface POI {
     type: POIType;
     difficulty: number; // 1-10
     rarity: POIRarity;
+    fortified?: boolean; // Whether POI is fortified with outpost defenses
+    outpostOwner?: string; // Tribe ID that owns the fortified POI
 }
 
 export interface HexData {

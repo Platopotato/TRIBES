@@ -401,10 +401,9 @@ export class DatabaseService {
               poiType: hex.poi?.type || null,
               poiId: hex.poi?.id || null,
               poiDifficulty: hex.poi?.difficulty || null,
-              poiRarity: hex.poi?.rarity || null
-              // TODO: Add fortification fields after database migration
-              // poiFortified: (hex.poi as any)?.fortified || null,
-              // poiOutpostOwner: (hex.poi as any)?.outpostOwner || null
+              poiRarity: hex.poi?.rarity || null,
+              poiFortified: hex.poi?.fortified || null,
+              poiOutpostOwner: hex.poi?.outpostOwner || null
             }))
           }
         }
@@ -763,10 +762,9 @@ export class DatabaseService {
           id: hex.poiId,
           type: hex.poiType,
           difficulty: hex.poiDifficulty,
-          rarity: hex.poiRarity
-          // TODO: Add fortification fields after database migration
-          // ...(hex.poiFortified !== undefined && hex.poiFortified ? { fortified: hex.poiFortified } : {}),
-          // ...(hex.poiOutpostOwner ? { outpostOwner: hex.poiOutpostOwner } : {})
+          rarity: hex.poiRarity,
+          ...(hex.poiFortified !== undefined && hex.poiFortified ? { fortified: hex.poiFortified } : {}),
+          ...(hex.poiOutpostOwner ? { outpostOwner: hex.poiOutpostOwner } : {})
         } : undefined
       })),
       tribes: dbGameState.tribes.map((tribe: any) => ({
@@ -937,9 +935,8 @@ export class DatabaseService {
           poiId: hex.poi?.id || null,
           poiDifficulty: hex.poi?.difficulty || null,
           poiRarity: hex.poi?.rarity || null,
-          // TODO: Add fortification fields after database migration
-          // poiFortified: (hex.poi as any)?.fortified || null,
-          // poiOutpostOwner: (hex.poi as any)?.outpostOwner || null,
+          poiFortified: hex.poi?.fortified || null,
+          poiOutpostOwner: hex.poi?.outpostOwner || null,
           gameStateId: currentGameState.id
         }));
 

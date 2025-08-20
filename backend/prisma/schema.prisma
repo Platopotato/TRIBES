@@ -59,9 +59,8 @@ model Hex {
   poiId        String?
   poiDifficulty Int?
   poiRarity    String? // POIRarity enum as string
-  // TODO: Add after database migration
-  // poiFortified Boolean? // Whether POI is fortified with outpost defenses
-  // poiOutpostOwner String? // Tribe ID that owns the fortified POI
+  poiFortified Boolean? // Whether POI is fortified with outpost defenses
+  poiOutpostOwner String? // Tribe ID that owns the fortified POI
   gameStateId  String
 
   // Relations

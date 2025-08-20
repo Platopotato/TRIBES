@@ -28,7 +28,7 @@ import { generateAIActions } from '../ai/aiActions.js';
 
 // Outpost helpers (module scope)
 function hasOutpostDefenses(hex: any): boolean {
-  return hex?.poi && (hex.poi.type === POIType.Outpost || (hex.poi as any).fortified);
+  return hex?.poi && (hex.poi.type === POIType.Outpost || hex.poi.fortified);
 }
 
 function isHomeBase(tribe: any, location: string): boolean {
@@ -88,8 +88,8 @@ function getOutpostOwnerTribeId(hex: any): string | null {
   }
 
   // Check for fortified POI with outpost properties
-  if ((poi as any).fortified && (poi as any).outpostOwner) {
-    return (poi as any).outpostOwner;
+  if (poi.fortified && poi.outpostOwner) {
+    return poi.outpostOwner;
   }
 
   return null;
@@ -104,8 +104,8 @@ function setOutpostOwner(hex: any, ownerId: string, hexKey: string) {
   }
 
   // Handle fortified POI
-  if ((hex.poi as any).fortified) {
-    (hex.poi as any).outpostOwner = ownerId;
+  if (hex.poi.fortified) {
+    hex.poi.outpostOwner = ownerId;
     hex.poi.id = `poi-fortified-${hex.poi.type}-${ownerId}-${hexKey}`;
     return;
   }
@@ -116,7 +116,7 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     const { q, r } = parseHexCoords(key);
     const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
     // Check if hex has outpost (standalone or fortified POI)
-    const hasOutpost = hex?.poi && (hex.poi.type === POIType.Outpost || (hex.poi as any).fortified);
+    const hasOutpost = hex?.poi && (hex.poi.type === POIType.Outpost || hex.poi.fortified);
     if (!hasOutpost) continue;
     const ownerId = getOutpostOwnerTribeId(hex);
     if (!ownerId) continue;
@@ -630,8 +630,8 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         // Fortify existing POI - preserve original type and properties, add outpost ownership
         hex.poi.id = `poi-fortified-${hex.poi.type}-${tribe.id}-${destKey}`;
         // Add outpost properties while preserving original POI functionality
-        (hex.poi as any).outpostOwner = tribe.id;
-        (hex.poi as any).fortified = true;
+        hex.poi.outpostOwner = tribe.id;
+        hex.poi.fortified = true;
         tribe.lastTurnResults.push({ id: `outpost-fortified-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ ${hex.poi.type} at ${destKey} fortified with outpost defenses! 5 builders consumed to create fortifications. Original POI benefits preserved.` });
 
         // Builders are consumed to create the fortification - no garrison created
@@ -1920,8 +1920,8 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
             // Fortify existing POI - preserve original type and properties, add outpost ownership
             hex.poi.id = `poi-fortified-${hex.poi.type}-${tribe.id}-${destKey}`;
             // Add outpost properties while preserving original POI functionality
-            (hex.poi as any).outpostOwner = tribe.id;
-            (hex.poi as any).fortified = true;
+            hex.poi.outpostOwner = tribe.id;
+            hex.poi.fortified = true;
 
             // For fortified POIs, builders become additional garrison at the location
             if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };

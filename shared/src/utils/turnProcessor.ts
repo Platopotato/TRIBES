@@ -1,4 +1,4 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject, SabotageType } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject, SabotageType, AIType } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getTechnology } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';

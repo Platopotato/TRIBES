@@ -21,7 +21,7 @@ const TechNode: React.FC<{
 }> = ({ tech, status, onClick, mobile = false }) => {
   const baseClasses = mobile
     ? "p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 flex items-center space-x-3 w-full mobile-touch-target touch-feedback haptic-light"
-    : "p-3 rounded-lg border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center aspect-video w-40";
+    : "p-4 rounded-lg border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[120px] w-full";
 
   const statusClasses = {
     completed: 'bg-green-800/50 border-green-500 text-slate-300',
@@ -57,10 +57,15 @@ const TechNode: React.FC<{
 
   return (
     <div className={`${baseClasses} ${statusClasses[status]}`} onClick={status === 'available' ? onClick : undefined}>
-      <div className="text-4xl mb-2">{tech.icon}</div>
-      <div className="font-bold text-sm">{tech.name}</div>
-      {status === 'completed' && <div className="text-xs text-green-400 mt-1">(Completed)</div>}
-      {status === 'researching' && <div className="text-xs text-blue-400 mt-1">(Researching)</div>}
+      <div className="text-3xl mb-2">{tech.icon}</div>
+      <div className="font-bold text-sm mb-1 leading-tight">{tech.name}</div>
+      <div className="text-xs text-slate-400 mb-2">
+        {tech.cost.scrap}🔧 • {tech.requiredTroops}👥
+      </div>
+      {status === 'completed' && <div className="text-xs text-green-400">✅ Completed</div>}
+      {status === 'researching' && <div className="text-xs text-blue-400">🔬 Researching</div>}
+      {status === 'available' && <div className="text-xs text-amber-400">⚡ Available</div>}
+      {status === 'locked' && <div className="text-xs text-red-400">🔒 Locked</div>}
     </div>
   );
 };
@@ -421,16 +426,16 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
             {/* Tech Tree - Full Width */}
             <div className="flex-grow p-6 overflow-auto bg-slate-800/30">
               {/* Desktop Filters */}
-              <div className="mb-6 max-w-6xl mx-auto">
-                <div className="flex flex-wrap gap-4 items-center justify-center">
+              <div className="mb-6 w-full">
+                <div className="flex flex-col gap-4 items-center">
                   <input
                     type="text"
                     placeholder="Search technologies..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                    className="w-full max-w-md px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
                   />
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <button
                       onClick={() => setSelectedCategory(null)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -454,20 +459,22 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
                 </div>
               </div>
 
-              <div className="flex justify-center items-start gap-12 max-w-6xl mx-auto">
-                {Object.entries(filteredTechTree).map(([category, techs]) => (
-                  <div key={category} className="space-y-8 relative flex-1 max-w-xs">
-                    <h3 className="text-center font-bold text-xl text-amber-500 tracking-wider uppercase">
-                      {category} ({techs.length})
-                    </h3>
-                    {techs.map((tech, index) => (
-                      <React.Fragment key={tech.id}>
-                        {index > 0 && <div className="absolute left-1/2 -translate-x-1/2 h-8 border-l-2 border-dashed border-slate-600" style={{ top: `${index * 11.5 - 2}rem`}}></div>}
-                        <TechNode tech={tech} status={getStatus(tech)} onClick={() => handleSelectTech(tech.id)} />
-                      </React.Fragment>
-                    ))}
-                  </div>
-                ))}
+              <div className="w-full overflow-x-auto">
+                <div className="flex justify-start items-start gap-8 min-w-max px-4">
+                  {Object.entries(filteredTechTree).map(([category, techs]) => (
+                    <div key={category} className="space-y-6 relative min-w-[280px] max-w-[320px]">
+                      <h3 className="text-center font-bold text-lg text-amber-500 tracking-wider uppercase">
+                        {category} ({techs.length})
+                      </h3>
+                      {techs.map((tech, index) => (
+                        <React.Fragment key={tech.id}>
+                          {index > 0 && <div className="absolute left-1/2 -translate-x-1/2 h-6 border-l-2 border-dashed border-slate-600" style={{ top: `${index * 9.5 - 1.5}rem`}}></div>}
+                          <TechNode tech={tech} status={getStatus(tech)} onClick={() => handleSelectTech(tech.id)} />
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

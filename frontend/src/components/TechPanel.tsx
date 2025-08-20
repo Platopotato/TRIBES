@@ -17,32 +17,39 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
   const isResearchQueued = plannedActions.some(a => a.actionType === ActionType.StartResearch);
 
   const renderContent = () => {
-    if (currentResearch) {
-      const tech = getTechnology(currentResearch.techId);
-      if (!tech) return null;
-      const progressPercent = (currentResearch.progress / tech.researchPoints) * 100;
-
+    if (currentResearch && currentResearch.length > 0) {
       return (
-        <div className="space-y-2">
-          <div className="flex justify-between items-baseline">
-            <span className="font-semibold text-slate-300">
-              {tech.icon} {tech.name}
-            </span>
-            <span className="text-sm text-slate-400">
-              {currentResearch.progress} / {tech.researchPoints} pts
-            </span>
-          </div>
-          <div className="w-full bg-slate-700 rounded-full h-2.5">
-            <div
-              className="bg-amber-500 h-2.5 rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-          <p className="text-xs text-slate-500 text-center">
-            {currentResearch.assignedTroops} troops assigned at Hex {currentResearch.location}.
-          </p>
-           <Button variant="secondary" onClick={onCancelResearch} className="w-full text-xs mt-2 bg-red-900/70 hover:bg-red-800 focus:ring-red-500">
-            Cancel Project
+        <div className="space-y-3">
+          {currentResearch.map((project, index) => {
+            const tech = getTechnology(project.techId);
+            if (!tech) return <p key={index} className="text-center text-red-400">Error: Technology not found.</p>;
+
+            const progressPercent = (project.progress / tech.researchPoints) * 100;
+
+            return (
+              <div key={project.techId} className="space-y-2 p-3 bg-slate-800/50 rounded-lg">
+                <div className="flex justify-between items-baseline">
+                  <span className="font-semibold text-slate-300">
+                    {tech.icon} {tech.name}
+                  </span>
+                  <span className="text-sm text-slate-400">
+                    {project.progress} / {tech.researchPoints} pts
+                  </span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-2.5">
+                  <div
+                    className="bg-amber-500 h-2.5 rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 text-center">
+                  {project.assignedTroops} troops assigned at Hex {project.location}.
+                </p>
+              </div>
+            );
+          })}
+          <Button variant="secondary" onClick={onCancelResearch} className="w-full text-xs mt-2 bg-red-900/70 hover:bg-red-800 focus:ring-red-500">
+            Cancel All Research
           </Button>
         </div>
       );
@@ -60,10 +67,10 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
   };
   
   const cardActions = (
-    <Button 
+    <Button
         variant="secondary"
-        onClick={onOpenTechTree} 
-        disabled={!!currentResearch || isResearchQueued}
+        onClick={onOpenTechTree}
+        disabled={isResearchQueued}
         className="text-xs px-3 py-1"
     >
         Tech Tree

@@ -169,7 +169,7 @@ export function generateAITribe(
         rationLevel: 'Normal',
         completedTechs: [],
         assets: [],
-        currentResearch: null,
+        currentResearch: [],
         journeyResponses: [],
         diplomacy: {},
     };

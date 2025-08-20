@@ -190,7 +190,7 @@ export interface Tribe {
   rationLevel: RationLevel;
   completedTechs: string[];
   assets: string[]; // List of owned asset names
-  currentResearch: ResearchProject | null;
+  currentResearch: ResearchProject[];
   journeyResponses: { journeyId: string; response: 'accept' | 'reject' }[];
   diplomacy: Record<string, DiplomaticRelation>; // Key is other tribe's ID
   injuredChiefs?: InjuredChief[]; // Chiefs out of action; return handled via upkeep

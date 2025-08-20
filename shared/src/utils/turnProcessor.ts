@@ -3281,24 +3281,37 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     }
 
     // RESEARCH PROGRESS PROCESSING (only if home base exists)
-    if (tribe.currentResearch && hasHomeBase) {
-        const researchResult = processTechnologyProgress(tribe);
-        if (researchResult.message) {
-            tribe.lastTurnResults.push({
-                id: `research-progress-${tribe.id}`,
-                actionType: ActionType.Technology,
-                actionData: {},
-                result: researchResult.message
-            });
+    if (tribe.currentResearch && tribe.currentResearch.length > 0 && hasHomeBase) {
+        const completedProjects: string[] = [];
+
+        // Process each research project
+        for (let i = 0; i < tribe.currentResearch.length; i++) {
+            const project = tribe.currentResearch[i];
+            const researchResult = processTechnologyProgress(tribe, project);
+
+            if (researchResult.message) {
+                tribe.lastTurnResults.push({
+                    id: `research-progress-${tribe.id}-${project.techId}`,
+                    actionType: ActionType.Technology,
+                    actionData: {},
+                    result: researchResult.message
+                });
+            }
+
+            // Update research state
+            if (researchResult.completed) {
+                tribe.completedTechs = tribe.completedTechs || [];
+                tribe.completedTechs.push(project.techId);
+                completedProjects.push(project.techId);
+            } else if (researchResult.newProgress !== undefined) {
+                tribe.currentResearch[i].progress = researchResult.newProgress;
+            }
         }
-        // Update tribe research state
-        if (researchResult.completed) {
-            tribe.completedTechs = tribe.completedTechs || [];
-            tribe.completedTechs.push(tribe.currentResearch.techId);
-            tribe.currentResearch = null;
-        } else if (researchResult.newProgress !== undefined) {
-            tribe.currentResearch.progress = researchResult.newProgress;
-        }
+
+        // Remove completed projects
+        tribe.currentResearch = tribe.currentResearch.filter(project =>
+            !completedProjects.includes(project.techId)
+        );
     }
 
     // Check for tribe elimination (no garrisons remaining)
@@ -3688,9 +3701,9 @@ function processStartResearchAction(tribe: any, action: any): string {
     const tech = getTechnology(techId);
     if (!tech) return `❌ Start Research failed: Technology '${techId}' not found.`;
 
-    if (tribe.currentResearch) {
-        const currentTech = getTechnology(tribe.currentResearch.techId);
-        return `❌ Start Research failed: Already researching ${currentTech?.name || 'unknown technology'}.`;
+    // Check if already researching this specific technology
+    if (tribe.currentResearch && tribe.currentResearch.some((project: any) => project.techId === techId)) {
+        return `❌ Start Research failed: Already researching ${tech.name}.`;
     }
 
     if (tribe.globalResources.scrap < tech.cost.scrap) {
@@ -3717,20 +3730,25 @@ function processStartResearchAction(tribe: any, action: any): string {
 
     // Start research
     tribe.globalResources.scrap -= tech.cost.scrap;
-    tribe.currentResearch = {
+
+    // Initialize currentResearch array if it doesn't exist
+    if (!tribe.currentResearch) {
+        tribe.currentResearch = [];
+    }
+
+    // Add new research project
+    tribe.currentResearch.push({
         techId,
         progress: 0,
         assignedTroops,
         location
-    };
+    });
 
     return `🔬 Research commenced on ${tech.name} at ${location}. ${assignedTroops} researchers assigned. Cost: ${tech.cost.scrap} scrap.`;
 }
 
-function processTechnologyProgress(tribe: any): { message?: string, completed?: boolean, newProgress?: number } {
-    if (!tribe.currentResearch) return {};
-
-    const project = tribe.currentResearch;
+function processTechnologyProgress(tribe: any, project: any): { message?: string, completed?: boolean, newProgress?: number } {
+    if (!project) return {};
     const tech = getTechnology(project.techId);
     if (!tech) {
         // Research cancelled due to missing tech data

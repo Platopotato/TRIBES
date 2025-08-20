@@ -15,7 +15,7 @@ interface TechTreeModalProps {
 
 const TechNode: React.FC<{
   tech: Technology;
-  status: 'completed' | 'available' | 'locked';
+  status: 'completed' | 'available' | 'locked' | 'researching';
   onClick: () => void;
   mobile?: boolean;
 }> = ({ tech, status, onClick, mobile = false }) => {
@@ -27,6 +27,7 @@ const TechNode: React.FC<{
     completed: 'bg-green-800/50 border-green-500 text-slate-300',
     available: 'bg-slate-700 border-amber-500 hover:bg-slate-600 hover:border-amber-400 text-slate-200',
     locked: 'bg-slate-900 border-slate-700 text-slate-500 cursor-not-allowed opacity-60',
+    researching: 'bg-blue-800/50 border-blue-500 text-slate-300 cursor-not-allowed',
   };
 
   if (mobile) {
@@ -40,6 +41,7 @@ const TechNode: React.FC<{
           </div>
           {status === 'completed' && <div className="text-xs text-green-400 mt-1">✅ Completed</div>}
           {status === 'locked' && <div className="text-xs text-red-400 mt-1">🔒 Locked</div>}
+          {status === 'researching' && <div className="text-xs text-blue-400 mt-1">🔬 Researching</div>}
         </div>
       </div>
     );
@@ -50,6 +52,7 @@ const TechNode: React.FC<{
       <div className="text-4xl mb-2">{tech.icon}</div>
       <div className="font-bold text-sm">{tech.name}</div>
       {status === 'completed' && <div className="text-xs text-green-400 mt-1">(Completed)</div>}
+      {status === 'researching' && <div className="text-xs text-blue-400 mt-1">(Researching)</div>}
     </div>
   );
 };
@@ -62,9 +65,11 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
   const [location, setLocation] = useState(Object.keys(availableGarrisons)[0] || '');
 
   const completedSet = useMemo(() => new Set(tribe.completedTechs), [tribe.completedTechs]);
+  const researchingSet = useMemo(() => new Set(tribe.currentResearch?.map(p => p.techId) || []), [tribe.currentResearch]);
 
-  const getStatus = (tech: Technology): 'completed' | 'available' | 'locked' => {
+  const getStatus = (tech: Technology): 'completed' | 'available' | 'locked' | 'researching' => {
     if (completedSet.has(tech.id)) return 'completed';
+    if (researchingSet.has(tech.id)) return 'researching';
     if (tech.prerequisites.every(p => completedSet.has(p))) return 'available';
     return 'locked';
   };
@@ -105,6 +110,7 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
       
       const hasEnoughScrap = tribe.globalResources.scrap >= selectedTech.cost.scrap;
       const meetsTroopRequirement = garrison && assignedTroops >= selectedTech.requiredTroops && garrison.troops >= assignedTroops;
+      const isAlreadyResearching = getStatus(selectedTech) === 'researching';
 
       return (
           <div className="p-6 flex flex-col h-full">
@@ -138,14 +144,15 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
                     <input type="range" min="0" max={garrison?.troops || 0} value={assignedTroops} onChange={e => setAssignedTroops(parseInt(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500" />
                  </div>
 
-                <Button 
-                    className="w-full" 
-                    onClick={handleStart} 
-                    disabled={!meetsTroopRequirement || !hasEnoughScrap}
+                <Button
+                    className="w-full"
+                    onClick={handleStart}
+                    disabled={!meetsTroopRequirement || !hasEnoughScrap || isAlreadyResearching}
                 >
-                    {!hasEnoughScrap ? `Need ${selectedTech.cost.scrap - tribe.globalResources.scrap} more scrap` : 
+                    {isAlreadyResearching ? 'Already Researching This Technology' :
+                     !hasEnoughScrap ? `Need ${selectedTech.cost.scrap - tribe.globalResources.scrap} more scrap` :
                      !garrison || garrison.troops < assignedTroops ? `Not enough troops in garrison` :
-                     assignedTroops < selectedTech.requiredTroops ? `Need at least ${selectedTech.requiredTroops} troops` : 
+                     assignedTroops < selectedTech.requiredTroops ? `Need at least ${selectedTech.requiredTroops} troops` :
                      'Start Research Project'}
                 </Button>
             </div>

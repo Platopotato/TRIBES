@@ -28,13 +28,41 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
     const rankedTribes = useMemo(() => {
         return gameState.tribes.map(tribe => {
             const totalTroops = Object.values(tribe.garrisons).reduce((sum, g) => sum + g.troops, 0);
+            const totalChiefs = Object.values(tribe.garrisons).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
+
+            // Get previous turn rank from history
+            let previousRank = null;
+            let rankChange = null;
+            if (gameState.history && gameState.history.length > 0) {
+                const lastTurnHistory = gameState.history[gameState.history.length - 1];
+                const tribeRecord = lastTurnHistory.tribeRecords.find(record => record.tribeId === tribe.id);
+                if (tribeRecord) {
+                    previousRank = tribeRecord.rank;
+                }
+            }
+
             return {
                 ...tribe,
                 score: calculateTribeScore(tribe),
                 totalTroops,
+                totalChiefs,
+                previousRank,
             };
-        }).sort((a, b) => b.score - a.score);
-    }, [gameState.tribes]);
+        }).sort((a, b) => b.score - a.score).map((tribe, index) => {
+            // Calculate rank change after sorting
+            const currentRank = index + 1;
+            let rankChange = null;
+            if (tribe.previousRank !== null) {
+                rankChange = tribe.previousRank - currentRank; // Positive = improved, negative = declined
+            }
+
+            return {
+                ...tribe,
+                currentRank,
+                rankChange,
+            };
+        });
+    }, [gameState.tribes, gameState.history]);
 
     const territoryData = useMemo(() => {
         const data = new Map<string, { color: string; tribeName: string }>();
@@ -82,7 +110,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                                 <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider">Player</th>
                                 <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Score</th>
                                 <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Troops</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Chiefs</th>
                                 <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-right">Garrisons</th>
+                                <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-center">Trend</th>
                                 {playerTribe && <th className="p-3 text-sm font-semibold text-slate-400 tracking-wider text-center">Diplomacy</th>}
                             </tr>
                         </thead>
@@ -107,7 +137,29 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                                         <td className="p-3 text-slate-400">{tribe.playerName}</td>
                                         <td className="p-3 text-lg font-bold text-amber-400 text-right">{tribe.score}</td>
                                         <td className="p-3 text-white font-mono text-right">{tribe.totalTroops}</td>
+                                        <td className="p-3 text-white font-mono text-right">{tribe.totalChiefs}</td>
                                         <td className="p-3 text-white font-mono text-center">{Object.keys(tribe.garrisons).length}</td>
+                                        <td className="p-3 text-center">
+                                            {tribe.rankChange !== null ? (
+                                                <div className="flex items-center justify-center space-x-1">
+                                                    {tribe.rankChange > 0 ? (
+                                                        <>
+                                                            <span className="text-green-400 font-bold">↗</span>
+                                                            <span className="text-green-400 text-sm">+{tribe.rankChange}</span>
+                                                        </>
+                                                    ) : tribe.rankChange < 0 ? (
+                                                        <>
+                                                            <span className="text-red-400 font-bold">↘</span>
+                                                            <span className="text-red-400 text-sm">{tribe.rankChange}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-sm">—</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-500 text-xs">New</span>
+                                            )}
+                                        </td>
                                         {playerTribe && (
                                             <td className="p-3 text-center">
                                                 {tribe.id === playerTribe.id ? <span className="text-xs italic text-slate-500">You</span> : getStatusPill(relation)}

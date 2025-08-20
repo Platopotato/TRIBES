@@ -585,13 +585,24 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // --- FINALIZATION & HISTORY RECORDING ---
     const finalTribesForHistory = state.tribes;
 
+    // Calculate scores and rank tribes for history
+    const tribesWithScores = finalTribesForHistory.map(tribe => ({
+        tribe,
+        score: calculateTribeScore(tribe),
+        troops: Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0),
+        garrisons: Object.keys(tribe.garrisons || {}).length,
+        chiefs: Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0),
+    })).sort((a, b) => b.score - a.score);
+
     const newHistoryRecord: TurnHistoryRecord = {
         turn: state.turn,
-        tribeRecords: finalTribesForHistory.map(tribe => ({
-            tribeId: tribe.id,
-            score: calculateTribeScore(tribe),
-            troops: Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0),
-            garrisons: Object.keys(tribe.garrisons || {}).length,
+        tribeRecords: tribesWithScores.map((tribeData, index) => ({
+            tribeId: tribeData.tribe.id,
+            score: tribeData.score,
+            troops: tribeData.troops,
+            garrisons: tribeData.garrisons,
+            chiefs: tribeData.chiefs,
+            rank: index + 1,
         })),
     };
 

@@ -394,6 +394,8 @@ export interface TribeHistoryRecord {
     score: number;
     troops: number;
     garrisons: number;
+    chiefs: number;
+    rank: number;
 }
 
 export interface TurnHistoryRecord {

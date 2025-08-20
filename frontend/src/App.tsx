@@ -468,6 +468,7 @@ const App: React.FC = () => {
           initialMapSettings={gameState.mapSettings}
           initialMapSeed={gameState.mapSeed}
           initialStartLocations={gameState.startingLocations}
+          gameState={gameState}
           onSave={handleUpdateMap}
           onCancel={() => setView('admin')}
         />

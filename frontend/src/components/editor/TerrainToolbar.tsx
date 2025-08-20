@@ -80,6 +80,14 @@ const TerrainToolbar: React.FC<TerrainToolbarProps> = ({ activeBrush, onSelectBr
                            <div className="w-6 h-6 mr-2 rounded-sm flex items-center justify-center font-bold text-lg bg-red-600">⌫</div>
                             <span className="font-semibold">Clear POI</span>
                         </BrushButton>
+                        <BrushButton brush="fortify_poi" activeBrush={activeBrush} onSelect={handleSelect} title="Fortify Existing POI">
+                            <div className="w-6 h-6 mr-2 rounded-sm flex items-center justify-center font-bold text-lg bg-amber-600">🏰</div>
+                            <span className="font-semibold">Fortify POI</span>
+                        </BrushButton>
+                        <BrushButton brush="unfortify_poi" activeBrush={activeBrush} onSelect={handleSelect} title="Remove Fortification">
+                            <div className="w-6 h-6 mr-2 rounded-sm flex items-center justify-center font-bold text-lg bg-slate-600">🚫</div>
+                            <span className="font-semibold">Remove Fortification</span>
+                        </BrushButton>
                     </div>
                 </div>
 

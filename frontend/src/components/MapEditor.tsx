@@ -16,12 +16,13 @@ interface MapEditorProps {
     initialStartLocations: string[];
     onSave: (mapData: HexData[], startingLocations: string[]) => void;
     onCancel: () => void;
+    gameState?: any; // Optional game state to detect existing fortified POIs
 }
 
 const MAP_RADIUS = 40;
 const MAX_START_LOCATIONS = 50;
 
-type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location';
+type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi';
 type BrushSize = 'single' | 'cluster';
 
 const formatHexCoords = (q: number, r: number) => `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
@@ -35,7 +36,7 @@ const getNeighbors = (q: number, r: number) => {
 };
 
 const MapEditor: React.FC<MapEditorProps> = (props) => {
-    const { initialMapData, initialMapSettings, initialStartLocations, onSave, onCancel } = props;
+    const { initialMapData, initialMapSettings, initialStartLocations, onSave, onCancel, gameState } = props;
     
     const [editedMap, setEditedMap] = useState<HexData[]>(() => JSON.parse(JSON.stringify(initialMapData)));
     const [startLocations, setStartLocations] = useState<string[]>(initialStartLocations);
@@ -92,6 +93,17 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
             } else if (activeBrush === 'clear_poi') {
                 if (newHex.poi) {
                     newHex.poi = undefined;
+                    hexUpdated = true;
+                }
+            } else if (activeBrush === 'fortify_poi') {
+                if (newHex.poi && !newHex.poi.fortified) {
+                    newHex.poi = { ...newHex.poi, fortified: true, outpostOwner: 'admin' };
+                    hexUpdated = true;
+                }
+            } else if (activeBrush === 'unfortify_poi') {
+                if (newHex.poi && newHex.poi.fortified) {
+                    const { fortified, outpostOwner, ...poiWithoutFortification } = newHex.poi;
+                    newHex.poi = poiWithoutFortification;
                     hexUpdated = true;
                 }
             } else if (activeBrush === 'clear_terrain') {
@@ -160,6 +172,42 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
               }
           }
       })
+    }
+
+    // Function to detect and apply existing fortified POIs from game state
+    const applyExistingFortifications = () => {
+        if (!gameState) return;
+
+        let updatedMap = [...editedMap];
+        let fortificationsFound = 0;
+
+        // Check current game state map data for fortified POIs
+        if (gameState.mapData) {
+            gameState.mapData.forEach((gameHex: any) => {
+                if (gameHex.poi && gameHex.poi.fortified) {
+                    // Find corresponding hex in editor map
+                    const editorHexIndex = updatedMap.findIndex(hex => hex.q === gameHex.q && hex.r === gameHex.r);
+                    if (editorHexIndex !== -1) {
+                        const editorHex = updatedMap[editorHexIndex];
+                        if (editorHex.poi) {
+                            // Apply fortification to existing POI
+                            updatedMap[editorHexIndex] = {
+                                ...editorHex,
+                                poi: {
+                                    ...editorHex.poi,
+                                    fortified: true,
+                                    outpostOwner: gameHex.poi.outpostOwner || 'unknown'
+                                }
+                            };
+                            fortificationsFound++;
+                        }
+                    }
+                }
+            });
+        }
+
+        setEditedMap(updatedMap);
+        alert(`Applied ${fortificationsFound} existing fortifications to the map!`);
     }
     
     const handleClearStartLocations = () => {
@@ -231,6 +279,11 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
             <header className="flex-shrink-0 flex justify-between items-center bg-slate-800 p-3 rounded-lg border-b-2 border-amber-600">
                 <h1 className="text-xl font-bold text-amber-400">Map Editor</h1>
                 <div className="flex items-center gap-4">
+                    {gameState && (
+                        <Button variant="secondary" onClick={applyExistingFortifications} title="Apply fortifications from current game state">
+                            🏰 Apply Existing Fortifications
+                        </Button>
+                    )}
                     <Button variant="secondary" onClick={onCancel}>Cancel</Button>
                     <Button onClick={() => onSave(editedMap, startLocations)}>Save Changes</Button>
                 </div>

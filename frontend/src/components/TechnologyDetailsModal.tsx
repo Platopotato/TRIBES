@@ -38,6 +38,20 @@ const TechnologyDetailsModal: React.FC<TechnologyDetailsModalProps> = ({
         return `+${effect.value} morale bonus`;
       case TechnologyEffectType.TradeBonus:
         return `+${Math.round(effect.value * 100)}% bonus to trade efficiency`;
+      case TechnologyEffectType.ScavengeBonus:
+        return `+${Math.round(effect.value * 100)}% bonus to scavenging yields`;
+      case TechnologyEffectType.VisibilityRangeBonus:
+        return `+${effect.value} hex visibility range bonus`;
+      case TechnologyEffectType.SabotageResistance:
+        return `+${Math.round(effect.value * 100)}% resistance to enemy sabotage`;
+      case TechnologyEffectType.SabotageEffectiveness:
+        return `+${Math.round(effect.value * 100)}% effectiveness of your sabotage operations`;
+      case TechnologyEffectType.TerrainMovementBonus:
+        return `+${Math.round(effect.value * 100)}% movement speed in ${effect.terrain || 'specific'} terrain`;
+      case TechnologyEffectType.ResourceCapacityBonus:
+        return `+${Math.round(effect.value * 100)}% increase to resource storage capacity`;
+      case TechnologyEffectType.ChiefRecruitmentBonus:
+        return `+${Math.round(effect.value * 100)}% bonus to chief recruitment success`;
       default:
         return `${effect.type}: ${effect.value}`;
     }
@@ -67,6 +81,20 @@ const TechnologyDetailsModal: React.FC<TechnologyDetailsModalProps> = ({
         return '😊';
       case TechnologyEffectType.TradeBonus:
         return '💰';
+      case TechnologyEffectType.ScavengeBonus:
+        return '🔍';
+      case TechnologyEffectType.VisibilityRangeBonus:
+        return '👁️';
+      case TechnologyEffectType.SabotageResistance:
+        return '🛡️';
+      case TechnologyEffectType.SabotageEffectiveness:
+        return '🕵️';
+      case TechnologyEffectType.TerrainMovementBonus:
+        return '🗺️';
+      case TechnologyEffectType.ResourceCapacityBonus:
+        return '📦';
+      case TechnologyEffectType.ChiefRecruitmentBonus:
+        return '👑';
       default:
         return '⚡';
     }

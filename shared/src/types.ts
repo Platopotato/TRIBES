@@ -100,6 +100,18 @@ export enum TechnologyEffectType {
   CombatBonusAttack = 'COMBAT_BONUS_ATTACK',
   CombatBonusDefense = 'COMBAT_BONUS_DEFENSE',
   MovementSpeedBonus = 'MOVEMENT_SPEED_BONUS',
+  ScavengeBonus = 'SCAVENGE_BONUS',
+  RecruitmentCostReduction = 'RECRUITMENT_COST_REDUCTION',
+  WeaponProductionBonus = 'WEAPON_PRODUCTION_BONUS',
+  ResearchSpeedBonus = 'RESEARCH_SPEED_BONUS',
+  MoraleBonus = 'MORALE_BONUS',
+  TradeBonus = 'TRADE_BONUS',
+  VisibilityRangeBonus = 'VISIBILITY_RANGE_BONUS',
+  SabotageResistance = 'SABOTAGE_RESISTANCE',
+  SabotageEffectiveness = 'SABOTAGE_EFFECTIVENESS',
+  TerrainMovementBonus = 'TERRAIN_MOVEMENT_BONUS',
+  ResourceCapacityBonus = 'RESOURCE_CAPACITY_BONUS',
+  ChiefRecruitmentBonus = 'CHIEF_RECRUITMENT_BONUS',
 }
 
 export interface TechnologyEffect {

@@ -1,6 +1,6 @@
 import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject, SabotageType, AIType } from '../types.js';
-import { getAsset } from '../data/assetData.js';
-import { getTechnology } from '../data/technologyData.js';
+import { getAsset, ALL_ASSETS } from '../data/assetData.js';
+import { getTechnology, TECHNOLOGY_TREE } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
 import { computeCasualties } from './_combatCasualtyModel.js';
 import { calculateTribeScore } from './statsUtils.js';
@@ -2799,6 +2799,17 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
 
 
 
+            case 'Vault':
+                // Vaults require special discovery processing - redirect to vault discovery
+                const vaultDiscovery = processVaultDiscoveryScavenging(tribe, location, state);
+                if (vaultDiscovery) {
+                    return vaultDiscovery; // Return the vault discovery message directly
+                }
+                // If vault already discovered, treat as ruins
+                poiBonus = 2;
+                poiMessage = ' 🏛️ The depleted vault still contains some salvageable materials.';
+                break;
+
             default:
 
 
@@ -3070,6 +3081,12 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             banditConquestMessage = processBanditConquest(tribe, defendingTribe, targetLocation, state);
         }
 
+        // Check for vault discovery rewards and bonus turns
+        let vaultDiscoveryMessage = '';
+        if (!defendersRemain) {
+            vaultDiscoveryMessage = processVaultDiscovery(tribe, targetLocation, state);
+        }
+
         // Generate epic battle narrative for attacker victory
         const battleNarrative = generateEpicBattleNarrative({
             location: targetLocation,
@@ -3089,9 +3106,13 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         });
 
         // Single comprehensive message for each side
-        const attackerResult = banditConquestMessage
-            ? `${battleNarrative.attackerMessage}\n\n${banditConquestMessage}`
-            : battleNarrative.attackerMessage;
+        let attackerResult = battleNarrative.attackerMessage;
+        if (banditConquestMessage) {
+            attackerResult += `\n\n${banditConquestMessage}`;
+        }
+        if (vaultDiscoveryMessage) {
+            attackerResult += `\n\n${vaultDiscoveryMessage}`;
+        }
 
         tribe.lastTurnResults.push({
             id: `battle-victory-${Date.now()}`,
@@ -4437,6 +4458,185 @@ function getHexByLocation(location: string): any {
     // This is a placeholder - you'll need to implement based on your hex coordinate system
     // For now, return null to avoid errors
     return null;
+}
+
+// Process vault discovery rewards and bonus turns
+function processVaultDiscovery(attackerTribe: any, location: string, state: any): string {
+    // Find the hex data for this location
+    const { q, r } = parseHexCoords(location);
+    const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+
+    if (!hexData || !hexData.poi || hexData.poi.type !== POIType.Vault) {
+        return ''; // Not a vault
+    }
+
+    // Calculate substantial vault discovery rewards
+    const baseReward = {
+        food: 80 + Math.floor(Math.random() * 41), // 80-120 food
+        scrap: 150 + Math.floor(Math.random() * 101), // 150-250 scrap
+        weapons: 15 + Math.floor(Math.random() * 16), // 15-30 weapons
+    };
+
+    // Apply rewards
+    attackerTribe.globalResources.food += baseReward.food;
+    attackerTribe.globalResources.scrap += baseReward.scrap;
+
+    // Add weapons to the conquering garrison
+    const conqueringGarrison = attackerTribe.garrisons[location];
+    if (conqueringGarrison) {
+        conqueringGarrison.weapons = (conqueringGarrison.weapons || 0) + baseReward.weapons;
+    }
+
+    // BONUS TURNS MECHANIC: Grant 2 additional turns for vault discovery
+    if (!attackerTribe.bonusTurns) attackerTribe.bonusTurns = 0;
+    attackerTribe.bonusTurns += 2;
+
+    // Random asset discovery (50% chance)
+    let assetReward = '';
+    if (Math.random() < 0.5) {
+        const availableAssets = ALL_ASSETS.filter(asset =>
+            !attackerTribe.assets || !attackerTribe.assets.includes(asset.name)
+        );
+
+        if (availableAssets.length > 0) {
+            const randomAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)];
+            if (!attackerTribe.assets) attackerTribe.assets = [];
+            attackerTribe.assets.push(randomAsset.name);
+            assetReward = `\n\n🎁 **RARE ASSET DISCOVERED!** Your forces uncovered a pristine ${randomAsset.name.replace(/_/g, ' ')}! This valuable equipment has been added to your tribe's arsenal.`;
+        }
+    }
+
+    // 25% chance for bonus technology
+    let techReward = '';
+    if (Math.random() < 0.25) {
+        const allTechs = Object.values(TECHNOLOGY_TREE).flat();
+        const availableTechs = allTechs.filter(tech =>
+            !attackerTribe.completedTechs.includes(tech.id) &&
+            tech.prerequisites.every(prereq => attackerTribe.completedTechs.includes(prereq))
+        );
+
+        if (availableTechs.length > 0) {
+            const randomTech = availableTechs[Math.floor(Math.random() * availableTechs.length)];
+            attackerTribe.completedTechs.push(randomTech.id);
+            techReward = `\n\n🔬 **ANCIENT KNOWLEDGE RECOVERED!** Data cores within the vault contained the secrets of "${randomTech.name}"! This technology has been automatically learned.`;
+        }
+    }
+
+    // Replace Vault with Ruins after discovery
+    hexData.poi = {
+        id: hexData.poi.id,
+        type: POIType.Ruins,
+        difficulty: 3,
+        rarity: 'Common'
+    };
+
+    // Generate epic vault discovery narrative
+    const discoveryMessage = `🏛️ **ANCIENT VAULT BREACHED!**
+
+Your forces have successfully broken into the legendary pre-war vault! The massive reinforced doors, sealed for centuries, finally yield to your assault. Inside, automated systems still hum with power, protecting incredible treasures from the old world.
+
+**VAULT TREASURES CLAIMED:**
+• ${baseReward.food} preserved food supplies
+• ${baseReward.scrap} advanced technological components
+• ${baseReward.weapons} military-grade weapons
+
+**🎯 MAJOR DISCOVERY BONUS!** The significance of this find grants your tribe +2 bonus turns to capitalize on this incredible advantage. Your people are energized by this monumental achievement!${assetReward}${techReward}
+
+The vault's systems have been depleted, leaving behind only ruins, but the knowledge and resources gained will benefit your tribe for generations to come.`;
+
+    return discoveryMessage;
+}
+
+// Process vault discovery through scavenging (peaceful discovery)
+function processVaultDiscoveryScavenging(tribe: any, location: string, state: any): string {
+    // Find the hex data for this location
+    const { q, r } = parseHexCoords(location);
+    const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+
+    if (!hexData || !hexData.poi || hexData.poi.type !== POIType.Vault) {
+        return ''; // Not a vault or already discovered
+    }
+
+    // Check if this vault has already been discovered (converted to ruins)
+    if (hexData.poi.type === POIType.Ruins) {
+        return ''; // Already discovered
+    }
+
+    // Same rewards as attack discovery but slightly reduced since it's peaceful
+    const baseReward = {
+        food: 60 + Math.floor(Math.random() * 31), // 60-90 food (slightly less than attack)
+        scrap: 120 + Math.floor(Math.random() * 81), // 120-200 scrap
+        weapons: 10 + Math.floor(Math.random() * 11), // 10-20 weapons
+    };
+
+    // Apply rewards
+    tribe.globalResources.food += baseReward.food;
+    tribe.globalResources.scrap += baseReward.scrap;
+
+    // Add weapons to the garrison at this location
+    const garrison = tribe.garrisons[location];
+    if (garrison) {
+        garrison.weapons = (garrison.weapons || 0) + baseReward.weapons;
+    }
+
+    // BONUS TURNS MECHANIC: Grant 2 additional turns for vault discovery
+    if (!tribe.bonusTurns) tribe.bonusTurns = 0;
+    tribe.bonusTurns += 2;
+
+    // Random asset discovery (40% chance - slightly lower than attack)
+    let assetReward = '';
+    if (Math.random() < 0.4) {
+        const availableAssets = ALL_ASSETS.filter(asset =>
+            !tribe.assets || !tribe.assets.includes(asset.name)
+        );
+
+        if (availableAssets.length > 0) {
+            const randomAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)];
+            if (!tribe.assets) tribe.assets = [];
+            tribe.assets.push(randomAsset.name);
+            assetReward = `\n\n🎁 **RARE ASSET DISCOVERED!** Hidden within the vault, your scouts found a pristine ${randomAsset.name.replace(/_/g, ' ')}! This valuable equipment has been added to your tribe's arsenal.`;
+        }
+    }
+
+    // 20% chance for bonus technology (lower than attack)
+    let techReward = '';
+    if (Math.random() < 0.2) {
+        const allTechs = Object.values(TECHNOLOGY_TREE).flat();
+        const availableTechs = allTechs.filter(tech =>
+            !tribe.completedTechs.includes(tech.id) &&
+            tech.prerequisites.every(prereq => tribe.completedTechs.includes(prereq))
+        );
+
+        if (availableTechs.length > 0) {
+            const randomTech = availableTechs[Math.floor(Math.random() * availableTechs.length)];
+            tribe.completedTechs.push(randomTech.id);
+            techReward = `\n\n🔬 **ANCIENT KNOWLEDGE RECOVERED!** Your careful exploration uncovered intact data cores containing the secrets of "${randomTech.name}"! This technology has been automatically learned.`;
+        }
+    }
+
+    // Replace Vault with Ruins after discovery
+    hexData.poi = {
+        id: hexData.poi.id,
+        type: POIType.Ruins,
+        difficulty: 3,
+        rarity: 'Common'
+    };
+
+    // Generate vault discovery narrative for peaceful exploration
+    const discoveryMessage = `🏛️ **ANCIENT VAULT DISCOVERED!**
+
+Your scavenging party has made an incredible discovery! While exploring the area, they uncovered the entrance to a legendary pre-war vault. Through careful exploration and technical expertise, they managed to bypass the security systems and gain access to the treasures within.
+
+**VAULT TREASURES RECOVERED:**
+• ${baseReward.food} preserved food supplies
+• ${baseReward.scrap} advanced technological components
+• ${baseReward.weapons} military-grade weapons
+
+**🎯 MAJOR DISCOVERY BONUS!** This monumental find grants your tribe +2 bonus turns to capitalize on this incredible advantage. Word of the discovery spreads quickly, energizing your entire tribe!${assetReward}${techReward}
+
+The vault's automated systems have been safely depleted, leaving behind ruins, but the knowledge and resources gained will benefit your tribe for generations to come.`;
+
+    return discoveryMessage;
 }
 
 // Process bandit conquest rewards and bonus turn

@@ -156,6 +156,26 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
         { name: 'request_weapons', label: 'Weapons', type: 'number' },
     ],
   },
+  [ActionType.Sabotage]: {
+    name: 'Sabotage',
+    description: 'Conduct covert operations against enemy tribes.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.242 4.242L9.88 9.88' }),
+    fields: [
+      { name: 'start_location', label: 'Launch From', type: 'garrison_select' },
+      { name: 'target_location', label: 'Target Location', type: 'targetLocation' },
+      { name: 'sabotage_type', label: 'Mission Type', type: 'select',
+        options: ['Destroy Resources', 'Steal Resources', 'Intelligence Gathering', 'Steal Research', 'Destroy Research', 'Sabotage Outpost', 'Poison Supplies'] },
+      { name: 'troops', label: 'Operatives', type: 'number', defaultValue: 1, max: 'troops' },
+      { name: 'chiefsToMove', label: 'Spy Chiefs', type: 'chief_select' },
+      { name: 'resource_target', label: 'Resource Target', type: 'select',
+        options: ['food', 'scrap', 'weapons', 'random'],
+        info: 'Only for resource-based missions' },
+      { name: 'amount', label: 'Target Amount', type: 'number', defaultValue: 10,
+        info: 'Amount to steal/destroy (0 = maximum possible)' },
+      { name: 'info', label: 'Mission Info', type: 'info',
+        info: 'Success depends on operatives sent, distance, and enemy defenses. Failed missions may result in captured operatives.' }
+    ],
+  },
 };
 
   // Non-plannable diplomacy actions are intentionally omitted from the action grid.

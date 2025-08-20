@@ -241,6 +241,7 @@ export enum ActionType {
   Defend = 'Defend',
   SetRations = 'Set Rations',
   Return = 'Return',
+  Sabotage = 'Sabotage',
   Upkeep = 'Upkeep', // Not user-selectable, for results only
   Technology = 'Technology', // Not user-selectable, for results only
   RespondToTrade = 'Respond to Trade',
@@ -256,6 +257,55 @@ export interface PrisonerExchangeProposal {
   offeredChiefNames: string[];
   requestedChiefNames: string[];
   expiresOnTurn: number;
+}
+
+export enum SabotageType {
+  DestroyResources = 'Destroy Resources',
+  StealResources = 'Steal Resources',
+  IntelligenceGathering = 'Intelligence Gathering',
+  StealResearch = 'Steal Research',
+  DestroyResearch = 'Destroy Research',
+  SabotageOutpost = 'Sabotage Outpost',
+  PoisonSupplies = 'Poison Supplies',
+}
+
+export interface SabotageOperation {
+  type: SabotageType;
+  targetTribeId: string;
+  targetLocation: string;
+  operatives: {
+    troops: number;
+    chiefs: string[];
+  };
+  specificTarget?: {
+    resourceType?: 'food' | 'scrap' | 'weapons';
+    researchProject?: string;
+    amount?: number;
+  };
+}
+
+export interface SabotageResult {
+  success: boolean;
+  detected: boolean;
+  operativesCaptured: {
+    troops: number;
+    chiefs: string[];
+  };
+  intelligence?: {
+    troopCounts?: Record<string, number>;
+    resources?: Record<string, number>;
+    plannedActions?: GameAction[];
+    researchProgress?: ResearchProject[];
+    completedTechs?: string[];
+  };
+  damageDealt?: {
+    resourcesDestroyed?: Record<string, number>;
+    resourcesStolen?: Record<string, number>;
+    researchDestroyed?: string[];
+    researchStolen?: ResearchProject[];
+    outpostDisabled?: boolean;
+    troopsWeakened?: number;
+  };
 }
 
 export type GamePhase = 'planning' | 'processing' | 'results' | 'waiting';

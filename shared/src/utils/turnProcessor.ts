@@ -1,4 +1,4 @@
-import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject } from '../types.js';
+import { GameState, ActionType, JourneyType, TerrainType, POIType, TechnologyEffectType, DiplomaticStatus, TurnHistoryRecord, ResearchProject, SabotageType } from '../types.js';
 import { getAsset } from '../data/assetData.js';
 import { getTechnology } from '../data/technologyData.js';
 import { getHexesInRange, parseHexCoords, findPath, formatHexCoords } from './mapUtils.js';
@@ -466,6 +466,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
                     break;
                 case ActionType.StartResearch:
                     result = processStartResearchAction(tribe, action);
+                    break;
+                case ActionType.Sabotage:
+                    result = processSabotageAction(tribe, action, state);
                     break;
                 default:
                     result = `${action.actionType} action processed (basic implementation).`;
@@ -3926,4 +3929,436 @@ function generateEpicBattleNarrative(params: {
 
         return { attackerMessage, defenderMessage, returnMessage };
     }
+}
+
+// --- SABOTAGE ACTION PROCESSOR ---
+function processSabotageAction(tribe: any, action: any, state: any): string {
+    const { start_location, target_location, sabotage_type, troops, chiefsToMove, resource_target, amount } = action.actionData;
+
+    // Validate inputs
+    if (!start_location || !target_location || !sabotage_type) {
+        return `❌ Sabotage failed: Missing required mission parameters.`;
+    }
+
+    if (!troops || troops < 1) {
+        return `❌ Sabotage failed: At least 1 operative required.`;
+    }
+
+    // Get source garrison
+    const sourceGarrison = tribe.garrisons[start_location];
+    if (!sourceGarrison) {
+        return `❌ Sabotage failed: No garrison found at ${start_location}.`;
+    }
+
+    // Check if we have enough operatives
+    if (sourceGarrison.troops < troops) {
+        return `❌ Sabotage failed: Not enough operatives at ${start_location}. Have ${sourceGarrison.troops}, need ${troops}.`;
+    }
+
+    // Check for chiefs
+    const availableChiefs = sourceGarrison.chiefs || [];
+    const selectedChiefs = chiefsToMove || [];
+    const movingChiefs = availableChiefs.filter((c: any) => selectedChiefs.includes(c.name));
+
+    if (selectedChiefs.length > 0 && movingChiefs.length !== selectedChiefs.length) {
+        return `❌ Sabotage failed: Some selected chiefs not available at ${start_location}.`;
+    }
+
+    // Find target tribe
+    const targetTribe = state.tribes.find((t: any) =>
+        t.garrisons && Object.keys(t.garrisons).includes(target_location)
+    );
+
+    if (!targetTribe) {
+        return `❌ Sabotage failed: No tribe found at target location ${target_location}.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Sabotage failed: Cannot sabotage your own tribe.`;
+    }
+
+    // Calculate distance and mission difficulty
+    const pathInfo = findPath(start_location, target_location, state.mapData);
+    if (!pathInfo.path) {
+        return `❌ Sabotage failed: No path to target location.`;
+    }
+
+    // Deduct operatives from source garrison
+    sourceGarrison.troops -= troops;
+    sourceGarrison.chiefs = availableChiefs.filter((c: any) => !selectedChiefs.includes(c.name));
+
+    // Calculate success probability
+    const baseSuccessRate = 0.6; // 60% base success
+    const chiefBonus = movingChiefs.length * 0.15; // +15% per chief
+    const operativeBonus = Math.min(troops * 0.05, 0.3); // +5% per operative, max 30%
+    const distancePenalty = Math.min(pathInfo.cost * 0.05, 0.4); // -5% per distance unit, max 40%
+
+    const successRate = Math.max(0.1, Math.min(0.95,
+        baseSuccessRate + chiefBonus + operativeBonus - distancePenalty
+    ));
+
+    const missionSuccess = Math.random() < successRate;
+    const detectionRate = missionSuccess ? 0.2 : 0.7; // 20% if success, 70% if failed
+    const detected = Math.random() < detectionRate;
+
+    // Process mission results
+    const result = executeSabotageOperation(
+        tribe, targetTribe, sabotage_type, resource_target, amount || 0,
+        troops, movingChiefs, missionSuccess, detected, target_location
+    );
+
+    return result;
+}
+
+function executeSabotageOperation(
+    attackerTribe: any,
+    targetTribe: any,
+    sabotageType: string,
+    resourceTarget: string,
+    amount: number,
+    operatives: number,
+    chiefs: any[],
+    success: boolean,
+    detected: boolean,
+    targetLocation: string
+): string {
+    const targetGarrison = targetTribe.garrisons[targetLocation];
+    let operativesCaptured = 0;
+    let chiefsCaptured: string[] = [];
+    let resultMessage = '';
+
+    // Handle capture of operatives if detected
+    if (detected) {
+        const captureRate = success ? 0.3 : 0.6; // Lower capture rate if mission succeeded
+        operativesCaptured = Math.floor(operatives * captureRate * Math.random());
+
+        if (chiefs.length > 0 && Math.random() < 0.4) {
+            const capturedChief = chiefs[Math.floor(Math.random() * chiefs.length)];
+            chiefsCaptured.push(capturedChief.name);
+
+            // Add captured chief to target tribe's prisoners
+            if (!targetTribe.prisoners) targetTribe.prisoners = [];
+            targetTribe.prisoners.push({
+                name: capturedChief.name,
+                originalTribeId: attackerTribe.id,
+                capturedTurn: targetTribe.currentTurn || 1,
+                skills: capturedChief.skills || []
+            });
+        }
+    }
+
+    // Add defender notification if detected
+    if (detected) {
+        const captureDetails = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` Captured: ${operativesCaptured} operatives${chiefsCaptured.length > 0 ? ` and Chief ${chiefsCaptured[0]}` : ''}.`
+            : ' All operatives escaped.';
+
+        targetTribe.lastTurnResults.push({
+            id: `sabotage-defense-${targetTribe.id}-${Date.now()}`,
+            actionType: ActionType.Defend,
+            actionData: {},
+            result: `🚨 **SABOTAGE DETECTED** Enemy operatives from ${attackerTribe.tribeName} attempted ${sabotageType.toLowerCase()} at ${targetLocation}.${captureDetails}`
+        });
+    }
+
+    if (!success) {
+        const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+            : detected ? ' Mission detected but operatives escaped.' : ' Mission failed silently.';
+
+        return `💥 **SABOTAGE FAILED** ${sabotageType} mission at ${targetLocation} unsuccessful.${captureText}`;
+    }
+
+    // Mission succeeded - execute the sabotage operation
+    switch (sabotageType) {
+        case 'Destroy Resources':
+            return executeResourceDestruction(targetTribe, targetGarrison, resourceTarget, amount, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Steal Resources':
+            return executeResourceTheft(attackerTribe, targetTribe, targetGarrison, resourceTarget, amount, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Intelligence Gathering':
+            return executeIntelligenceGathering(attackerTribe, targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Steal Research':
+            return executeResearchTheft(attackerTribe, targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Destroy Research':
+            return executeResearchDestruction(targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Sabotage Outpost':
+            return executeOutpostSabotage(targetTribe, targetGarrison, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        case 'Poison Supplies':
+            return executePoisonSupplies(targetTribe, targetGarrison, targetLocation, detected, operativesCaptured, chiefsCaptured);
+
+        default:
+            return `❌ Unknown sabotage type: ${sabotageType}`;
+    }
+}
+
+// Individual sabotage operation functions
+function executeResourceDestruction(targetTribe: any, targetGarrison: any, resourceTarget: string, amount: number, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    const resources = ['food', 'scrap', 'weapons'];
+    const targetsToDestroy = resourceTarget === 'random' ? resources : [resourceTarget];
+
+    let totalDestroyed = 0;
+    let destructionDetails: string[] = [];
+
+    targetsToDestroy.forEach(resource => {
+        if (resource === 'food' || resource === 'scrap') {
+            // Global resources
+            const available = targetTribe.globalResources[resource] || 0;
+            const toDestroy = amount > 0 ? Math.min(amount, available) : Math.floor(available * 0.3); // 30% if no amount specified
+
+            if (toDestroy > 0) {
+                targetTribe.globalResources[resource] -= toDestroy;
+                destructionDetails.push(`${toDestroy} ${resource}`);
+                totalDestroyed += toDestroy;
+            }
+        } else if (resource === 'weapons' && targetGarrison) {
+            // Garrison-specific weapons
+            const available = targetGarrison.weapons || 0;
+            const toDestroy = amount > 0 ? Math.min(amount, available) : Math.floor(available * 0.4); // 40% if no amount specified
+
+            if (toDestroy > 0) {
+                targetGarrison.weapons -= toDestroy;
+                destructionDetails.push(`${toDestroy} weapons`);
+                totalDestroyed += toDestroy;
+            }
+        }
+    });
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    if (totalDestroyed === 0) {
+        return `💥 **SABOTAGE COMPLETE** Resource destruction at ${targetLocation} found no significant targets.${captureText}`;
+    }
+
+    return `💥 **SABOTAGE SUCCESSFUL** Destroyed ${destructionDetails.join(', ')} at ${targetLocation}.${captureText}`;
+}
+
+function executeResourceTheft(attackerTribe: any, targetTribe: any, targetGarrison: any, resourceTarget: string, amount: number, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    const resources = ['food', 'scrap', 'weapons'];
+    const targetsToSteal = resourceTarget === 'random' ? [resources[Math.floor(Math.random() * resources.length)]] : [resourceTarget];
+
+    let totalStolen = 0;
+    let theftDetails: string[] = [];
+
+    targetsToSteal.forEach(resource => {
+        if (resource === 'food' || resource === 'scrap') {
+            // Global resources
+            const available = targetTribe.globalResources[resource] || 0;
+            const toSteal = amount > 0 ? Math.min(amount, available) : Math.floor(available * 0.2); // 20% if no amount specified
+
+            if (toSteal > 0) {
+                targetTribe.globalResources[resource] -= toSteal;
+                attackerTribe.globalResources[resource] = (attackerTribe.globalResources[resource] || 0) + toSteal;
+                theftDetails.push(`${toSteal} ${resource}`);
+                totalStolen += toSteal;
+            }
+        } else if (resource === 'weapons' && targetGarrison) {
+            // Garrison-specific weapons
+            const available = targetGarrison.weapons || 0;
+            const toSteal = amount > 0 ? Math.min(amount, available) : Math.floor(available * 0.25); // 25% if no amount specified
+
+            if (toSteal > 0) {
+                targetGarrison.weapons -= toSteal;
+                // Add stolen weapons to attacker's home base or a random garrison
+                const attackerGarrisons = Object.keys(attackerTribe.garrisons);
+                if (attackerGarrisons.length > 0) {
+                    const homeGarrison = attackerTribe.garrisons[attackerTribe.location] || attackerTribe.garrisons[attackerGarrisons[0]];
+                    homeGarrison.weapons = (homeGarrison.weapons || 0) + toSteal;
+                }
+                theftDetails.push(`${toSteal} weapons`);
+                totalStolen += toSteal;
+            }
+        }
+    });
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    if (totalStolen === 0) {
+        return `🎯 **SABOTAGE COMPLETE** Resource theft at ${targetLocation} found no significant targets.${captureText}`;
+    }
+
+    return `🎯 **SABOTAGE SUCCESSFUL** Stole ${theftDetails.join(', ')} from ${targetLocation}.${captureText}`;
+}
+
+function executeIntelligenceGathering(attackerTribe: any, targetTribe: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    const targetGarrison = targetTribe.garrisons[targetLocation];
+    let intelligence: string[] = [];
+
+    // Gather troop information
+    if (targetGarrison) {
+        intelligence.push(`**Garrison at ${targetLocation}:** ${targetGarrison.troops || 0} troops, ${targetGarrison.weapons || 0} weapons`);
+
+        if (targetGarrison.chiefs && targetGarrison.chiefs.length > 0) {
+            const chiefNames = targetGarrison.chiefs.map((c: any) => c.name).join(', ');
+            intelligence.push(`**Chiefs present:** ${chiefNames}`);
+        }
+    }
+
+    // Gather resource information
+    intelligence.push(`**Global Resources:** ${targetTribe.globalResources.food || 0} food, ${targetTribe.globalResources.scrap || 0} scrap`);
+
+    // Gather research information
+    if (targetTribe.currentResearch && targetTribe.currentResearch.length > 0) {
+        const researchInfo = targetTribe.currentResearch.map((project: any) => {
+            const tech = getTechnology(project.techId);
+            return `${tech?.name || 'Unknown'} (${project.progress}/${tech?.researchPoints || 0})`;
+        }).join(', ');
+        intelligence.push(`**Active Research:** ${researchInfo}`);
+    }
+
+    if (targetTribe.completedTechs && targetTribe.completedTechs.length > 0) {
+        const recentTechs = targetTribe.completedTechs.slice(-3); // Last 3 completed techs
+        intelligence.push(`**Recent Technologies:** ${recentTechs.join(', ')}`);
+    }
+
+    // Gather planned actions (partial information)
+    if (targetTribe.actions && targetTribe.actions.length > 0) {
+        const actionTypes = targetTribe.actions.map((a: any) => a.actionType).slice(0, 3); // First 3 action types
+        intelligence.push(`**Planned Actions:** ${actionTypes.join(', ')}`);
+    }
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    const intelReport = intelligence.join(' | ');
+    return `🔍 **INTELLIGENCE GATHERED** ${intelReport}${captureText}`;
+}
+
+function executeResearchTheft(attackerTribe: any, targetTribe: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    if (!targetTribe.currentResearch || targetTribe.currentResearch.length === 0) {
+        const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+            : detected ? ' Mission detected but operatives escaped.' : '';
+        return `🔬 **SABOTAGE COMPLETE** No active research found at ${targetLocation}.${captureText}`;
+    }
+
+    // Steal from a random research project
+    const randomProject = targetTribe.currentResearch[Math.floor(Math.random() * targetTribe.currentResearch.length)];
+    const tech = getTechnology(randomProject.techId);
+    const progressToSteal = Math.floor(randomProject.progress * 0.3); // Steal 30% of progress
+
+    if (progressToSteal > 0) {
+        randomProject.progress -= progressToSteal;
+
+        // Add stolen research to attacker's matching project or start new one
+        let attackerProject = attackerTribe.currentResearch?.find((p: any) => p.techId === randomProject.techId);
+        if (attackerProject) {
+            attackerProject.progress += progressToSteal;
+        } else {
+            // Start new research project with stolen progress
+            if (!attackerTribe.currentResearch) attackerTribe.currentResearch = [];
+            attackerTribe.currentResearch.push({
+                techId: randomProject.techId,
+                progress: progressToSteal,
+                assignedTroops: 0,
+                location: attackerTribe.location
+            });
+        }
+    }
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    return `🔬 **RESEARCH STOLEN** Acquired ${progressToSteal} research points for ${tech?.name || 'Unknown Technology'} from ${targetLocation}.${captureText}`;
+}
+
+function executeResearchDestruction(targetTribe: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    if (!targetTribe.currentResearch || targetTribe.currentResearch.length === 0) {
+        const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+            : detected ? ' Mission detected but operatives escaped.' : '';
+        return `💥 **SABOTAGE COMPLETE** No active research found at ${targetLocation}.${captureText}`;
+    }
+
+    // Destroy progress from a random research project
+    const randomProject = targetTribe.currentResearch[Math.floor(Math.random() * targetTribe.currentResearch.length)];
+    const tech = getTechnology(randomProject.techId);
+    const progressToDestroy = Math.floor(randomProject.progress * 0.5); // Destroy 50% of progress
+
+    if (progressToDestroy > 0) {
+        randomProject.progress -= progressToDestroy;
+
+        // Remove project if progress drops to 0 or below
+        if (randomProject.progress <= 0) {
+            targetTribe.currentResearch = targetTribe.currentResearch.filter((p: any) => p.techId !== randomProject.techId);
+        }
+    }
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    return `💥 **RESEARCH SABOTAGED** Destroyed ${progressToDestroy} research points from ${tech?.name || 'Unknown Technology'} at ${targetLocation}.${captureText}`;
+}
+
+function executeOutpostSabotage(targetTribe: any, targetGarrison: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    const hex = getHexByLocation(targetLocation);
+    const hasOutpost = hex?.poi && (hex.poi.type === 'Outpost' || hex.poi.fortified);
+
+    if (!hasOutpost) {
+        const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+            : detected ? ' Mission detected but operatives escaped.' : '';
+        return `⚡ **SABOTAGE COMPLETE** No outpost found at ${targetLocation}.${captureText}`;
+    }
+
+    // Temporarily disable outpost defenses
+    if (!targetTribe.sabotageEffects) targetTribe.sabotageEffects = {};
+    targetTribe.sabotageEffects[targetLocation] = {
+        type: 'outpost_disabled',
+        duration: 2, // Disabled for 2 turns
+        appliedTurn: targetTribe.currentTurn || 1
+    };
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    return `⚡ **OUTPOST SABOTAGED** Defenses at ${targetLocation} disabled for 2 turns.${captureText}`;
+}
+
+function executePoisonSupplies(targetTribe: any, targetGarrison: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
+    if (!targetGarrison) {
+        const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+            ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+            : detected ? ' Mission detected but operatives escaped.' : '';
+        return `☠️ **SABOTAGE COMPLETE** No garrison found at ${targetLocation}.${captureText}`;
+    }
+
+    const troopsAffected = Math.floor(targetGarrison.troops * 0.3); // Affect 30% of troops
+
+    if (troopsAffected > 0) {
+        // Apply poison effect that reduces combat effectiveness
+        if (!targetTribe.sabotageEffects) targetTribe.sabotageEffects = {};
+        targetTribe.sabotageEffects[targetLocation] = {
+            type: 'poisoned_troops',
+            troopsAffected: troopsAffected,
+            duration: 3, // Effect lasts 3 turns
+            appliedTurn: targetTribe.currentTurn || 1
+        };
+    }
+
+    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
+        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
+        : detected ? ' Mission detected but operatives escaped.' : '';
+
+    return `☠️ **SUPPLIES POISONED** ${troopsAffected} troops at ${targetLocation} weakened for 3 turns.${captureText}`;
+}
+
+// Helper function to get hex by location (you may need to adjust this based on your hex system)
+function getHexByLocation(location: string): any {
+    // This is a placeholder - you'll need to implement based on your hex coordinate system
+    // For now, return null to avoid errors
+    return null;
 }

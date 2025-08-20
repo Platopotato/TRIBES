@@ -16,7 +16,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
   const [editingResources, setEditingResources] = useState<GlobalResources | null>(null);
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
-  const [editingResearch, setEditingResearch] = useState<ResearchProject | null>(null);
+  const [editingResearch, setEditingResearch] = useState<ResearchProject[]>([]);
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [playerToEject, setPlayerToEject] = useState<{ userId: string; username: string } | null>(null);
 
@@ -28,7 +28,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setSelectedTribe(tribe);
     setEditingResources({ ...tribe.globalResources });
     setEditingGarrisons({ ...tribe.garrisons });
-    setEditingResearch(tribe.currentResearch ? { ...tribe.currentResearch } : null);
+    setEditingResearch(tribe.currentResearch ? [...tribe.currentResearch] : []);
     setEditingCompletedTechs([...tribe.completedTechs]);
   };
 

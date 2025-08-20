@@ -294,11 +294,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     }
 
     // Deduct troops for current research
-    if (playerTribe.currentResearch) {
-        const { location, assignedTroops } = playerTribe.currentResearch;
-        if (available[location]) {
-            available[location].troops = Math.max(0, available[location].troops - assignedTroops);
-        }
+    if (playerTribe.currentResearch && playerTribe.currentResearch.length > 0) {
+        playerTribe.currentResearch.forEach(project => {
+            const { location, assignedTroops } = project;
+            if (available[location]) {
+                available[location].troops = Math.max(0, available[location].troops - assignedTroops);
+            }
+        });
     }
 
     return available;

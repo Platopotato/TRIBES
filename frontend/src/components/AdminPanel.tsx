@@ -609,7 +609,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         morale: tribe.globalResources.morale,
         rationLevel: tribe.rationLevel,
         completedTechs: tribe.completedTechs.length,
-        currentResearch: tribe.currentResearch?.techId || 'None',
+        currentResearch: tribe.currentResearch && tribe.currentResearch.length > 0 ?
+          tribe.currentResearch.map(project => getTechnology(project.techId)?.name || 'Unknown').join(', ') : 'None',
         history: tribeHistory,
         trends: trends
       };

@@ -513,6 +513,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const generateTurnSummary = (turnsBack: number = 1) => {
     const currentTurn = gameState.turn;
+    const summarizedTurn = currentTurn - turnsBack;
     const history = gameState.history || [];
 
     const summary = allTribes.map(tribe => {
@@ -547,10 +548,35 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
                  resultText.includes('Leader') ||
                  resultText.includes('approved') && resultText.includes('request');
         })
-        .map(result => ({
-          type: result.actionType,
-          description: result.result || 'Chief acquired'
-        }));
+        .map(result => {
+          const resultText = result.result || '';
+          // Extract chief name from common patterns
+          let chiefName = 'Unknown Chief';
+
+          // Pattern: "Chief [Name] has joined"
+          const joinedMatch = resultText.match(/Chief\s+([A-Za-z\s]+)\s+has\s+joined/i);
+          if (joinedMatch) {
+            chiefName = joinedMatch[1].trim();
+          }
+
+          // Pattern: "approved for Chief [Name]"
+          const approvedMatch = resultText.match(/approved.*?Chief\s+([A-Za-z\s]+)/i);
+          if (approvedMatch) {
+            chiefName = approvedMatch[1].trim();
+          }
+
+          // Pattern: "[Name] approved"
+          const nameApprovedMatch = resultText.match(/([A-Za-z\s]+)\s+approved/i);
+          if (nameApprovedMatch && !resultText.includes('request')) {
+            chiefName = nameApprovedMatch[1].trim();
+          }
+
+          return {
+            type: result.actionType,
+            name: chiefName,
+            description: result.result || 'Chief acquired'
+          };
+        });
 
       // Also check if any chiefs were approved via admin this turn
       const approvedChiefsThisTurn = (gameState.chiefRequests || [])
@@ -591,6 +617,14 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         scoreChange: currentStats.score - tribeHistory[0].score
       } : null;
 
+      // Detect if this is a new tribe (joined this turn or recently)
+      const isNewTribe = currentTurn <= 2 || tribeHistory.length === 0 ||
+        tribe.lastTurnResults.some(result =>
+          result.result?.includes('joined the game') ||
+          result.result?.includes('tribe created') ||
+          result.result?.includes('new tribe')
+        );
+
       return {
         tribeName: tribe.tribeName,
         playerName: tribe.playerName,
@@ -606,6 +640,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         currentActions,
         lastTurnResults,
         chiefsAppearedThisTurn: [...chiefsAppearedThisTurn, ...approvedChiefsThisTurn],
+        isNewTribe: isNewTribe,
         morale: tribe.globalResources.morale,
         rationLevel: tribe.rationLevel,
         completedTechs: tribe.completedTechs.length,
@@ -621,12 +656,14 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const handleDownloadTurnSummary = () => {
     const summary = generateTurnSummary(summaryTurnsBack);
-    const summaryText = `RADIX TRIBES - TURN ${gameState.turn} SUMMARY
+    const summarizedTurn = gameState.turn - summaryTurnsBack;
+    const summaryText = `RADIX TRIBES - TURN ${summarizedTurn} SUMMARY
+Current Turn: ${gameState.turn} | Summarizing: Turn ${summarizedTurn} Results
 Generated: ${new Date().toLocaleString()}
 ============================================
 
 ${summary.map(tribe => `
-TRIBE: ${tribe.tribeName}
+TRIBE: ${tribe.tribeName} ${tribe.isNewTribe ? '🆕 NEW TRIBE - JUST STARTED!' : ''}
 Leader: ${tribe.playerName} ${tribe.isAI ? `(AI - ${tribe.aiType})` : '(Human)'}
 Turn Status: ${tribe.turnSubmitted ? '✅ SUBMITTED' : '❌ NOT SUBMITTED'}
 Home Base: ${tribe.homeBase}
@@ -657,7 +694,7 @@ ${tribe.lastTurnResults.length > 0 ?
 
 CHIEFS APPEARED THIS TURN:
 ${tribe.chiefsAppearedThisTurn.length > 0 ?
-  tribe.chiefsAppearedThisTurn.map(c => `  👑 ${c.type}: ${c.description}`).join('\n') :
+  tribe.chiefsAppearedThisTurn.map(c => `  👑 ${c.name} (via ${c.type})`).join('\n') :
   '  No new chiefs this turn'}
 
 TECHNOLOGY:
@@ -1637,7 +1674,12 @@ GAME STATISTICS:
           <div className="bg-neutral-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-neutral-600">
               <div>
-                <h2 className="text-2xl font-bold text-amber-400">Turn {gameState.turn} Summary</h2>
+                <h2 className="text-2xl font-bold text-amber-400">
+                  Turn {gameState.turn - summaryTurnsBack} Results Summary
+                </h2>
+                <p className="text-sm text-neutral-300 mt-1">
+                  Current Turn: {gameState.turn} | Showing results from Turn {gameState.turn - summaryTurnsBack}
+                </p>
                 <div className="flex items-center space-x-4 mt-2">
                   <label className="text-sm text-neutral-300">Include previous turns:</label>
                   <select
@@ -1668,7 +1710,14 @@ GAME STATISTICS:
                   <div key={index} className="bg-neutral-700 rounded-lg p-4 border border-neutral-600">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="text-xl font-bold text-amber-300">{tribe.tribeName}</h3>
+                        <h3 className="text-xl font-bold text-amber-300">
+                          {tribe.tribeName}
+                          {tribe.isNewTribe && (
+                            <span className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded-full">
+                              🆕 NEW TRIBE
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-neutral-300">
                           Leader: {tribe.playerName} {tribe.isAI ? `(AI - ${tribe.aiType})` : '(Human)'}
                         </p>
@@ -1746,7 +1795,7 @@ GAME STATISTICS:
                         <div className="text-sm space-y-1 max-h-20 overflow-y-auto">
                           {tribe.chiefsAppearedThisTurn.length > 0 ? (
                             tribe.chiefsAppearedThisTurn.map((c, i) => (
-                              <p key={i} className="text-green-400">👑 {c.description}</p>
+                              <p key={i} className="text-green-400">👑 {c.name} <span className="text-neutral-400">(via {c.type})</span></p>
                             ))
                           ) : (
                             <p className="text-neutral-500">No new chiefs</p>

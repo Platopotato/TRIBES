@@ -1,8 +1,9 @@
-import React from 'react';
-import { Tribe, GameAction, ActionType } from '@radix-tribes/shared';
+import React, { useState } from 'react';
+import { Tribe, GameAction, ActionType, Technology } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { getTechnology } from '@radix-tribes/shared';
+import TechnologyDetailsModal from './TechnologyDetailsModal';
 
 interface TechPanelProps {
   tribe: Tribe;
@@ -13,8 +14,16 @@ interface TechPanelProps {
 
 const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTechTree, onCancelResearch }) => {
   const { currentResearch, completedTechs } = tribe;
+  const [selectedTechnology, setSelectedTechnology] = useState<Technology | null>(null);
 
   const isResearchQueued = plannedActions.some(a => a.actionType === ActionType.StartResearch);
+
+  const handleTechClick = (techId: string) => {
+    const tech = getTechnology(techId);
+    if (tech) {
+      setSelectedTechnology(tech);
+    }
+  };
 
   const renderContent = () => {
     if (currentResearch && currentResearch.length > 0) {
@@ -78,30 +87,47 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
   );
 
   return (
-    <Card title="Technology">
-      <div className="space-y-3">
-        <div className="flex justify-end mb-3">
-          {cardActions}
-        </div>
-        {renderContent()}
-        {completedTechs.length > 0 && (
-          <div className="pt-3 border-t border-slate-700">
-            <h5 className="font-semibold text-slate-300 mb-2 text-sm">Completed Techs</h5>
-            <div className="flex flex-wrap gap-2">
-              {completedTechs.map(techId => {
-                const tech = getTechnology(techId);
-                if (!tech) return null;
-                return (
-                  <span key={techId} title={tech.name} className="text-xl cursor-help">
-                    {tech.icon}
-                  </span>
-                );
-              })}
-            </div>
+    <>
+      <Card title="Technology">
+        <div className="space-y-3">
+          <div className="flex justify-end mb-3">
+            {cardActions}
           </div>
-        )}
-      </div>
-    </Card>
+          {renderContent()}
+          {completedTechs.length > 0 && (
+            <div className="pt-3 border-t border-slate-700">
+              <h5 className="font-semibold text-slate-300 mb-2 text-sm">Completed Techs</h5>
+              <div className="flex flex-wrap gap-2">
+                {completedTechs.map(techId => {
+                  const tech = getTechnology(techId);
+                  if (!tech) return null;
+                  return (
+                    <button
+                      key={techId}
+                      onClick={() => handleTechClick(techId)}
+                      title={`Click to view ${tech.name} benefits`}
+                      className="text-xl cursor-pointer hover:scale-110 transition-transform duration-200 p-1 rounded hover:bg-slate-700/50"
+                    >
+                      {tech.icon}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500 mt-2">💡 Click on any technology to view its benefits</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Technology Details Modal */}
+      {selectedTechnology && (
+        <TechnologyDetailsModal
+          isOpen={true}
+          onClose={() => setSelectedTechnology(null)}
+          technology={selectedTechnology}
+        />
+      )}
+    </>
   );
 };
 

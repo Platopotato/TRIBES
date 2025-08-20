@@ -27,8 +27,52 @@ function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'comba
 import { generateAIActions } from '../ai/aiActions.js';
 
 // Outpost helpers (module scope)
-function hasOutpostDefenses(hex: any): boolean {
-  return hex?.poi && (hex.poi.type === POIType.Outpost || hex.poi.fortified);
+function hasOutpostDefenses(hex: any, tribe?: any, location?: string): boolean {
+  const hasOutpost = hex?.poi && (hex.poi.type === POIType.Outpost || hex.poi.fortified);
+
+  // Check if outpost is disabled by sabotage
+  if (hasOutpost && tribe && location) {
+    const sabotageEffects = getSabotageEffectsOnCombat(tribe, location);
+    if (sabotageEffects.outpostDisabled) {
+      return false; // Outpost defenses are disabled
+    }
+  }
+
+  return hasOutpost;
+}
+
+// Calculate sabotage effects on combat effectiveness
+function getSabotageEffectsOnCombat(tribe: any, location: string): { strengthMultiplier: number, outpostDisabled: boolean } {
+    if (!tribe.sabotageEffects || !tribe.sabotageEffects[location]) {
+        return { strengthMultiplier: 1.0, outpostDisabled: false };
+    }
+
+    const effect = tribe.sabotageEffects[location];
+    const currentTurn = tribe.currentTurn || 1;
+    const turnsElapsed = currentTurn - effect.appliedTurn;
+
+    // Check if effect is still active
+    if (turnsElapsed >= effect.duration) {
+        return { strengthMultiplier: 1.0, outpostDisabled: false };
+    }
+
+    let strengthMultiplier = 1.0;
+    let outpostDisabled = false;
+
+    if (effect.type === 'poisoned_troops') {
+        // Poisoned troops have reduced combat effectiveness
+        const troopsAffected = effect.troopsAffected || 0;
+        const totalTroops = tribe.garrisons[location]?.troops || 1;
+        const affectedRatio = Math.min(1.0, troopsAffected / totalTroops);
+
+        // Reduce strength by 40% for affected troops
+        strengthMultiplier = 1.0 - (affectedRatio * 0.4);
+    } else if (effect.type === 'outpost_disabled') {
+        // Outpost defenses are disabled
+        outpostDisabled = true;
+    }
+
+    return { strengthMultiplier, outpostDisabled };
 }
 
 function isHomeBase(tribe: any, location: string): boolean {
@@ -508,6 +552,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
 
     // ABANDONMENT TRACKING: Track inactive tribes for admin visibility
     trackTribeAbandonment(state);
+
+    // SABOTAGE EFFECTS PROCESSING: Process ongoing sabotage effects
+    processSabotageEffects(state);
 
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
@@ -2935,8 +2982,12 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const attackerRationMod = tribe.rationEffects?.combatModifier ? (1 + (tribe.rationEffects.combatModifier / 100)) : 1;
     const defenderRationMod = defendingTribe.rationEffects?.combatModifier ? (1 + (defendingTribe.rationEffects.combatModifier / 100)) : 1;
 
-    // Add explicit outpost defensive bonus to win/loss calculation
-    const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0; // +25% strength for outpost defenders
+    // Apply sabotage effects
+    const attackerSabotageEffects = getSabotageEffectsOnCombat(tribe, origin);
+    const defenderSabotageEffects = getSabotageEffectsOnCombat(defendingTribe, targetLocation);
+
+    // Add explicit outpost defensive bonus to win/loss calculation (check for sabotage)
+    const outpostDefBonus = hasOutpostDefenses(defHex, defendingTribe, targetLocation) ? 1.25 : 1.0; // +25% strength for outpost defenders
 
     // Add home base defensive bonus (+50% base, +25% more for last stand)
     const homeDefBonus = getHomeBaseDefensiveBonus(defendingTribe, targetLocation);
@@ -2944,9 +2995,9 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     // Combine all defensive bonuses
     const totalDefBonus = outpostDefBonus * homeDefBonus;
 
-    // Calculate final effective strengths
-    const finalAttackerStrength = attackerStrength * atkMult * attackerRationMod;
-    const finalDefenderStrength = defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * totalDefBonus;
+    // Calculate final effective strengths (including sabotage effects)
+    const finalAttackerStrength = attackerStrength * atkMult * attackerRationMod * attackerSabotageEffects.strengthMultiplier;
+    const finalDefenderStrength = defenderStrength * defMult * defenderRationMod * (1 + terrainDefBonus) * totalDefBonus * defenderSabotageEffects.strengthMultiplier;
 
     // For very lopsided battles (>3:1 ratio), reduce randomness to ensure decisive outcomes
     const strengthRatio = finalAttackerStrength / finalDefenderStrength;
@@ -4361,4 +4412,65 @@ function getHexByLocation(location: string): any {
     // This is a placeholder - you'll need to implement based on your hex coordinate system
     // For now, return null to avoid errors
     return null;
+}
+
+// Process ongoing sabotage effects each turn
+function processSabotageEffects(state: any): void {
+    state.tribes.forEach((tribe: any) => {
+        if (!tribe.sabotageEffects) return;
+
+        const currentTurn = tribe.currentTurn || 1;
+        const expiredEffects: string[] = [];
+
+        Object.keys(tribe.sabotageEffects).forEach(location => {
+            const effect = tribe.sabotageEffects[location];
+            const turnsElapsed = currentTurn - effect.appliedTurn;
+
+            if (turnsElapsed >= effect.duration) {
+                // Effect has expired
+                expiredEffects.push(location);
+
+                // Add notification about effect expiring
+                if (effect.type === 'outpost_disabled') {
+                    tribe.lastTurnResults.push({
+                        id: `sabotage-expire-${tribe.id}-${location}`,
+                        actionType: ActionType.Upkeep,
+                        actionData: {},
+                        result: `🔧 **REPAIRS COMPLETE** Outpost defenses at ${location} have been restored.`
+                    });
+                } else if (effect.type === 'poisoned_troops') {
+                    tribe.lastTurnResults.push({
+                        id: `sabotage-expire-${tribe.id}-${location}`,
+                        actionType: ActionType.Upkeep,
+                        actionData: {},
+                        result: `💊 **RECOVERY COMPLETE** Troops at ${location} have recovered from poisoning.`
+                    });
+                }
+            } else {
+                // Effect is still active - apply ongoing effects
+                if (effect.type === 'poisoned_troops') {
+                    // Poisoned troops have reduced effectiveness (handled in combat calculations)
+                    const remainingTurns = effect.duration - turnsElapsed;
+                    if (remainingTurns === 1) {
+                        tribe.lastTurnResults.push({
+                            id: `sabotage-warning-${tribe.id}-${location}`,
+                            actionType: ActionType.Upkeep,
+                            actionData: {},
+                            result: `⚠️ **POISON WARNING** Troops at ${location} will recover next turn.`
+                        });
+                    }
+                }
+            }
+        });
+
+        // Remove expired effects
+        expiredEffects.forEach(location => {
+            delete tribe.sabotageEffects[location];
+        });
+
+        // Clean up empty sabotageEffects object
+        if (Object.keys(tribe.sabotageEffects).length === 0) {
+            delete tribe.sabotageEffects;
+        }
+    });
 }

@@ -3309,7 +3309,7 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         }
 
         // Remove completed projects
-        tribe.currentResearch = tribe.currentResearch.filter(project =>
+        tribe.currentResearch = tribe.currentResearch.filter((project: ResearchProject) =>
             !completedProjects.includes(project.techId)
         );
     }
@@ -3702,7 +3702,7 @@ function processStartResearchAction(tribe: any, action: any): string {
     if (!tech) return `❌ Start Research failed: Technology '${techId}' not found.`;
 
     // Check if already researching this specific technology
-    if (tribe.currentResearch && tribe.currentResearch.some((project: any) => project.techId === techId)) {
+    if (tribe.currentResearch && tribe.currentResearch.some((project: ResearchProject) => project.techId === techId)) {
         return `❌ Start Research failed: Already researching ${tech.name}.`;
     }
 

@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React, { useState, useRef, useEffect } from 'react';
-import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, LoginAnnouncement, BackupStatus, BackupFile, TurnDeadline, Newsletter } from '@radix-tribes/shared';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest, AIType, LoginAnnouncement, BackupStatus, BackupFile, TurnDeadline, Newsletter, getTechnology } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';

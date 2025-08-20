@@ -411,67 +411,27 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             <div className="space-y-4">
               {/* Current Research */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Current Research Project</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs text-slate-400">Technology</label>
-                    <select
-                      value={editingResearch?.techId || ''}
-                      onChange={(e) => {
-                        if (e.target.value === '') {
-                          setEditingResearch(null);
-                        } else {
-                          const tech = ALL_TECHS.find(t => t.id === e.target.value);
-                          if (tech) {
-                            setEditingResearch({
-                              techId: e.target.value,
-                              progress: editingResearch?.progress || 0,
-                              assignedTroops: editingResearch?.assignedTroops || 0,
-                              location: editingResearch?.location || selectedTribe.location
-                            });
-                          }
-                        }
-                      }}
-                      className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
-                    >
-                      <option value="">No active research</option>
-                      {ALL_TECHS.map(tech => (
-                        <option key={tech.id} value={tech.id}>{tech.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {editingResearch && (
-                    <>
-                      <div>
-                        <label className="text-xs text-slate-400">Progress</label>
-                        <input
-                          type="number"
-                          value={editingResearch.progress}
-                          onChange={(e) => setEditingResearch({
-                            ...editingResearch,
-                            progress: parseInt(e.target.value) || 0
-                          })}
-                          className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
-                          min="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-slate-400">Assigned Troops</label>
-                        <input
-                          type="number"
-                          value={editingResearch.assignedTroops}
-                          onChange={(e) => setEditingResearch({
-                            ...editingResearch,
-                            assignedTroops: parseInt(e.target.value) || 0
-                          })}
-                          className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-sm"
-                          min="0"
-                        />
-                      </div>
-                    </>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Current Research Projects</label>
+                <div className="text-sm text-slate-400">
+                  {editingResearch && editingResearch.length > 0 ? (
+                    <div className="space-y-2">
+                      {editingResearch.map((project, index) => {
+                        const tech = ALL_TECHS.find(t => t.id === project.techId);
+                        return (
+                          <div key={index} className="bg-slate-800 p-2 rounded">
+                            <div><strong>{tech?.name || 'Unknown'}</strong></div>
+                            <div>Progress: {project.progress} / {tech?.researchPoints || 0}</div>
+                            <div>Troops: {project.assignedTroops} at {project.location}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div>No active research projects</div>
                   )}
+                </div>
+                <div className="text-xs text-slate-500 mt-2">
+                  Note: Research editing not available in this interface. Use in-game tech tree to manage research.
                 </div>
               </div>
 

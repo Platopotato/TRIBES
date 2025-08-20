@@ -452,4 +452,54 @@ export class GameService {
     console.log(`✅ Removed AI tribe: ${removedTribe.tribeName} (${removedTribe.aiType})`);
     return true;
   }
+
+  // Create a bandit encampment at a specific location
+  async createBanditEncampment(location: string, customName?: string): Promise<boolean> {
+    const gameState = await this.getGameState();
+    if (!gameState) return false;
+
+    // Validate location is not occupied
+    const occupied = new Set(gameState.tribes.map(t => t.location));
+    if (occupied.has(location)) {
+      console.log(`❌ Location ${location} is already occupied`);
+      return false;
+    }
+
+    // Validate the hex exists and is suitable
+    const targetHex = gameState.mapData.find(hex => {
+      const coords = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+      return coords === location;
+    });
+
+    if (!targetHex || !['Plains', 'Forest', 'Wasteland', 'Desert', 'Mountains'].includes(targetHex.terrain)) {
+      console.log(`❌ Invalid bandit camp location: ${location}`);
+      return false;
+    }
+
+    // Generate bandit encampment
+    const existingNames = gameState.tribes.map(t => t.tribeName);
+    const banditCamp = generateAITribe(
+      location,
+      existingNames,
+      AIType.Bandit,
+      gameState.mapData
+    );
+
+    // Apply custom name if provided
+    if (customName && customName.trim()) {
+      banditCamp.tribeName = customName.trim();
+    }
+
+    // Set up diplomacy - bandits are hostile to everyone
+    gameState.tribes.forEach(t => {
+      banditCamp.diplomacy[t.id] = { status: DiplomaticStatus.War };
+      t.diplomacy[banditCamp.id] = { status: DiplomaticStatus.War };
+    });
+
+    gameState.tribes.push(banditCamp);
+    await this.updateGameState(gameState);
+
+    console.log(`🏴‍☠️ Created bandit encampment: ${banditCamp.tribeName} at ${location}`);
+    return true;
+  }
 }

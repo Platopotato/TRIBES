@@ -409,6 +409,82 @@ function generateScavengeAction(tribe: Tribe, mapData: HexData[]): GameAction | 
     };
 }
 
+// Bandit AI: Extremely aggressive, focuses on defending their camp and attacking nearby enemies
+function generateBanditActions(tribe: Tribe, allTribes: Tribe[], mapData: HexData[]): GameAction[] {
+    const actions: GameAction[] = [];
+
+    // Bandits are extremely territorial and aggressive
+    const enemies = findEnemiesInRange(tribe, allTribes, 6); // Larger detection range
+
+    if (enemies.length > 0) {
+        // Prioritize defending the camp first
+        const mainGarrison = Object.entries(tribe.garrisons)
+            .sort(([, a], [, b]) => b.troops - a.troops)[0];
+
+        if (mainGarrison && mainGarrison[1].troops >= 10) {
+            // Always defend with a significant force
+            actions.push({
+                id: `action-bandit-${Date.now()}-defend`,
+                actionType: ActionType.Defend,
+                actionData: {
+                    start_location: mainGarrison[0],
+                    troops: Math.floor(mainGarrison[1].troops * 0.4) // 40% of troops defend
+                }
+            });
+        }
+
+        // If we have overwhelming force, attack the nearest enemy
+        const nearestEnemy = enemies[0];
+        if (mainGarrison && mainGarrison[1].troops >= 20 && nearestEnemy.distance <= 3) {
+            const attackForce = Math.floor(mainGarrison[1].troops * 0.6); // 60% attack force
+            if (attackForce >= 10) {
+                actions.push({
+                    id: `action-bandit-${Date.now()}-attack`,
+                    actionType: ActionType.Attack,
+                    actionData: {
+                        start_location: mainGarrison[0],
+                        target_location: nearestEnemy.location,
+                        troops: attackForce,
+                        weapons: Math.floor((mainGarrison[1].weapons || 0) * 0.8),
+                        chiefsToMove: (mainGarrison[1].chiefs || []).map(c => c.name)
+                    }
+                });
+            }
+        }
+    }
+
+    // If no immediate threats, build more weapons or recruit
+    if (actions.length === 0) {
+        if (tribe.globalResources.scrap >= 15) {
+            const weaponGarrison = Object.entries(tribe.garrisons)[0];
+            if (weaponGarrison) {
+                actions.push({
+                    id: `action-bandit-${Date.now()}-weapons`,
+                    actionType: ActionType.BuildWeapons,
+                    actionData: {
+                        start_location: weaponGarrison[0],
+                        scrap: Math.min(20, tribe.globalResources.scrap)
+                    }
+                });
+            }
+        } else if (tribe.globalResources.food >= 30) {
+            const recruitGarrison = Object.entries(tribe.garrisons)[0];
+            if (recruitGarrison) {
+                actions.push({
+                    id: `action-bandit-${Date.now()}-recruit`,
+                    actionType: ActionType.Recruit,
+                    actionData: {
+                        start_location: recruitGarrison[0],
+                        food: Math.min(30, tribe.globalResources.food)
+                    }
+                });
+            }
+        }
+    }
+
+    return actions;
+}
+
 // Main AI action generation function
 export function generateAIActions(tribe: Tribe, allTribes: Tribe[], mapData: HexData[]): GameAction[] {
     if (!tribe.isAI || !tribe.aiType) return [];
@@ -424,6 +500,8 @@ export function generateAIActions(tribe: Tribe, allTribes: Tribe[], mapData: Hex
             return generateTraderActions(tribe, allTribes, mapData);
         case AIType.Scavenger:
             return generateScavengerActions(tribe, allTribes, mapData);
+        case AIType.Bandit:
+            return generateBanditActions(tribe, allTribes, mapData);
         case AIType.Wanderer:
         default:
             // Original wanderer behavior

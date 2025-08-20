@@ -27,6 +27,10 @@ const AI_NAMES_BY_TYPE = {
     [AIType.Wanderer]: {
         prefixes: ['Dust', 'Wind', 'Drift', 'Roam', 'Lost', 'Free', 'Wild', 'Nomad', 'Wander', 'Journey'],
         suffixes: ['Wanderers', 'Nomads', 'Drifters', 'Rovers', 'Travelers', 'Roamers', 'Vagabonds', 'Migrants', 'Pilgrims', 'Wayfarers']
+    },
+    [AIType.Bandit]: {
+        prefixes: ['Black', 'Red', 'Skull', 'Viper', 'Raven', 'Shadow', 'Thorn', 'Poison', 'Blade', 'Scar'],
+        suffixes: ['Bandits', 'Raiders', 'Outlaws', 'Marauders', 'Brigands', 'Cutthroats', 'Rogues', 'Thieves', 'Desperados', 'Reavers']
     }
 };
 
@@ -77,6 +81,13 @@ function generatePersonalityStats(aiType: AIType): TribeStats {
             stats.strength += Math.floor(points * 0.3);
             stats.leadership += Math.floor(points * 0.2);
             stats.charisma += points - Math.floor(points * 0.85);
+            break;
+        case AIType.Bandit:
+            // Focus heavily on strength and leadership for raiding
+            stats.strength += Math.floor(points * 0.45);
+            stats.leadership += Math.floor(points * 0.35);
+            stats.intelligence += Math.floor(points * 0.15);
+            stats.charisma += points - Math.floor(points * 0.95);
             break;
         case AIType.Wanderer:
         default:
@@ -210,6 +221,12 @@ function generateInitialGarrison(aiType: AIType): Garrison {
                 weapons: 2 + Math.floor(Math.random() * 4), // 2-5 weapons
                 chiefs: [],
             };
+        case AIType.Bandit:
+            return {
+                troops: 25 + Math.floor(Math.random() * 16), // 25-40 troops (large raiding party)
+                weapons: 15 + Math.floor(Math.random() * 11), // 15-25 weapons (well-armed)
+                chiefs: [], // Bandits might have chiefs added later
+            };
         case AIType.Wanderer:
         default:
             return {
@@ -259,6 +276,13 @@ function generateInitialResources(aiType: AIType) {
                 food: 70 + Math.floor(Math.random() * 31), // 70-100 food
                 scrap: 5 + Math.floor(Math.random() * 11), // 5-15 scrap
                 morale: 45 + Math.floor(Math.random() * 21), // 45-65 morale
+            };
+        case AIType.Bandit:
+            return {
+                ...base,
+                food: 60 + Math.floor(Math.random() * 41), // 60-100 food (raided supplies)
+                scrap: 35 + Math.floor(Math.random() * 26), // 35-60 scrap (stolen goods)
+                morale: 75 + Math.floor(Math.random() * 26), // 75-100 morale (high from raiding)
             };
         case AIType.Wanderer:
         default:

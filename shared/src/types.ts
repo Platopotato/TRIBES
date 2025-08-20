@@ -142,6 +142,7 @@ export enum AIType {
   Expansionist = 'Expansionist',
   Trader = 'Trader',
   Scavenger = 'Scavenger',
+  Bandit = 'Bandit',
 }
 
 export enum DiplomaticStatus {

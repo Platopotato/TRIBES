@@ -556,6 +556,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // SABOTAGE EFFECTS PROCESSING: Process ongoing sabotage effects
     processSabotageEffects(state);
 
+    // BONUS TURN PROCESSING: Handle bonus turns from bandit conquests
+    processBonusTurns(state);
+
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
@@ -3049,6 +3052,13 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             }
         }
 
+        // Check for bandit conquest rewards and bonus turn
+        let banditConquestMessage = '';
+        const defendersRemain = (defenderGarrison.troops || 0) > 0;
+        if (!defendersRemain) {
+            banditConquestMessage = processBanditConquest(tribe, defendingTribe, targetLocation, state);
+        }
+
         // Generate epic battle narrative for attacker victory
         const battleNarrative = generateEpicBattleNarrative({
             location: targetLocation,
@@ -3068,11 +3078,15 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         });
 
         // Single comprehensive message for each side
+        const attackerResult = banditConquestMessage
+            ? `${battleNarrative.attackerMessage}\n\n${banditConquestMessage}`
+            : battleNarrative.attackerMessage;
+
         tribe.lastTurnResults.push({
             id: `battle-victory-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: action.actionData,
-            result: battleNarrative.attackerMessage
+            result: attackerResult
         });
         defendingTribe.lastTurnResults.push({
             id: `battle-defeat-${Date.now()}`,
@@ -4412,6 +4426,78 @@ function getHexByLocation(location: string): any {
     // This is a placeholder - you'll need to implement based on your hex coordinate system
     // For now, return null to avoid errors
     return null;
+}
+
+// Process bandit conquest rewards and bonus turn
+function processBanditConquest(attackerTribe: any, defeatedTribe: any, location: string, state: any): string {
+    if (!defeatedTribe.isAI || defeatedTribe.aiType !== AIType.Bandit) {
+        return ''; // Not a bandit conquest
+    }
+
+    // Calculate substantial rewards for conquering bandits
+    const baseReward = {
+        troops: 8 + Math.floor(Math.random() * 8), // 8-15 troops join
+        food: 40 + Math.floor(Math.random() * 31), // 40-70 food
+        scrap: 25 + Math.floor(Math.random() * 21), // 25-45 scrap
+        weapons: 5 + Math.floor(Math.random() * 6), // 5-10 weapons
+    };
+
+    // Apply rewards
+    attackerTribe.globalResources.food += baseReward.food;
+    attackerTribe.globalResources.scrap += baseReward.scrap;
+
+    // Add troops and weapons to the conquering garrison
+    const conqueringGarrison = attackerTribe.garrisons[location];
+    if (conqueringGarrison) {
+        conqueringGarrison.troops += baseReward.troops;
+        conqueringGarrison.weapons = (conqueringGarrison.weapons || 0) + baseReward.weapons;
+    }
+
+    // BONUS TURN MECHANIC: Grant an additional turn
+    if (!attackerTribe.bonusTurns) attackerTribe.bonusTurns = 0;
+    attackerTribe.bonusTurns += 1;
+
+    // Generate epic conquest narrative
+    const conquestMessage = `🏴‍☠️ **BANDIT CAMP CONQUERED!**
+
+Your forces have successfully destroyed the ${defeatedTribe.tribeName} and claimed their stronghold! The surviving bandits, impressed by your strength, have joined your cause.
+
+**SPOILS OF WAR:**
+• ${baseReward.troops} bandits joined your ranks
+• ${baseReward.food} food supplies seized
+• ${baseReward.scrap} scrap materials claimed
+• ${baseReward.weapons} weapons captured
+
+**🎯 BONUS TURN GRANTED!** Your tribe gains an additional turn to consolidate power and plan your next move. The conquest of this bandit stronghold has strengthened your position significantly.`;
+
+    return conquestMessage;
+}
+
+// Process bonus turns from bandit conquests
+function processBonusTurns(state: any): void {
+    state.tribes.forEach((tribe: any) => {
+        if (tribe.bonusTurns && tribe.bonusTurns > 0) {
+            // Grant bonus turn by allowing the tribe to submit actions again
+            tribe.turnSubmitted = false;
+            tribe.actions = []; // Clear current actions to allow new planning
+
+            // Reduce bonus turn count
+            tribe.bonusTurns -= 1;
+
+            // Add notification about bonus turn
+            tribe.lastTurnResults.push({
+                id: `bonus-turn-${tribe.id}-${Date.now()}`,
+                actionType: ActionType.Upkeep,
+                actionData: {},
+                result: `🎯 **BONUS TURN ACTIVE!** Your conquest of the bandit camp grants you an additional turn to plan and execute actions. Plan wisely!`
+            });
+
+            // Clean up bonus turns if none remaining
+            if (tribe.bonusTurns <= 0) {
+                delete tribe.bonusTurns;
+            }
+        }
+    });
 }
 
 // Process ongoing sabotage effects each turn

@@ -4030,7 +4030,7 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
 
     // Calculate distance and mission difficulty
     const pathInfo = findPath(start_location, target_location, state.mapData);
-    if (!pathInfo.path) {
+    if (!pathInfo || !pathInfo.path) {
         return `❌ Sabotage failed: No path to target location.`;
     }
 

@@ -83,8 +83,8 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         const chiefCount = garrison?.chiefs?.length ?? 0;
         const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
 
-        // If this hex also has an Outpost, suppress the large garrison display in favor of the mini overlay on the POI
-        if (poi?.type === POIType.Outpost) {
+        // If this hex has any POI, suppress the large garrison display in favor of the mini overlay on the POI
+        if (poi) {
             return null;
         }
 
@@ -146,6 +146,11 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     }
 
     // Advanced rendering for multiple tribes with better spacing
+    // If this hex has any POI, suppress the large garrison display in favor of the mini overlay on the POI
+    if (poi) {
+        return null;
+    }
+
     const iconSize = Math.min(size * 0.5, 16); // Smaller icons for better visibility
 
     // Arrange tribes in a more spread out pattern for better visibility
@@ -330,29 +335,47 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
             >
                 {POI_SYMBOLS[poi.type]}
             </text>
-                {poi.type === POIType.Outpost && (() => {
-              // Render a small stacked overlay for each tribe garrison present on this Outpost
+                {(() => {
+              // Render tribe garrison overlays for ALL POI types
               const overlays = [] as JSX.Element[];
               const hexCoords = formatHexCoords(q, r);
               const yStep = size * 0.3;
               const startY = -size * 0.45;
-              // start with visible tribes, but ensure ownerTribe is included if not already present (string-safe compare)
-              const base = [...(tribesOnHex || [])];
-              if (ownerTribe && !base.some(t => String(t.id) === String(ownerTribe.id))) base.push(ownerTribe);
-              base.forEach((tribe, idx) => {
-                const g = tribe.garrisons?.[hexCoords];
-                const troops = g?.troops ?? 0;
-                const chiefs = g?.chiefs?.length ?? 0;
-                if (troops <= 0) return;
+
+              // For outposts, include owner tribe even if not visible
+              let tribesWithGarrisons = [...(tribesOnHex || [])];
+              if (poi.type === POIType.Outpost && ownerTribe && !tribesWithGarrisons.some(t => String(t.id) === String(ownerTribe.id))) {
+                tribesWithGarrisons.push(ownerTribe);
+              }
+
+              tribesWithGarrisons.forEach((tribe, idx) => {
+                const garrison = tribe.garrisons?.[hexCoords];
+                const troops = garrison?.troops ?? 0;
+                const chiefs = garrison?.chiefs?.length ?? 0;
+                if (troops <= 0 && chiefs <= 0) return;
+
                 const icon = TRIBE_ICONS[tribe.icon] || TRIBE_ICONS['castle'];
+
                 overlays.push(
-                  <g key={`op-g-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + overlays.length * yStep})`}>
+                  <g key={`poi-garrison-${tribe.id}`} transform={`translate(${size * -0.45}, ${startY + overlays.length * yStep})`}>
+                    {/* Tribe circle */}
                     <circle cx="0" cy="0" r={size * 0.22} fill={tribe.color} stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
+                    {/* Tribe icon */}
                     <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">{icon}</text>
-                    <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
-                    <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>{troops}</text>
+
+                    {/* Troop count box */}
+                    {troops > 0 && (
+                      <>
+                        <rect x={-size*0.28} y={size*0.12} width={size*0.56} height={size*0.26} rx="2" fill="rgba(17,24,39,0.9)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5" />
+                        <text x="0" y={size*0.25} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.18}>
+                          {troops > 99 ? '99+' : troops}
+                        </text>
+                      </>
+                    )}
+
+                    {/* Chief indicator */}
                     {chiefs > 0 && (
-                      <text x={size*0.3} y={-size*0.15} textAnchor="middle" dy=".05em" className="font-bold" fontSize={size*0.2}>
+                      <text x={size*0.3} y={-size*0.15} textAnchor="middle" dy=".05em" className="font-bold text-yellow-400" fontSize={size*0.2}>
                         ★
                       </text>
                     )}

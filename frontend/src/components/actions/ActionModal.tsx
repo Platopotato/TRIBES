@@ -136,6 +136,15 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 	  }, [draftAction?.actionType, draftAction?.actionData?.start_location, selectedHexForDisplay, mapData, tribe.assets]);
 
   const handleSelectActionType = (actionType: ActionType) => {
+    // Validate prisoner actions before allowing them
+    if (actionType === ActionType.ReleasePrisoner || actionType === ActionType.ExchangePrisoners) {
+      const prisoners = tribe.prisoners || [];
+      if (prisoners.length === 0) {
+        console.warn(`❌ Attempted to create ${actionType} action with no prisoners available`);
+        // Don't allow the action to be created - just return early
+        return;
+      }
+    }
 
     const definition = ACTION_DEFINITIONS[actionType];
     const initialData: { [key: string]: any } = {};
@@ -185,6 +194,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       // Custom diplomacy actions
       if (actionType === ActionType.ReleasePrisoner) {
         const prisonerNames = (tribe.prisoners || []).map(p => p.chief?.name).filter(Boolean);
+        console.log(`🔍 RELEASE PRISONER DEBUG: Creating action for ${tribe.tribeName}, prisoners available: ${prisonerNames.length}, names: ${prisonerNames.join(', ')}`);
         initialData['chief_name'] = prisonerNames[0] || '';
         const toId = (tribe.prisoners || [])[0]?.fromTribeId;
         if (toId) initialData['toTribeId'] = toId;

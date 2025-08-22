@@ -4133,17 +4133,53 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
 function processReleasePrisonerAction(tribe: any, action: any, state: any): string {
     const name: string = action.actionData?.chief_name;
     const targetTribeId: string | undefined = action.actionData?.toTribeId;
-    if (!name) return '❌ Release Prisoner: missing chief_name.';
+
+    // Enhanced validation and error messages
+    if (!name || name.trim() === '') {
+        console.log(`❌ RELEASE PRISONER ERROR: ${tribe.tribeName} attempted to release prisoner with missing/empty chief_name. Prisoners: ${(tribe.prisoners || []).length}`);
+        return '❌ Release Prisoner: No prisoner specified. This action should not have been created without selecting a prisoner.';
+    }
+
+    // Check if tribe has any prisoners at all
+    if (!tribe.prisoners || tribe.prisoners.length === 0) {
+        console.log(`❌ RELEASE PRISONER ERROR: ${tribe.tribeName} attempted to release prisoner but has no prisoners at all.`);
+        return '❌ Release Prisoner: You have no prisoners to release. This action should not have been created.';
+    }
+
     const idx = (tribe.prisoners || []).findIndex((p: any) => p.chief?.name === name);
-    if (idx === -1) return `❌ Release Prisoner: you do not hold a prisoner named ${name}.`;
+    if (idx === -1) {
+        const availablePrisoners = tribe.prisoners.map((p: any) => p.chief?.name || 'Unknown').join(', ');
+        console.log(`❌ RELEASE PRISONER ERROR: ${tribe.tribeName} attempted to release "${name}" but prisoner not found. Available: ${availablePrisoners}`);
+        return `❌ Release Prisoner: You do not hold a prisoner named "${name}". Available prisoners: ${availablePrisoners}`;
+    }
+
     const prisoner = tribe.prisoners![idx];
     const toTribe = state.tribes.find((t: any) => t.id === (targetTribeId || prisoner.fromTribeId));
-    if (!toTribe) return '❌ Release Prisoner: target tribe not found.';
+    if (!toTribe) {
+        console.log(`❌ RELEASE PRISONER ERROR: Target tribe not found for prisoner ${name}. TargetId: ${targetTribeId || prisoner.fromTribeId}`);
+        return '❌ Release Prisoner: Target tribe not found. The prisoner\'s original tribe may have been eliminated.';
+    }
+
+    // Successful release
     tribe.prisoners!.splice(idx, 1);
     if (!toTribe.garrisons[toTribe.location]) toTribe.garrisons[toTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
     toTribe.garrisons[toTribe.location].chiefs.push(prisoner.chief);
-    tribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: action.actionData, result: `🤝 Released prisoner ${name} to ${toTribe.tribeName}.` });
-    toTribe.lastTurnResults.push({ id: `release-${Date.now()}`, actionType: ActionType.ReleasePrisoner, actionData: {}, result: `🎗️ ${tribe.tribeName} released your chief ${name}. She has returned to ${toTribe.location}.` });
+
+    console.log(`🤝 PRISONER RELEASED: ${tribe.tribeName} released ${name} to ${toTribe.tribeName}`);
+
+    tribe.lastTurnResults.push({
+        id: `release-${Date.now()}`,
+        actionType: ActionType.ReleasePrisoner,
+        actionData: action.actionData,
+        result: `🤝 Released prisoner ${name} to ${toTribe.tribeName}.`
+    });
+    toTribe.lastTurnResults.push({
+        id: `release-${Date.now()}`,
+        actionType: ActionType.ReleasePrisoner,
+        actionData: {},
+        result: `🎗️ ${tribe.tribeName} released your chief ${name}. She has returned to ${toTribe.location}.`
+    });
+
     return `Released ${name}`;
 }
 

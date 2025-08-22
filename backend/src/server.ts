@@ -20,7 +20,12 @@ async function resolveMigrationIssues() {
 
     console.log('🔧 SERVER STARTUP: Prisma client created successfully');
 
-      // Check for failed migration
+    // Test database connection first
+    await prisma.$queryRaw`SELECT 1 as test`;
+    console.log('✅ SERVER STARTUP: Database connection verified');
+
+    // Check for failed migration and clean it up
+    try {
       const failedMigration = await prisma.$queryRaw`
         SELECT * FROM "_prisma_migrations"
         WHERE migration_name = '20250822_add_max_actions_override'
@@ -28,7 +33,7 @@ async function resolveMigrationIssues() {
       `;
 
       if (Array.isArray(failedMigration) && failedMigration.length > 0) {
-        console.log('❌ SERVER STARTUP: Found failed migration, resolving...');
+        console.log('❌ SERVER STARTUP: Found failed migration, removing...');
 
         // Remove failed migration
         await prisma.$executeRaw`
@@ -40,8 +45,12 @@ async function resolveMigrationIssues() {
       } else {
         console.log('✅ SERVER STARTUP: No failed migrations found');
       }
+    } catch (migrationError) {
+      console.log('⚠️ SERVER STARTUP: Could not check migration table:', migrationError.message);
+    }
 
-      // Add column if missing
+    // Add column if missing - this is critical for app functionality
+    try {
       const columnExists = await prisma.$queryRaw`
         SELECT column_name
         FROM information_schema.columns
@@ -51,23 +60,43 @@ async function resolveMigrationIssues() {
 
       if (!Array.isArray(columnExists) || columnExists.length === 0) {
         console.log('🔧 SERVER STARTUP: Adding maxActionsOverride column...');
+        console.log('🔧 SERVER STARTUP: This is CRITICAL for app database writes!');
+
         await prisma.$executeRaw`
           ALTER TABLE "tribes" ADD COLUMN "maxActionsOverride" INTEGER
         `;
+
         console.log('✅ SERVER STARTUP: Column added successfully');
+        console.log('✅ SERVER STARTUP: Database writes should now work correctly');
       } else {
         console.log('✅ SERVER STARTUP: Column already exists');
       }
-
-      await prisma.$disconnect();
-      console.log('🎉 SERVER STARTUP: Migration resolution complete');
-    } catch (error) {
-      console.error('❌ SERVER STARTUP: Migration resolution failed:', error);
-      console.error('❌ SERVER STARTUP: Error details:', error);
-      // Don't exit - let the server try to start anyway
-      console.log('⚠️ SERVER STARTUP: Continuing with server startup despite migration error...');
+    } catch (columnError) {
+      console.error('❌ SERVER STARTUP: CRITICAL - Failed to add column:', columnError.message);
+      console.error('❌ SERVER STARTUP: App database writes may fail!');
     }
+
+    // Final verification - test that we can query the column
+    try {
+      console.log('🔍 SERVER STARTUP: Verifying database schema...');
+      const testQuery = await prisma.$queryRaw`
+        SELECT "maxActionsOverride" FROM "tribes" LIMIT 1
+      `;
+      console.log('✅ SERVER STARTUP: Database schema verification successful');
+    } catch (verifyError) {
+      console.error('❌ SERVER STARTUP: Schema verification failed:', verifyError.message);
+      console.error('❌ SERVER STARTUP: Database writes may still fail!');
+    }
+
+    await prisma.$disconnect();
+    console.log('🎉 SERVER STARTUP: Migration resolution complete');
+  } catch (error) {
+    console.error('❌ SERVER STARTUP: Migration resolution failed:', error);
+    console.error('❌ SERVER STARTUP: Error details:', error);
+    // Don't exit - let the server try to start anyway
+    console.log('⚠️ SERVER STARTUP: Continuing with server startup despite migration error...');
   }
+}
 }
 
 // Import shared types and utilities

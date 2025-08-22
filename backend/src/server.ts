@@ -9,6 +9,60 @@ import { fileURLToPath } from 'url';
 // Load environment variables
 dotenv.config();
 
+// Migration resolution for production
+async function resolveMigrationIssues() {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔧 PRODUCTION: Running migration resolution...');
+    try {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+
+      // Check for failed migration
+      const failedMigration = await prisma.$queryRaw`
+        SELECT * FROM "_prisma_migrations"
+        WHERE migration_name = '20250822_add_max_actions_override'
+        AND finished_at IS NULL
+      `;
+
+      if (Array.isArray(failedMigration) && failedMigration.length > 0) {
+        console.log('❌ PRODUCTION: Found failed migration, resolving...');
+
+        // Remove failed migration
+        await prisma.$executeRaw`
+          DELETE FROM "_prisma_migrations"
+          WHERE migration_name = '20250822_add_max_actions_override'
+        `;
+
+        console.log('✅ PRODUCTION: Failed migration removed');
+      }
+
+      // Add column if missing
+      const columnExists = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'tribes'
+        AND column_name = 'maxActionsOverride'
+      `;
+
+      if (!Array.isArray(columnExists) || columnExists.length === 0) {
+        console.log('🔧 PRODUCTION: Adding maxActionsOverride column...');
+        await prisma.$executeRaw`
+          ALTER TABLE "tribes" ADD COLUMN "maxActionsOverride" INTEGER
+        `;
+        console.log('✅ PRODUCTION: Column added successfully');
+      } else {
+        console.log('✅ PRODUCTION: Column already exists');
+      }
+
+      await prisma.$disconnect();
+      console.log('🎉 PRODUCTION: Migration resolution complete');
+    } catch (error) {
+      console.error('❌ PRODUCTION: Migration resolution failed:', error);
+      // Don't exit - let the server try to start anyway
+    }
+  }
+}
+
 // Import shared types and utilities
 import {
   GameState,
@@ -152,7 +206,17 @@ io.on('connection', (socket) => {
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+// Resolve migration issues before starting server
+resolveMigrationIssues().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}).catch((error) => {
+  console.error('❌ Failed to resolve migrations, starting server anyway:', error);
+  server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 });

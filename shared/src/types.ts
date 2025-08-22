@@ -223,6 +223,7 @@ export interface Tribe {
       recordedOnTurn: number;
     } | null;
   };
+  bonusTurns?: number;
 }
 
 export interface InjuredChief {

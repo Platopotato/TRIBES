@@ -2388,7 +2388,7 @@ GAME STATISTICS:
               {(() => {
                 const newsletterData = generateNewsletterSummary(summaryTurnsBack);
 
-                if (newsletterData.error) {
+                if ('error' in newsletterData) {
                   return (
                     <div className="text-center py-8">
                       <p className="text-red-400 mb-4">{newsletterData.error}</p>
@@ -2567,7 +2567,8 @@ GAME STATISTICS:
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `newsletter-turn-${data.turn}-data.json`;
+                    const filename = 'error' in data ? 'newsletter-error.json' : `newsletter-turn-${data.turn}-data.json`;
+                    a.download = filename;
                     a.click();
                     URL.revokeObjectURL(url);
                   }}

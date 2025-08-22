@@ -350,37 +350,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
 	function normalizeTribeCoordinates(tribe: any) {
 	  const normalized: Record<string, any> = {};
 	  Object.entries(tribe.garrisons || {}).forEach(([key, gar]: any) => {
-// Outpost helpers
-function getOutpostOwnerTribeId(hex: any): string | null {
-    const poi = hex?.poi;
-    if (!poi || poi.type !== POIType.Outpost) return null;
-    // id format from builder: poi-outpost-<tribeId>-<hex>
-    const parts = String(poi.id || '').split('poi-outpost-');
-    if (parts.length < 2) return null;
-    const rest = parts[1];
-    const owner = rest.split('-')[0];
-    return owner || null;
-}
-function setOutpostOwner(hex: any, ownerId: string, hexKey: string) {
-    if (!hex?.poi || hex.poi.type !== POIType.Outpost) return;
-    hex.poi.id = `poi-outpost-${ownerId}-${hexKey}`;
-}
-function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ignoreKey?: string): { blockedAt: string, ownerId: string } | null {
-    for (const key of path) {
-        if (ignoreKey && convertToStandardFormat(key) === convertToStandardFormat(ignoreKey)) continue;
-        const { q, r } = parseHexCoords(key);
-        const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
-        if (!hex?.poi || hex.poi.type !== POIType.Outpost) continue;
-        const ownerId = getOutpostOwnerTribeId(hex);
-        if (!ownerId) continue;
-        const owner = state.tribes.find((t: any) => t.id === ownerId);
-        if (!owner) continue;
-        if (!isAllied(tribe, owner)) {
-            return { blockedAt: key, ownerId };
-        }
-    }
-    return null;
-}
+// REMOVED: Duplicate functions with incorrect logic that ignored fortified POIs
+// The correct getOutpostOwnerTribeId and setOutpostOwner functions are defined above (lines 121-156)
+// REMOVED: Duplicate function with incorrect logic that ignored fortified POIs
+// The correct pathBlockedByHostileOutpost function is defined above (line 157)
 
 	    const std = convertToStandardFormat(String(key));
 	    if (!normalized[std]) normalized[std] = { troops: 0, weapons: 0, chiefs: [] };
@@ -1701,9 +1674,9 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
     // Apply losses
     // If multiple neutral arrivals and no occupant/hostility, narrate standoff
     if (!occupant && arrivals.length > 1) {
-    // If hex has an Outpost POI, transfer ownership to the winner
+    // If hex has an outpost (standalone or fortified POI), transfer ownership to the winner
     const hexForPOI = state.mapData.find((h: any) => h.q === q && h.r === r);
-    if (hexForPOI?.poi?.type === POIType.Outpost) {
+    if (hasOutpostDefenses(hexForPOI)) {
         const prevOwnerId = getOutpostOwnerTribeId(hexForPOI);
         setOutpostOwner(hexForPOI, winner.tribe.id, destKey);
         const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);

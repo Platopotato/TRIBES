@@ -28,16 +28,27 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
   const { q, r, terrain, poi } = hexData;
 
   const outpostOwnerId: string | null = React.useMemo(() => {
-    if (!poi || poi.type !== POIType.Outpost) return null;
-    const s = String(poi.id || '');
-    const prefix = 'poi-outpost-';
-    const idx = s.indexOf(prefix);
-    if (idx === -1) return null;
-    const rest = s.slice(idx + prefix.length);
-    // Tribe IDs may contain hyphens; take everything before the last '-' as tribeId
-    const lastDash = rest.lastIndexOf('-');
-    if (lastDash === -1) return null;
-    return rest.slice(0, lastDash) || null;
+    if (!poi) return null;
+
+    // Check for standalone outpost
+    if (poi.type === POIType.Outpost) {
+      const s = String(poi.id || '');
+      const prefix = 'poi-outpost-';
+      const idx = s.indexOf(prefix);
+      if (idx === -1) return null;
+      const rest = s.slice(idx + prefix.length);
+      // Tribe IDs may contain hyphens; take everything before the last '-' as tribeId
+      const lastDash = rest.lastIndexOf('-');
+      if (lastDash === -1) return null;
+      return rest.slice(0, lastDash) || null;
+    }
+
+    // Check for fortified POI with outpost properties
+    if (poi.fortified && poi.outpostOwner) {
+      return poi.outpostOwner;
+    }
+
+    return null;
   }, [poi]);
 
   const ownerTribe: Tribe | undefined = React.useMemo(() => {

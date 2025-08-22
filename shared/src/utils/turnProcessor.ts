@@ -643,6 +643,18 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     }
     state.history.push(newHistoryRecord);
 
+    // DETAILED HISTORY RECORDING: Comprehensive action tracking for newsletter generation
+    const detailedHistoryRecord = generateDetailedTurnHistory(state, tribesWithScores);
+    if (!state.detailedHistory) {
+        state.detailedHistory = [];
+    }
+    state.detailedHistory.push(detailedHistoryRecord);
+
+    // Keep only last 10 turns of detailed history to prevent excessive data growth
+    if (state.detailedHistory.length > 10) {
+        state.detailedHistory = state.detailedHistory.slice(-10);
+    }
+
     return state;
 }
 
@@ -5213,4 +5225,319 @@ function processSabotageEffects(state: any): void {
             delete tribe.sabotageEffects;
         }
     });
+}
+
+// DETAILED HISTORY GENERATION: Comprehensive action tracking for newsletter generation
+function generateDetailedTurnHistory(state: any, tribesWithScores: any[]): any {
+    console.log(`📰 Generating detailed turn history for turn ${state.turn}...`);
+
+    const detailedTribeRecords = tribesWithScores.map((tribeData, index) => {
+        const tribe = tribeData.tribe;
+
+        // Get previous turn data for comparison
+        const previousTurnData = getPreviousTurnData(state, tribe.id);
+
+        // Analyze actions taken this turn
+        const actions = analyzeTribalActions(tribe);
+
+        // Calculate resource changes
+        const resourceChanges = calculateResourceChanges(tribe, previousTurnData);
+
+        // Calculate territory changes
+        const territoryChanges = calculateTerritoryChanges(tribe, previousTurnData);
+
+        // Calculate military changes
+        const militaryChanges = calculateMilitaryChanges(tribe, previousTurnData);
+
+        // Analyze research progress
+        const researchProgress = analyzeResearchProgress(tribe);
+
+        // Extract major events and diplomatic events
+        const { majorEvents, diplomaticEvents } = extractSignificantEvents(tribe);
+
+        return {
+            tribeId: tribe.id,
+            tribeName: tribe.tribeName,
+            playerName: tribe.playerName,
+            isAI: tribe.isAI || false,
+            aiType: tribe.aiType,
+            score: tribeData.score,
+            troops: tribeData.troops,
+            garrisons: tribeData.garrisons,
+            chiefs: tribeData.chiefs,
+            rank: index + 1,
+            actions,
+            majorEvents,
+            resourceChanges,
+            territoryChanges,
+            militaryChanges,
+            researchProgress,
+            diplomaticEvents
+        };
+    });
+
+    // Generate global events summary
+    const globalEvents = extractGlobalEvents(state);
+
+    // Generate turn summary
+    const turnSummary = generateTurnSummaryText(detailedTribeRecords, globalEvents);
+
+    return {
+        turn: state.turn,
+        tribeRecords: detailedTribeRecords,
+        globalEvents,
+        turnSummary
+    };
+}
+
+// Helper function to get previous turn data for comparison
+function getPreviousTurnData(state: any, tribeId: string): any {
+    if (!state.detailedHistory || state.detailedHistory.length === 0) {
+        return null;
+    }
+
+    const previousTurn = state.detailedHistory[state.detailedHistory.length - 1];
+    return previousTurn.tribeRecords.find((record: any) => record.tribeId === tribeId);
+}
+
+// Analyze tribal actions taken this turn
+function analyzeTribalActions(tribe: any): any[] {
+    const actions: any[] = [];
+
+    (tribe.lastTurnResults || []).forEach((result: any) => {
+        // Skip debug and upkeep messages
+        if (result.actionType === ActionType.Upkeep && result.result?.includes('DEBUG')) {
+            return;
+        }
+
+        const action = {
+            actionType: result.actionType,
+            actionData: result.actionData || {},
+            result: result.result || '',
+            timestamp: Date.now(),
+            success: !result.result?.includes('❌') && !result.result?.includes('failed'),
+            location: result.actionData?.location || result.actionData?.start_location || result.actionData?.target_location
+        };
+
+        // Extract resource information from result text
+        action.resourcesSpent = extractResourcesFromText(result.result, 'spent');
+        action.resourcesGained = extractResourcesFromText(result.result, 'gained');
+        action.troopsInvolved = extractTroopsFromText(result.result);
+
+        actions.push(action);
+    });
+
+    return actions;
+}
+
+// Calculate resource changes compared to previous turn
+function calculateResourceChanges(tribe: any, previousTurnData: any): any {
+    const current = tribe.globalResources || {};
+    const previous = previousTurnData?.resourceChanges || {};
+
+    return {
+        food: {
+            before: previous.food?.after || 0,
+            after: current.food || 0,
+            change: (current.food || 0) - (previous.food?.after || 0)
+        },
+        scrap: {
+            before: previous.scrap?.after || 0,
+            after: current.scrap || 0,
+            change: (current.scrap || 0) - (previous.scrap?.after || 0)
+        },
+        morale: {
+            before: previous.morale?.after || 50,
+            after: current.morale || 50,
+            change: (current.morale || 50) - (previous.morale?.after || 50)
+        }
+    };
+}
+
+// Calculate territory changes
+function calculateTerritoryChanges(tribe: any, previousTurnData: any): any {
+    const currentGarrisons = Object.keys(tribe.garrisons || {});
+    const previousGarrisons = previousTurnData ? Object.keys(previousTurnData.garrisons || {}) : [];
+
+    const gained = currentGarrisons.filter(loc => !previousGarrisons.includes(loc));
+    const lost = previousGarrisons.filter(loc => !currentGarrisons.includes(loc));
+
+    return {
+        gained,
+        lost,
+        netChange: gained.length - lost.length
+    };
+}
+
+// Calculate military changes
+function calculateMilitaryChanges(tribe: any, previousTurnData: any): any {
+    const currentTroops = Object.values(tribe.garrisons || {}).reduce((sum: number, g: any) => sum + g.troops, 0);
+    const currentWeapons = Object.values(tribe.garrisons || {}).reduce((sum: number, g: any) => sum + g.weapons, 0);
+
+    const previousTroops = previousTurnData?.troops || 0;
+    const previousWeapons = previousTurnData?.militaryChanges?.weaponsAfter || 0;
+
+    const troopChange = currentTroops - previousTroops;
+    const weaponChange = currentWeapons - previousWeapons;
+
+    return {
+        troopsGained: Math.max(0, troopChange),
+        troopsLost: Math.max(0, -troopChange),
+        weaponsGained: Math.max(0, weaponChange),
+        weaponsLost: Math.max(0, -weaponChange),
+        netTroopChange: troopChange,
+        netWeaponChange: weaponChange
+    };
+}
+
+// Analyze research progress
+function analyzeResearchProgress(tribe: any): any {
+    const started: string[] = [];
+    const completed: string[] = [];
+    const ongoing: string[] = [];
+
+    // Check for research completion in turn results
+    (tribe.lastTurnResults || []).forEach((result: any) => {
+        if (result.actionType === ActionType.Technology) {
+            if (result.result?.includes('RESEARCH COMPLETE') || result.result?.includes('BREAKTHROUGH')) {
+                const techMatch = result.result.match(/\*\*([^*]+)\*\*/);
+                if (techMatch) {
+                    completed.push(techMatch[1]);
+                }
+            }
+        }
+        if (result.actionType === ActionType.StartResearch) {
+            const techMatch = result.result.match(/Research commenced on ([^.]+)/);
+            if (techMatch) {
+                started.push(techMatch[1]);
+            }
+        }
+    });
+
+    // Check ongoing research
+    if (tribe.currentResearch && Array.isArray(tribe.currentResearch)) {
+        tribe.currentResearch.forEach((project: any) => {
+            const tech = getTechnology(project.techId);
+            if (tech) {
+                ongoing.push(tech.name);
+            }
+        });
+    }
+
+    return { started, completed, ongoing };
+}
+
+// Extract significant events from turn results
+function extractSignificantEvents(tribe: any): { majorEvents: string[]; diplomaticEvents: string[] } {
+    const majorEvents: string[] = [];
+    const diplomaticEvents: string[] = [];
+
+    (tribe.lastTurnResults || []).forEach((result: any) => {
+        const resultText = result.result || '';
+
+        // Major events
+        if (resultText.includes('BREAKTHROUGH') ||
+            resultText.includes('DISCOVERY') ||
+            resultText.includes('ELIMINATED') ||
+            resultText.includes('VAULT') ||
+            resultText.includes('BANDIT CONQUEST') ||
+            resultText.includes('CHIEF') && resultText.includes('joined')) {
+            majorEvents.push(resultText);
+        }
+
+        // Diplomatic events
+        if (result.actionType === ActionType.Trade ||
+            resultText.includes('diplomatic') ||
+            resultText.includes('alliance') ||
+            resultText.includes('peace') ||
+            resultText.includes('war') ||
+            resultText.includes('neutral')) {
+            diplomaticEvents.push(resultText);
+        }
+
+        // Combat events
+        if (resultText.includes('⚔️') ||
+            resultText.includes('battle') ||
+            resultText.includes('attack') ||
+            resultText.includes('defend')) {
+            majorEvents.push(resultText);
+        }
+    });
+
+    return { majorEvents, diplomaticEvents };
+}
+
+// Extract global events from the game state
+function extractGlobalEvents(state: any): string[] {
+    const globalEvents: string[] = [];
+
+    // Check for tribe eliminations
+    state.tribes.forEach((tribe: any) => {
+        if (tribe.eliminated) {
+            globalEvents.push(`${tribe.tribeName} was eliminated from the game`);
+        }
+    });
+
+    // Check for new tribes (this would need to be tracked separately)
+    // For now, we'll detect based on turn results
+
+    return globalEvents;
+}
+
+// Generate turn summary text
+function generateTurnSummaryText(tribeRecords: any[], globalEvents: string[]): string {
+    const activeTribeCount = tribeRecords.filter(t => !t.isAI).length;
+    const aiTribeCount = tribeRecords.filter(t => t.isAI).length;
+
+    const totalActions = tribeRecords.reduce((sum, tribe) => sum + tribe.actions.length, 0);
+    const researchCompletions = tribeRecords.reduce((sum, tribe) => sum + tribe.researchProgress.completed.length, 0);
+    const majorEvents = tribeRecords.reduce((sum, tribe) => sum + tribe.majorEvents.length, 0);
+
+    let summary = `Turn Summary: ${activeTribeCount} player tribes and ${aiTribeCount} AI tribes took ${totalActions} total actions. `;
+
+    if (researchCompletions > 0) {
+        summary += `${researchCompletions} research projects were completed. `;
+    }
+
+    if (majorEvents > 0) {
+        summary += `${majorEvents} major events occurred. `;
+    }
+
+    if (globalEvents.length > 0) {
+        summary += `Global events: ${globalEvents.join(', ')}.`;
+    }
+
+    return summary;
+}
+
+// Helper functions for text parsing
+function extractResourcesFromText(text: string, type: 'spent' | 'gained'): Record<string, number> {
+    const resources: Record<string, number> = {};
+
+    // Look for patterns like "Cost: 50 scrap" or "gained 25 food"
+    const patterns = [
+        /(\d+)\s+(food|scrap|weapons?)/gi,
+        /Cost:\s*(\d+)\s+(food|scrap|weapons?)/gi,
+        /(gained|found|recovered|lost|spent)\s*(\d+)\s+(food|scrap|weapons?)/gi
+    ];
+
+    patterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            const amount = parseInt(match[1] || match[2]);
+            const resource = (match[2] || match[3]).toLowerCase().replace(/s$/, ''); // Remove plural 's'
+
+            if (!isNaN(amount) && ['food', 'scrap', 'weapon'].includes(resource)) {
+                const resourceKey = resource === 'weapon' ? 'weapons' : resource;
+                resources[resourceKey] = (resources[resourceKey] || 0) + amount;
+            }
+        }
+    });
+
+    return resources;
+}
+
+function extractTroopsFromText(text: string): number {
+    const troopMatch = text.match(/(\d+)\s+(troops?|warriors?|soldiers?|fighters?)/i);
+    return troopMatch ? parseInt(troopMatch[1]) : 0;
 }

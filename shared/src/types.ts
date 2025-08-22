@@ -410,9 +410,61 @@ export interface TribeHistoryRecord {
     rank: number;
 }
 
+export interface DetailedActionRecord {
+    actionType: ActionType;
+    actionData: any;
+    result: string;
+    timestamp?: number;
+    success?: boolean;
+    resourcesSpent?: Record<string, number>;
+    resourcesGained?: Record<string, number>;
+    troopsInvolved?: number;
+    location?: string;
+}
+
+export interface DetailedTribeHistoryRecord extends TribeHistoryRecord {
+    tribeName: string;
+    playerName: string;
+    isAI: boolean;
+    aiType?: AIType;
+    actions: DetailedActionRecord[];
+    majorEvents: string[];
+    resourceChanges: {
+        food: { before: number; after: number; change: number };
+        scrap: { before: number; after: number; change: number };
+        morale: { before: number; after: number; change: number };
+    };
+    territoryChanges: {
+        gained: string[];
+        lost: string[];
+        netChange: number;
+    };
+    militaryChanges: {
+        troopsGained: number;
+        troopsLost: number;
+        weaponsGained: number;
+        weaponsLost: number;
+        netTroopChange: number;
+        netWeaponChange: number;
+    };
+    researchProgress: {
+        started: string[];
+        completed: string[];
+        ongoing: string[];
+    };
+    diplomaticEvents: string[];
+}
+
 export interface TurnHistoryRecord {
     turn: number;
     tribeRecords: TribeHistoryRecord[];
+}
+
+export interface DetailedTurnHistoryRecord {
+    turn: number;
+    tribeRecords: DetailedTribeHistoryRecord[];
+    globalEvents: string[];
+    turnSummary: string;
 }
 
 export interface GameState {
@@ -426,6 +478,7 @@ export interface GameState {
     diplomaticProposals: DiplomaticProposal[];
     prisonerExchangeProposals?: PrisonerExchangeProposal[];
     history?: TurnHistoryRecord[];
+    detailedHistory?: DetailedTurnHistoryRecord[];
     ticker?: TickerState;
     loginAnnouncements?: LoginAnnouncementState;
     turnDeadline?: TurnDeadline;

@@ -49,6 +49,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [userToRemove, setUserToRemove] = useState<User | null>(null);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [showTurnSummary, setShowTurnSummary] = useState(false);
+  const [showNewsletterSummary, setShowNewsletterSummary] = useState(false);
   const [summaryTurnsBack, setSummaryTurnsBack] = useState(1); // How many turns back to include
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -509,6 +510,59 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const generateNewsletterSummary = (turnsBack: number = 1) => {
+    const targetTurn = gameState.turn - turnsBack;
+    const detailedHistory = gameState.detailedHistory || [];
+
+    // Find the detailed history record for the target turn
+    const turnRecord = detailedHistory.find(record => record.turn === targetTurn);
+
+    if (!turnRecord) {
+      return {
+        error: `No detailed history found for turn ${targetTurn}`,
+        availableTurns: detailedHistory.map(r => r.turn)
+      };
+    }
+
+    // Generate comprehensive newsletter content
+    const newsletterData = {
+      turn: targetTurn,
+      summary: turnRecord.turnSummary,
+      globalEvents: turnRecord.globalEvents,
+      tribes: turnRecord.tribeRecords.map(tribe => ({
+        name: tribe.tribeName,
+        player: tribe.playerName,
+        isAI: tribe.isAI,
+        rank: tribe.rank,
+        score: tribe.score,
+        actions: tribe.actions.map(action => ({
+          type: action.actionType,
+          location: action.location,
+          result: action.result,
+          success: action.success,
+          resourcesSpent: action.resourcesSpent,
+          resourcesGained: action.resourcesGained,
+          troopsInvolved: action.troopsInvolved
+        })),
+        majorEvents: tribe.majorEvents,
+        resourceChanges: tribe.resourceChanges,
+        territoryChanges: tribe.territoryChanges,
+        militaryChanges: tribe.militaryChanges,
+        researchProgress: tribe.researchProgress,
+        diplomaticEvents: tribe.diplomaticEvents
+      })),
+      statistics: {
+        totalActions: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.actions.length, 0),
+        researchCompletions: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.researchProgress.completed.length, 0),
+        majorEvents: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.majorEvents.length, 0),
+        activePlayers: turnRecord.tribeRecords.filter(t => !t.isAI).length,
+        aiTribes: turnRecord.tribeRecords.filter(t => t.isAI).length
+      }
+    };
+
+    return newsletterData;
   };
 
   const generateTurnSummary = (turnsBack: number = 1) => {
@@ -1614,6 +1668,12 @@ GAME STATISTICS:
                     </svg>
                     View Turn Summary
                   </Button>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={() => setShowNewsletterSummary(true)}>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                    </svg>
+                    Newsletter Summary
+                  </Button>
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
               </div>
             </Card>
@@ -2299,6 +2359,223 @@ GAME STATISTICS:
                   onClick={() => setShowAIManagementModal(false)}
                   variant="secondary"
                 >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Newsletter Summary Modal */}
+      {showNewsletterSummary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-neutral-600">
+              <h2 className="text-2xl font-bold text-amber-300">
+                📰 Newsletter Summary - Turn {gameState.turn - summaryTurnsBack}
+              </h2>
+              <button
+                onClick={() => setShowNewsletterSummary(false)}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {(() => {
+                const newsletterData = generateNewsletterSummary(summaryTurnsBack);
+
+                if (newsletterData.error) {
+                  return (
+                    <div className="text-center py-8">
+                      <p className="text-red-400 mb-4">{newsletterData.error}</p>
+                      <p className="text-neutral-400">Available turns: {newsletterData.availableTurns?.join(', ') || 'None'}</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Turn Overview */}
+                    <div className="bg-neutral-700 rounded-lg p-4">
+                      <h3 className="text-xl font-bold text-amber-300 mb-3">Turn Overview</h3>
+                      <p className="text-neutral-300 mb-2">{newsletterData.summary}</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-400">{newsletterData.statistics.totalActions}</div>
+                          <div className="text-sm text-neutral-400">Total Actions</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-400">{newsletterData.statistics.researchCompletions}</div>
+                          <div className="text-sm text-neutral-400">Research Completed</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-400">{newsletterData.statistics.majorEvents}</div>
+                          <div className="text-sm text-neutral-400">Major Events</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-amber-400">{newsletterData.statistics.activePlayers}</div>
+                          <div className="text-sm text-neutral-400">Active Players</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Global Events */}
+                    {newsletterData.globalEvents.length > 0 && (
+                      <div className="bg-neutral-700 rounded-lg p-4">
+                        <h3 className="text-xl font-bold text-red-400 mb-3">🌍 Global Events</h3>
+                        <ul className="space-y-2">
+                          {newsletterData.globalEvents.map((event, index) => (
+                            <li key={index} className="text-neutral-300">• {event}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Tribe Actions */}
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-amber-300">📋 Detailed Tribe Actions</h3>
+                      {newsletterData.tribes
+                        .sort((a, b) => a.rank - b.rank)
+                        .map((tribe, index) => (
+                          <div key={index} className="bg-neutral-700 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="text-lg font-bold text-amber-300">
+                                  #{tribe.rank} {tribe.name}
+                                  {tribe.isAI && <span className="text-xs bg-blue-600 px-2 py-1 rounded ml-2">AI</span>}
+                                </h4>
+                                <p className="text-sm text-neutral-400">Player: {tribe.player}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-green-400">{tribe.score}</div>
+                                <div className="text-xs text-neutral-400">Score</div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            {tribe.actions.length > 0 && (
+                              <div className="mb-3">
+                                <h5 className="font-semibold text-blue-300 mb-2">Actions Taken ({tribe.actions.length})</h5>
+                                <div className="space-y-1 max-h-40 overflow-y-auto">
+                                  {tribe.actions.map((action, actionIndex) => (
+                                    <div key={actionIndex} className="text-sm bg-neutral-800 p-2 rounded">
+                                      <div className="flex justify-between items-start">
+                                        <span className="font-medium text-amber-400">{action.type}</span>
+                                        <span className={`text-xs px-2 py-1 rounded ${action.success ? 'bg-green-600' : 'bg-red-600'}`}>
+                                          {action.success ? 'Success' : 'Failed'}
+                                        </span>
+                                      </div>
+                                      {action.location && (
+                                        <div className="text-xs text-neutral-400">Location: {action.location}</div>
+                                      )}
+                                      <div className="text-neutral-300 mt-1">{action.result}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Major Events */}
+                            {tribe.majorEvents.length > 0 && (
+                              <div className="mb-3">
+                                <h5 className="font-semibold text-purple-300 mb-2">Major Events</h5>
+                                <ul className="space-y-1">
+                                  {tribe.majorEvents.map((event, eventIndex) => (
+                                    <li key={eventIndex} className="text-sm text-neutral-300">• {event}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Research Progress */}
+                            {(tribe.researchProgress.completed.length > 0 || tribe.researchProgress.started.length > 0) && (
+                              <div className="mb-3">
+                                <h5 className="font-semibold text-green-300 mb-2">🔬 Research Progress</h5>
+                                {tribe.researchProgress.completed.length > 0 && (
+                                  <div className="text-sm">
+                                    <span className="text-green-400">Completed:</span> {tribe.researchProgress.completed.join(', ')}
+                                  </div>
+                                )}
+                                {tribe.researchProgress.started.length > 0 && (
+                                  <div className="text-sm">
+                                    <span className="text-blue-400">Started:</span> {tribe.researchProgress.started.join(', ')}
+                                  </div>
+                                )}
+                                {tribe.researchProgress.ongoing.length > 0 && (
+                                  <div className="text-sm">
+                                    <span className="text-yellow-400">Ongoing:</span> {tribe.researchProgress.ongoing.join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Resource & Territory Changes */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                              <div>
+                                <h6 className="font-semibold text-amber-300">Resources</h6>
+                                <div>Food: {tribe.resourceChanges.food.change > 0 ? '+' : ''}{tribe.resourceChanges.food.change}</div>
+                                <div>Scrap: {tribe.resourceChanges.scrap.change > 0 ? '+' : ''}{tribe.resourceChanges.scrap.change}</div>
+                                <div>Morale: {tribe.resourceChanges.morale.change > 0 ? '+' : ''}{tribe.resourceChanges.morale.change}</div>
+                              </div>
+                              <div>
+                                <h6 className="font-semibold text-amber-300">Territory</h6>
+                                <div>Net Change: {tribe.territoryChanges.netChange > 0 ? '+' : ''}{tribe.territoryChanges.netChange}</div>
+                                {tribe.territoryChanges.gained.length > 0 && (
+                                  <div className="text-green-400">Gained: {tribe.territoryChanges.gained.length}</div>
+                                )}
+                                {tribe.territoryChanges.lost.length > 0 && (
+                                  <div className="text-red-400">Lost: {tribe.territoryChanges.lost.length}</div>
+                                )}
+                              </div>
+                              <div>
+                                <h6 className="font-semibold text-amber-300">Military</h6>
+                                <div>Troops: {tribe.militaryChanges.netTroopChange > 0 ? '+' : ''}{tribe.militaryChanges.netTroopChange}</div>
+                                <div>Weapons: {tribe.militaryChanges.netWeaponChange > 0 ? '+' : ''}{tribe.militaryChanges.netWeaponChange}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="flex justify-between items-center p-6 border-t border-neutral-600">
+              <div className="flex items-center space-x-4">
+                <label className="text-sm text-neutral-400">
+                  Turns Back:
+                  <select
+                    value={summaryTurnsBack}
+                    onChange={(e) => setSummaryTurnsBack(parseInt(e.target.value))}
+                    className="ml-2 bg-neutral-700 text-white rounded px-2 py-1"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="space-x-3">
+                <Button
+                  onClick={() => {
+                    const data = generateNewsletterSummary(summaryTurnsBack);
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `newsletter-turn-${data.turn}-data.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Download JSON
+                </Button>
+                <Button onClick={() => setShowNewsletterSummary(false)} variant="secondary">
                   Close
                 </Button>
               </div>

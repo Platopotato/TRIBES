@@ -87,12 +87,10 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
   },
   [ActionType.Rest]: {
     name: 'Rest',
-    description: 'Restore troop morale and combat effectiveness.',
+    description: 'Restore tribe-wide morale and combat effectiveness.',
     icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z' }),
     fields: [
-      { name: 'start_location', label: 'Location', type: 'garrison_select' },
-      { name: 'troops', label: 'Resting Troops', type: 'number', defaultValue: 1, max: 'troops' },
-      { name: 'info', label: 'Info', type: 'info', info: 'Recovers 15-25 morale, affected by leadership.' }
+      { name: 'info', label: 'Info', type: 'info', info: 'Restores 8+ morale to your entire tribe. Effectiveness increases with leadership. No resource cost.' }
     ],
   },
   [ActionType.BuildWeapons]: {

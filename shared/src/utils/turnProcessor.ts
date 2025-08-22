@@ -2104,7 +2104,7 @@ function processRestAction(tribe: any, action: any): string {
 
     const narrative = restNarratives[Math.floor(Math.random() * restNarratives.length)];
 
-    return `😌 ${tribe.tribeName} rested as ${narrative}. Morale increased by ${totalMoraleGain} (${oldMorale} → ${tribe.globalResources.morale}).`;
+    return `😌 **TRIBE-WIDE REST** - ${tribe.tribeName} rested as ${narrative}. All troops across all garrisons benefit! Morale increased by ${totalMoraleGain} (${oldMorale} → ${tribe.globalResources.morale}).`;
 }
 
 function processSetRationAction(tribe: any, action: any): string {

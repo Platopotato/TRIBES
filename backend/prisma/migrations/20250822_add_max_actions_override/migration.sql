@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Tribe" ADD COLUMN     "maxActionsOverride" INTEGER;
+ALTER TABLE "tribes" ADD COLUMN     "maxActionsOverride" INTEGER;

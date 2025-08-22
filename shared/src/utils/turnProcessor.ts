@@ -5310,19 +5310,17 @@ function analyzeTribalActions(tribe: any): any[] {
             return;
         }
 
-        const action = {
+        const action: any = {
             actionType: result.actionType,
             actionData: result.actionData || {},
             result: result.result || '',
             timestamp: Date.now(),
             success: !result.result?.includes('❌') && !result.result?.includes('failed'),
-            location: result.actionData?.location || result.actionData?.start_location || result.actionData?.target_location
+            location: result.actionData?.location || result.actionData?.start_location || result.actionData?.target_location,
+            resourcesSpent: extractResourcesFromText(result.result, 'spent'),
+            resourcesGained: extractResourcesFromText(result.result, 'gained'),
+            troopsInvolved: extractTroopsFromText(result.result)
         };
-
-        // Extract resource information from result text
-        action.resourcesSpent = extractResourcesFromText(result.result, 'spent');
-        action.resourcesGained = extractResourcesFromText(result.result, 'gained');
-        action.troopsInvolved = extractTroopsFromText(result.result);
 
         actions.push(action);
     });

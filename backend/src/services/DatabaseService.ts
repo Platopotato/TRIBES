@@ -741,15 +741,13 @@ export class DatabaseService {
       diplomacy[relation.fromTribeId] = { status: relation.status };
     });
 
-    // Debug logging
-    if (Object.keys(diplomacy).length > 0) {
-      console.log(`🔍 Built diplomacy for ${dbTribe.tribeName}:`, Object.keys(diplomacy).length, 'relations');
-    }
+    // Reduced logging for performance
 
     return diplomacy;
   }
 
   private convertDbGameStateToGameState(dbGameState: any): GameState {
+    const startTime = Date.now();
     console.log(`🔍 DB CONVERSION: Converting game state with ${dbGameState.tribes?.length || 0} tribes`);
 
     // This is a simplified conversion - in a real implementation,
@@ -798,7 +796,7 @@ export class DatabaseService {
               weapons: garrison.weapons,
               chiefs: garrison.chiefs
             };
-            console.log(`🔍 DB CONVERSION: ${tribe.tribeName} garrison at ${hexKey}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
+            // Reduced logging for performance
             return acc;
           }, {});
 
@@ -832,6 +830,9 @@ export class DatabaseService {
       suspended: dbGameState.suspended || false,
       suspensionMessage: dbGameState.suspensionMessage || undefined
     };
+
+    const endTime = Date.now();
+    console.log(`✅ DB CONVERSION: Completed in ${endTime - startTime}ms`);
   }
 
   private async validateAndCleanGameState(gameState: GameState): Promise<GameState> {

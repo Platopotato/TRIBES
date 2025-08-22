@@ -30,6 +30,11 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         let maxS = 0;
 
         history.forEach(turnRecord => {
+            if (!turnRecord.tribeRecords) {
+                console.warn('📊 Missing tribeRecords in turn:', turnRecord);
+                return;
+            }
+
             turnRecord.tribeRecords.forEach(tribeRecord => {
                 if (!dataByTribe[tribeRecord.tribeId]) {
                     dataByTribe[tribeRecord.tribeId] = [];
@@ -40,9 +45,16 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
                 }
             });
         });
-        
+
         const firstTurn = history[0]?.turn || 1;
         const lastTurn = history[history.length - 1]?.turn || 1;
+
+        console.log('📊 Chart data processed:', {
+            tribesWithData: Object.keys(dataByTribe).length,
+            dataPoints: Object.values(dataByTribe).reduce((sum, data) => sum + data.length, 0),
+            maxScore: maxS,
+            turnRange: [firstTurn, lastTurn]
+        });
 
         return {
             chartData: Object.entries(dataByTribe),
@@ -51,11 +63,37 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         };
     }, [history]);
     
+    // Debug logging for chart data
+    console.log('📊 TribeGrowthChart Debug:', {
+        historyLength: history.length,
+        chartDataLength: chartData.length,
+        maxScore,
+        turnDomain,
+        sampleHistory: history.slice(0, 2)
+    });
+
+    if (history.length < 1) {
+        return (
+            <Card title="📈 Tribal Growth Trends">
+                <div className="h-96 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-slate-400 italic mb-2">No historical data available yet.</p>
+                        <p className="text-slate-500 text-sm">Charts will appear after the first turn is processed.</p>
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
     if (history.length < 2) {
         return (
-            <Card title="Tribe Growth (by Score)">
+            <Card title="📈 Tribal Growth Trends">
                 <div className="h-96 flex items-center justify-center">
-                    <p className="text-slate-400 italic">Not enough turn data to display growth chart. Check back after the next turn is processed.</p>
+                    <div className="text-center">
+                        <p className="text-slate-400 italic mb-2">Building historical data...</p>
+                        <p className="text-slate-500 text-sm">Growth trends will appear after turn {history[0]?.turn + 1 || 2}.</p>
+                        <p className="text-slate-600 text-xs mt-2">Current: Turn {history[0]?.turn || 1} recorded</p>
+                    </div>
                 </div>
             </Card>
         );
@@ -83,8 +121,22 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         return ticks;
     }, [maxScore]);
 
+    // Additional validation for chart rendering
+    if (chartData.length === 0) {
+        return (
+            <Card title="📈 Tribal Growth Trends">
+                <div className="h-96 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-slate-400 italic mb-2">No tribe data available for charting.</p>
+                        <p className="text-slate-500 text-sm">History: {history.length} turns recorded</p>
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
     return (
-        <Card title="Tribe Growth (by Score)">
+        <Card title="📈 Tribal Growth Trends">
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex-grow relative h-96">
                     <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`}>

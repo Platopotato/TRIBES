@@ -175,6 +175,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
 
             {/* Growth Chart - Bottom Section */}
             <Card title="📈 Tribal Growth Trends">
+                {/* Debug info for troubleshooting */}
+                {process.env.NODE_ENV === 'development' && (
+                    <div className="mb-4 p-2 bg-slate-800 rounded text-xs text-slate-400">
+                        Debug: History length: {gameState.history?.length || 0},
+                        Tribes: {rankedTribes.length},
+                        Turn: {gameState.turn}
+                    </div>
+                )}
                 <TribeGrowthChart
                     history={gameState.history || []}
                     tribes={rankedTribes}

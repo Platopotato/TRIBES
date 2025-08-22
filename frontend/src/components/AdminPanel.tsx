@@ -398,6 +398,11 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     client.unpublishNewsletter(newsletterId);
   };
 
+  const handleUploadNewsletter = (newsletter: Omit<Newsletter, 'id' | 'publishedAt'>) => {
+    console.log(`📤 Uploading newsletter for turn ${newsletter.turn}:`, newsletter.title);
+    client.saveNewsletter(newsletter);
+  };
+
   // AI Management handlers
   const handleAddAITribe = () => {
     if (!selectedSpawnLocation) {
@@ -1267,6 +1272,7 @@ GAME STATISTICS:
                   onSave={handleSaveNewsletter}
                   onPublish={handlePublishNewsletter}
                   onUnpublish={handleUnpublishNewsletter}
+                  onUploadNewsletter={handleUploadNewsletter}
                 />
               </div>
             </Card>

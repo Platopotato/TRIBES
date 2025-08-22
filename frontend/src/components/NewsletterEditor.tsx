@@ -9,6 +9,7 @@ interface NewsletterEditorProps {
   onSave: (newsletter: Omit<Newsletter, 'id' | 'publishedAt'>) => void;
   onPublish: (newsletterId: string) => void;
   onUnpublish: (newsletterId: string) => void;
+  onUploadNewsletter?: (newsletter: Omit<Newsletter, 'id' | 'publishedAt'>) => void;
 }
 
 const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
@@ -17,11 +18,16 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   allNewsletters = [],
   onSave,
   onPublish,
-  onUnpublish
+  onUnpublish,
+  onUploadNewsletter
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTurn, setUploadTurn] = useState<number>(currentTurn - 1);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadContent, setUploadContent] = useState('');
 
   // Find newsletter for current turn from either currentNewsletter or allNewsletters
   const turnNewsletter = currentNewsletter || allNewsletters.find(n => n.turn === currentTurn);
@@ -111,14 +117,117 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
     }
   };
 
+  const handleUploadNewsletter = () => {
+    if (!uploadTitle.trim() || !uploadContent.trim()) {
+      alert('Please enter both a title and content for the newsletter');
+      return;
+    }
+
+    if (uploadTurn < 1 || uploadTurn >= currentTurn) {
+      alert(`Turn must be between 1 and ${currentTurn - 1} (previous turns only)`);
+      return;
+    }
+
+    // Check if newsletter already exists for this turn
+    const existingNewsletter = allNewsletters.find(n => n.turn === uploadTurn);
+    if (existingNewsletter) {
+      if (!confirm(`A newsletter already exists for Turn ${uploadTurn}. Replace it?`)) {
+        return;
+      }
+    }
+
+    if (onUploadNewsletter) {
+      onUploadNewsletter({
+        turn: uploadTurn,
+        title: uploadTitle.trim(),
+        content: uploadContent.trim(),
+        isPublished: true // Auto-publish uploaded newsletters
+      });
+    }
+
+    // Reset upload form
+    setUploadTurn(currentTurn - 1);
+    setUploadTitle('');
+    setUploadContent('');
+    setShowUploadModal(false);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+
+        // Try to parse as JSON first (newsletter export format)
+        try {
+          const newsletterData = JSON.parse(content);
+          if (newsletterData.title && newsletterData.content && newsletterData.turn) {
+            setUploadTurn(newsletterData.turn);
+            setUploadTitle(newsletterData.title);
+            setUploadContent(newsletterData.content);
+          } else {
+            throw new Error('Invalid newsletter format');
+          }
+        } catch {
+          // If not JSON, treat as plain text content
+          setUploadContent(content);
+          setUploadTitle(`Turn ${uploadTurn} Newsletter`);
+        }
+      } catch (error) {
+        alert('Error reading file. Please ensure it\'s a valid text or JSON file.');
+      }
+    };
+    reader.readAsText(file);
+
+    // Clear the input so the same file can be selected again
+    event.target.value = '';
+  };
+
+  const handleExportNewsletter = () => {
+    if (!turnNewsletter) return;
+
+    const exportData = {
+      turn: turnNewsletter.turn,
+      title: turnNewsletter.title,
+      content: turnNewsletter.content,
+      isPublished: turnNewsletter.isPublished,
+      publishedAt: turnNewsletter.publishedAt,
+      exportedAt: new Date().toISOString()
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `newsletter-turn-${turnNewsletter.turn}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-blue-400">
           📰 Turn {currentTurn} Newsletter
         </h3>
-        
+
         <div className="flex items-center space-x-2">
+          {onUploadNewsletter && (
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-xs px-2 py-1"
+            >
+              📤 Upload Previous
+            </Button>
+          )}
+
           {turnNewsletter && (
             <span className={`px-2 py-1 rounded text-xs font-bold ${
               turnNewsletter.isPublished
@@ -150,6 +259,13 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
               className="bg-blue-600 hover:bg-blue-700"
             >
               ✏️ Edit Newsletter
+            </Button>
+
+            <Button
+              onClick={handleExportNewsletter}
+              className="bg-slate-600 hover:bg-slate-700"
+            >
+              💾 Export
             </Button>
 
             {turnNewsletter.isPublished ? (
@@ -221,6 +337,98 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
             >
               Cancel
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Previous Newsletter Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-purple-400">📤 Upload Previous Newsletter</h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-slate-400 hover:text-white text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Turn Number (1 to {currentTurn - 1})
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={currentTurn - 1}
+                  value={uploadTurn}
+                  onChange={(e) => setUploadTurn(parseInt(e.target.value) || 1)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Newsletter Title
+                </label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder={`Turn ${uploadTurn} Newsletter`}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Upload from File
+                </label>
+                <input
+                  type="file"
+                  accept=".txt,.md,.json"
+                  onChange={handleFileUpload}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-200 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-600 file:text-white file:cursor-pointer"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Supports .txt, .md, or .json files. JSON files should have title, content, and turn fields.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Newsletter Content
+                </label>
+                <textarea
+                  value={uploadContent}
+                  onChange={(e) => setUploadContent(e.target.value)}
+                  placeholder="Enter newsletter content here..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-200 h-64 resize-none"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Supports markdown: **bold**, *italic*, # headers, ## subheaders
+                </p>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-600">
+                <Button
+                  onClick={handleUploadNewsletter}
+                  className="bg-purple-600 hover:bg-purple-700"
+                  disabled={!uploadTitle.trim() || !uploadContent.trim()}
+                >
+                  📤 Upload Newsletter
+                </Button>
+                <Button
+                  onClick={() => setShowUploadModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

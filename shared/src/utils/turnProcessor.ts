@@ -321,6 +321,21 @@ function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, sta
 }
 
 export function processGlobalTurn(gameState: GameState): GameState {
+    // CHIEF INTEGRITY CHECK: Log chief status before turn processing
+    console.log(`👑 PRE-TURN CHIEF STATUS (Turn ${gameState.turn}):`);
+    gameState.tribes.forEach((tribe: any) => {
+        const activeChiefs = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) =>
+            sum + (garrison.chiefs?.length || 0), 0);
+        const injuredChiefs = tribe.injuredChiefs?.length || 0;
+        const prisoners = tribe.prisoners?.length || 0;
+
+        console.log(`  ${tribe.tribeName}: ${activeChiefs} active, ${injuredChiefs} injured, ${prisoners} prisoners`);
+
+        if (activeChiefs === 0 && injuredChiefs === 0) {
+            console.log(`  ⚠️ WARNING: ${tribe.tribeName} has NO ACTIVE CHIEFS!`);
+        }
+    });
+
     // PHASE 1: Restore basic actions and upkeep
     // Testing: Recruit, Rest, BuildWeapons, basic upkeep
 
@@ -562,6 +577,20 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
+
+    // CHIEF TRACKING: Log chief counts for debugging disappearances
+    state.tribes.forEach((tribe: any) => {
+        const totalChiefs = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) =>
+            sum + (garrison.chiefs?.length || 0), 0);
+        const injuredChiefs = tribe.injuredChiefs?.length || 0;
+        const prisoners = tribe.prisoners?.length || 0;
+
+        console.log(`👑 CHIEF COUNT - ${tribe.tribeName}: ${totalChiefs} active, ${injuredChiefs} injured, ${prisoners} prisoners`);
+
+        if (totalChiefs === 0 && injuredChiefs === 0 && prisoners === 0) {
+            console.log(`⚠️ WARNING: ${tribe.tribeName} has NO CHIEFS anywhere!`);
+        }
+    });
 
     // ELIMINATION CLEANUP: Remove eliminated tribes from the game
     const eliminatedTribes = state.tribes.filter((tribe: any) => tribe.eliminated);
@@ -1624,14 +1653,24 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
 
     if (attackerRoll > defenderRoll) {
         if (defenderChiefs.length > 0 && Math.random() < 0.3) {
-            const captured = defenderChiefs.splice(Math.floor(Math.random() * defenderChiefs.length), 1)[0];
+            const captureIndex = Math.floor(Math.random() * defenderChiefs.length);
+            const captured = defenderChiefs.splice(captureIndex, 1)[0];
+
+            // CRITICAL FIX: Ensure captured chief is properly added to attacker's prisoners
+            if (!attackerTribe.prisoners) attackerTribe.prisoners = [];
+            attackerTribe.prisoners.push({
+                chief: captured,
+                fromTribeId: defenderTribe.id,
+                capturedOnTurn: state.turn
+            });
+
+            console.log(`🎗️ CHIEF CAPTURE: ${captured.name} captured from ${defenderTribe.tribeName} by ${attackerTribe.tribeName} at ${destKey}`);
+
             defenderTribe.lastTurnResults.push({
                 id: `chief-captured-${Date.now()}`,
-
-
                 actionType: ActionType.Attack,
                 actionData: {},
-                result: `🎗️ Chief ${captured.name} was captured at ${destKey} and is now a prisoner!`
+                result: `🎗️ Chief ${captured.name} was captured at ${destKey} and is now a prisoner of ${attackerTribe.tribeName}!`
             });
             attackerTribe.lastTurnResults.push({
                 id: `chief-prize-${Date.now()}`,
@@ -1645,14 +1684,23 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         }
     } else {
         if (attackerChiefs.length > 0 && Math.random() < 0.2) {
-            const injured = attackerChiefs.splice(Math.floor(Math.random() * attackerChiefs.length), 1)[0];
+            const injuryIndex = Math.floor(Math.random() * attackerChiefs.length);
+            const injured = attackerChiefs.splice(injuryIndex, 1)[0];
+
+            // CRITICAL FIX: Ensure injured chief is properly tracked and placed
+            console.log(`🩹 CHIEF INJURY: ${injured.name} from ${attackerTribe.tribeName} injured at ${destKey}, returning to home base`);
+
             // Send injured chief back to home hex (tribe.location) and mark out until returnTurn
-            if (!attackerTribe.garrisons[attackerTribe.location]) attackerTribe.garrisons[attackerTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+            if (!attackerTribe.garrisons[attackerTribe.location]) {
+                attackerTribe.garrisons[attackerTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+            }
             const homeGarrison = attackerTribe.garrisons[attackerTribe.location];
             homeGarrison.chiefs.push(injured);
+
             const returnTurn = state.turn + 3; // out for 3 turns
             if (!attackerTribe.injuredChiefs) attackerTribe.injuredChiefs = [];
             attackerTribe.injuredChiefs.push({ chief: injured, returnTurn, fromHex: destKey });
+
             attackerTribe.lastTurnResults.push({
                 id: `chief-injured-${Date.now()}`,
                 actionType: ActionType.Attack,
@@ -4130,16 +4178,31 @@ function executeSabotageOperation(
         operativesCaptured = Math.floor(operatives * captureRate * Math.random());
 
         if (chiefs.length > 0 && Math.random() < 0.4) {
-            const capturedChief = chiefs[Math.floor(Math.random() * chiefs.length)];
+            const captureIndex = Math.floor(Math.random() * chiefs.length);
+            const capturedChief = chiefs[captureIndex];
             chiefsCaptured.push(capturedChief.name);
+
+            // CRITICAL FIX: Remove captured chief from attacker's garrison
+            // Find and remove the chief from the attacking tribe's garrison
+            const attackerGarrison = attackerTribe.garrisons[targetLocation] ||
+                                   Object.values(attackerTribe.garrisons).find((g: any) =>
+                                       g.chiefs && g.chiefs.some((c: any) => c.name === capturedChief.name)
+                                   );
+
+            if (attackerGarrison && attackerGarrison.chiefs) {
+                const chiefIndex = attackerGarrison.chiefs.findIndex((c: any) => c.name === capturedChief.name);
+                if (chiefIndex >= 0) {
+                    attackerGarrison.chiefs.splice(chiefIndex, 1);
+                    console.log(`🎗️ SABOTAGE CAPTURE: Chief ${capturedChief.name} removed from ${attackerTribe.tribeName} garrison and captured by ${targetTribe.tribeName}`);
+                }
+            }
 
             // Add captured chief to target tribe's prisoners
             if (!targetTribe.prisoners) targetTribe.prisoners = [];
             targetTribe.prisoners.push({
-                name: capturedChief.name,
-                originalTribeId: attackerTribe.id,
-                capturedTurn: targetTribe.currentTurn || 1,
-                skills: capturedChief.skills || []
+                chief: capturedChief, // Store full chief object, not just name
+                fromTribeId: attackerTribe.id,
+                capturedOnTurn: targetTribe.currentTurn || 1
             });
         }
     }

@@ -115,7 +115,10 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
     onUpdateTribe(updatedTribe);
     setSelectedTribe(updatedTribe);
-    alert('Tribe updated successfully!');
+
+    // Enhanced success message with player notification info
+    const playerName = selectedTribe.playerName;
+    alert(`✅ Tribe "${updatedTribe.tribeName}" updated successfully!\n\n🔔 ${playerName} will receive a notification and be prompted to refresh their browser to see the changes.\n\n💡 If they don't see the changes immediately, ask them to refresh their page.`);
   };
 
   const handleResetTurnSubmission = (tribe: Tribe) => {

@@ -6,6 +6,9 @@ let socket: Socket;
 // Store current user for authentication restoration
 let currentUser: User | null = null;
 
+// Export function to get current user
+export const getCurrentUser = (): User | null => currentUser;
+
 // Helper function to create a typed emitter
 const createEmitter = <T>(eventName: string) => (payload: T) => {
     console.log(`Attempting to emit ${eventName}:`, payload);
@@ -148,6 +151,25 @@ export const initClient = (
 
     socket.on('users_updated', (newUsers: User[]) => {
         onUsersUpdate(newUsers);
+    });
+
+    socket.on('admin_notification', (notification: { type: string, message: string, tribeId?: string, playerId?: string }) => {
+        console.log('🔔 Admin notification received:', notification);
+
+        // Show notification to user
+        if (notification.type === 'tribe_updated') {
+            // Check if this notification is for the current user
+            const currentUser = getCurrentUser();
+            if (currentUser && notification.playerId === currentUser.id) {
+                console.log('🎯 Tribe update notification for current user');
+                alert(`🔧 Admin Update: ${notification.message}`);
+
+                // Force a page refresh to ensure all changes are visible
+                if (confirm('Would you like to refresh the page to ensure all changes are visible?')) {
+                    window.location.reload();
+                }
+            }
+        }
     });
     
     socket.on('login_success', (user: User) => {

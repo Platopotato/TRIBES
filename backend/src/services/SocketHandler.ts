@@ -390,7 +390,40 @@ export class SocketHandler {
     });
 
     // Admin-specific handlers
-    socket.on('admin:updateTribe', createGenericHandler(actionHandlers['update_tribe']));
+    socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
+      console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);
+      const gameState = await this.gameService.getGameState();
+      const users = await this.gameService.getAllUsers();
+
+      if (gameState) {
+        // Update the tribe in the game state
+        const oldTribe = gameState.tribes.find(t => t.id === updatedTribe.id);
+        gameState.tribes = gameState.tribes.map(t => t.id === updatedTribe.id ? updatedTribe : t);
+
+        await this.gameService.updateGameState(gameState);
+
+        // Broadcast updated game state to all clients
+        console.log(`📡 ADMIN: Broadcasting updated game state after tribe update`);
+        await emitGameState();
+        await emitUsers();
+
+        // Send specific notification to the affected player
+        if (oldTribe && oldTribe.playerId) {
+          const affectedUser = users.find(u => u.id === oldTribe.playerId);
+          if (affectedUser) {
+            console.log(`🔔 ADMIN: Notifying player ${affectedUser.username} of tribe changes`);
+            this.io.emit('admin_notification', {
+              type: 'tribe_updated',
+              message: `Your tribe "${updatedTribe.tribeName}" has been updated by an administrator. Please refresh if you don't see the changes.`,
+              tribeId: updatedTribe.id,
+              playerId: oldTribe.playerId
+            });
+          }
+        }
+
+        console.log(`✅ ADMIN: Tribe ${updatedTribe.tribeName} updated successfully`);
+      }
+    });
     socket.on('admin:removePlayer', async (userId: string) => {
       console.log(`🚫 Admin removing player: ${userId}`);
       const gameState = await this.gameService.getGameState();

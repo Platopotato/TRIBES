@@ -19,7 +19,7 @@ services:
       echo "=== Build complete ==="
     startCommand: |
       cd backend &&
-      npx prisma migrate deploy &&
+      npm run db:migrate:safe &&
       npm start
     envVars:
       - key: NODE_ENV

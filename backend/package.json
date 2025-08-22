@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:resolve": "node resolve-migration.js",
+    "db:migrate:safe": "npm run db:migrate:resolve && npm run db:migrate",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts"
   },

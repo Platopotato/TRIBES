@@ -1194,26 +1194,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   </div>
                 )}
 
-                {/* DEBUGGING: Manual state reset button (fallback) */}
-                {!playerTribe?.turnSubmitted && !turnSubmitted && playerTribe?.lastTurnResults && playerTribe.lastTurnResults.length > 0 &&
-                 !playerTribe.lastTurnResults.some(result => result.result?.includes('TURN') && result.result?.includes('COMPLETED')) && (
-                  <div className="bg-blue-900/50 border border-blue-400 p-4 rounded-lg text-center">
-                    <div className="text-blue-200 font-bold text-sm mb-2">
-                      🔧 DEBUG: Turn completed but UI stuck?
-                    </div>
-                    <button
-                      onClick={() => {
-                        console.log('🔧 MANUAL RESET: Forcing UI to planning mode');
-                        setTurnSubmitted(false);
-                        setView('planning');
-                        setPlannedActions([]);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-                    >
-                      🔄 Force UI Reset
-                    </button>
-                  </div>
-                )}
+
               </div>
             </div>
           </div>

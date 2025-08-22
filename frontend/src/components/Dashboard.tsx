@@ -77,6 +77,37 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
   const [plannedActions, setPlannedActions] = useState<GameAction[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Backup planned actions to localStorage to prevent loss
+  useEffect(() => {
+    if (plannedActions.length > 0 && playerTribe && !playerTribe.turnSubmitted) {
+      const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+      localStorage.setItem(backupKey, JSON.stringify(plannedActions));
+      console.log('💾 Backed up', plannedActions.length, 'planned actions to localStorage');
+    }
+  }, [plannedActions, playerTribe, turn]);
+
+  // Restore planned actions from localStorage on component mount
+  useEffect(() => {
+    if (playerTribe && !playerTribe.turnSubmitted && plannedActions.length === 0) {
+      const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+      const backup = localStorage.getItem(backupKey);
+      if (backup) {
+        try {
+          const restoredActions = JSON.parse(backup);
+          if (restoredActions.length > 0) {
+            setPlannedActions(restoredActions);
+            setShowRestoredMessage(true);
+            setTimeout(() => setShowRestoredMessage(false), 5000);
+            console.log('🔄 Restored', restoredActions.length, 'planned actions from localStorage');
+          }
+        } catch (error) {
+          console.error('❌ Failed to restore planned actions:', error);
+          localStorage.removeItem(backupKey);
+        }
+      }
+    }
+  }, [playerTribe, turn]);
   const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isCodexOpen, setIsCodexOpen] = useState(false);
@@ -105,6 +136,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [waitingForLocationSelection, setWaitingForLocationSelection] = useState(false);
   const [turnSubmitted, setTurnSubmitted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showRestoredMessage, setShowRestoredMessage] = useState(false);
 
   // Determine which modal is currently active (only one can be active at a time)
   const activeModal = isTechTreeOpen ? 'research' : isHelpModalOpen ? 'help' : isCodexOpen ? 'codex' : null;
@@ -161,7 +193,16 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             setView('planning');
             setTurnSubmitted(false);
         }
-        setPlannedActions([]); // Always clear local planned actions on tribe data change
+        // Only clear planned actions if turn was actually submitted or we're viewing results
+        if (playerTribe.turnSubmitted || (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0)) {
+            console.log('🧹 Clearing planned actions - turn submitted or results available');
+            setPlannedActions([]);
+            // Clear localStorage backup when turn is submitted
+            const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+            localStorage.removeItem(backupKey);
+        } else {
+            console.log('💾 Preserving planned actions - turn not submitted yet');
+        }
     }
   }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);
 
@@ -340,6 +381,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       };
       onUpdateTribe(updatedTribe);
       onFinalizeTurn(plannedActions, journeyResponses);
+
+      // Clear localStorage backup after successful submission
+      const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+      localStorage.removeItem(backupKey);
+      console.log('🧹 Cleared action backup after successful submission');
 
       // Mark turn as submitted locally
       setTurnSubmitted(true);
@@ -943,6 +989,18 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     {turnSubmitted || playerTribe?.turnSubmitted ?
                       `${playerTribe?.actions?.length || 0} action${(playerTribe?.actions?.length || 0) !== 1 ? 's' : ''} sent to admin for processing` :
                       `${plannedActions.length} action${plannedActions.length !== 1 ? 's' : ''} sent to admin for processing`}
+                  </div>
+                </div>
+              )}
+
+              {/* Restored Actions Message */}
+              {showRestoredMessage && (
+                <div className="mt-4 bg-blue-600/90 border border-blue-400 p-4 rounded-lg animate-pulse">
+                  <div className="text-white font-bold text-center">
+                    🔄 Actions Restored!
+                  </div>
+                  <div className="text-blue-100 text-sm text-center mt-1">
+                    Your planned actions were automatically recovered from backup.
                   </div>
                 </div>
               )}

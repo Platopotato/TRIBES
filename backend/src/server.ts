@@ -11,11 +11,14 @@ dotenv.config();
 
 // Migration resolution for production
 async function resolveMigrationIssues() {
-  if (process.env.NODE_ENV === 'production') {
-    console.log('🔧 PRODUCTION: Running migration resolution...');
-    try {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
+  console.log('🔧 SERVER STARTUP: Running migration resolution...');
+  console.log('🔧 Environment:', process.env.NODE_ENV);
+
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    console.log('🔧 SERVER STARTUP: Prisma client created successfully');
 
       // Check for failed migration
       const failedMigration = await prisma.$queryRaw`
@@ -25,7 +28,7 @@ async function resolveMigrationIssues() {
       `;
 
       if (Array.isArray(failedMigration) && failedMigration.length > 0) {
-        console.log('❌ PRODUCTION: Found failed migration, resolving...');
+        console.log('❌ SERVER STARTUP: Found failed migration, resolving...');
 
         // Remove failed migration
         await prisma.$executeRaw`
@@ -33,7 +36,9 @@ async function resolveMigrationIssues() {
           WHERE migration_name = '20250822_add_max_actions_override'
         `;
 
-        console.log('✅ PRODUCTION: Failed migration removed');
+        console.log('✅ SERVER STARTUP: Failed migration removed');
+      } else {
+        console.log('✅ SERVER STARTUP: No failed migrations found');
       }
 
       // Add column if missing
@@ -45,20 +50,22 @@ async function resolveMigrationIssues() {
       `;
 
       if (!Array.isArray(columnExists) || columnExists.length === 0) {
-        console.log('🔧 PRODUCTION: Adding maxActionsOverride column...');
+        console.log('🔧 SERVER STARTUP: Adding maxActionsOverride column...');
         await prisma.$executeRaw`
           ALTER TABLE "tribes" ADD COLUMN "maxActionsOverride" INTEGER
         `;
-        console.log('✅ PRODUCTION: Column added successfully');
+        console.log('✅ SERVER STARTUP: Column added successfully');
       } else {
-        console.log('✅ PRODUCTION: Column already exists');
+        console.log('✅ SERVER STARTUP: Column already exists');
       }
 
       await prisma.$disconnect();
-      console.log('🎉 PRODUCTION: Migration resolution complete');
+      console.log('🎉 SERVER STARTUP: Migration resolution complete');
     } catch (error) {
-      console.error('❌ PRODUCTION: Migration resolution failed:', error);
+      console.error('❌ SERVER STARTUP: Migration resolution failed:', error);
+      console.error('❌ SERVER STARTUP: Error details:', error);
       // Don't exit - let the server try to start anyway
+      console.log('⚠️ SERVER STARTUP: Continuing with server startup despite migration error...');
     }
   }
 }

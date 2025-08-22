@@ -19,7 +19,8 @@ services:
       echo "=== Build complete ==="
     startCommand: |
       cd backend &&
-      npm start
+      echo "🚀 BYPASSING MIGRATIONS: Using embedded resolution..." &&
+      npm run start:skip-migrations
     envVars:
       - key: NODE_ENV
         value: production

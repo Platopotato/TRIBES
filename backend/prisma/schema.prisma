@@ -92,6 +92,7 @@ model Tribe {
   assets            Json    // Array of asset names
   currentResearch   Json?   // ResearchProject object
   journeyResponses  Json    // Array of journey response objects
+  maxActionsOverride Int?   // Admin override for max actions per turn
   gameStateId       String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

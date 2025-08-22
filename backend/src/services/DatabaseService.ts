@@ -340,6 +340,7 @@ export class DatabaseService {
             stats: tribe.stats as any,
             rationLevel: tribe.rationLevel,
             exploredHexes: tribe.exploredHexes,
+            maxActionsOverride: tribe.maxActionsOverride,
           }
         });
         console.log(`✅ Updated tribe basic data: ${tribe.tribeName}`);
@@ -788,6 +789,7 @@ export class DatabaseService {
         assets: tribe.assets,
         currentResearch: tribe.currentResearch,
         journeyResponses: tribe.journeyResponses,
+        maxActionsOverride: tribe.maxActionsOverride,
         garrisons: (() => {
           const garrisons = tribe.garrisons.reduce((acc: any, garrison: any) => {
             const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
@@ -1007,6 +1009,7 @@ export class DatabaseService {
                 assets: tribe.assets as any,
                 currentResearch: tribe.currentResearch as any,
                 journeyResponses: tribe.journeyResponses as any,
+                maxActionsOverride: tribe.maxActionsOverride,
                 gameStateId: currentGameState.id
               },
               update: {
@@ -1029,6 +1032,7 @@ export class DatabaseService {
                 assets: tribe.assets as any,
                 currentResearch: tribe.currentResearch as any,
                 journeyResponses: tribe.journeyResponses as any,
+                maxActionsOverride: tribe.maxActionsOverride,
                 gameStateId: currentGameState.id
               }
             });

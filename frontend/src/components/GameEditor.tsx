@@ -18,6 +18,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
   const [editingResearch, setEditingResearch] = useState<ResearchProject[]>([]);
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
+  const [editingMaxActions, setEditingMaxActions] = useState<number | undefined>(undefined);
   const [playerToEject, setPlayerToEject] = useState<{ userId: string; username: string } | null>(null);
 
   const playerTribes = useMemo(() => {
@@ -30,6 +31,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setEditingGarrisons({ ...tribe.garrisons });
     setEditingResearch(tribe.currentResearch ? [...tribe.currentResearch] : []);
     setEditingCompletedTechs([...tribe.completedTechs]);
+    setEditingMaxActions(tribe.maxActionsOverride);
   };
 
   const handleResourceChange = (resource: keyof GlobalResources, value: number) => {
@@ -107,7 +109,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       globalResources: editingResources,
       garrisons: editingGarrisons,
       currentResearch: editingResearch,
-      completedTechs: editingCompletedTechs
+      completedTechs: editingCompletedTechs,
+      maxActionsOverride: editingMaxActions
     };
 
     onUpdateTribe(updatedTribe);
@@ -335,6 +338,57 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                       ))}
                     </select>
                   )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Max Actions Editor */}
+        {selectedTribe && (
+          <Card title={`Action Limits - ${selectedTribe.tribeName}`} className="lg:col-span-1">
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-900/50 rounded-md">
+                <h4 className="text-slate-300 font-semibold mb-2">Actions Per Turn</h4>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-slate-300 text-sm">Admin Override</label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        value={editingMaxActions || ''}
+                        onChange={(e) => setEditingMaxActions(e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="Auto"
+                        className="w-20 px-2 py-1 bg-slate-700 text-white rounded border border-slate-600"
+                        min="0"
+                        max="20"
+                      />
+                      {editingMaxActions !== undefined && (
+                        <Button
+                          onClick={() => setEditingMaxActions(undefined)}
+                          variant="secondary"
+                          className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-400 space-y-1">
+                    <p>
+                      <strong>Current:</strong> {editingMaxActions !== undefined ? `${editingMaxActions} (Admin Override)` : 'Auto-calculated'}
+                    </p>
+                    {editingMaxActions === undefined && (
+                      <p className="text-slate-500">
+                        Auto: 3 base + troop bonuses + leadership/10 + chiefs + bonus turns×2
+                      </p>
+                    )}
+                    <p className="text-amber-400">
+                      ⚠️ Override disables all automatic action calculations
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

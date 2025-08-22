@@ -224,6 +224,7 @@ export interface Tribe {
     } | null;
   };
   bonusTurns?: number;
+  maxActionsOverride?: number; // Admin override for max actions per turn (optional)
 }
 
 export interface InjuredChief {

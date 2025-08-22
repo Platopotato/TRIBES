@@ -256,6 +256,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const maxActions = useMemo(() => {
     if (!playerTribe) return 3;
 
+    // Check for admin override first
+    if (playerTribe.maxActionsOverride !== undefined && playerTribe.maxActionsOverride !== null) {
+      console.log(`🎯 ADMIN OVERRIDE: Using admin-set max actions: ${playerTribe.maxActionsOverride}`);
+      return playerTribe.maxActionsOverride;
+    }
+
     let baseActions = 3;
 
     // Troop bonuses: +1 at 60 members, +2 at 100 members (members = total troops including those on journeys)

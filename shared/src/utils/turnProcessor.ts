@@ -574,6 +574,9 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     // BONUS TURN PROCESSING: Handle bonus turns from bandit conquests
     processBonusTurns(state);
 
+    // RANDOM EVENTS PROCESSING: Handle environmental events, discoveries, and encounters
+    processRandomEvents(state);
+
     // CRITICAL FIX: Apply "Force Refresh" logic to all tribes
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
@@ -641,6 +644,310 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     state.history.push(newHistoryRecord);
 
     return state;
+}
+
+// RANDOM EVENTS SYSTEM: Process environmental events, discoveries, and encounters
+function processRandomEvents(state: any): void {
+    console.log(`🎲 Processing random events for turn ${state.turn}...`);
+
+    state.tribes.forEach((tribe: any) => {
+        // Skip eliminated tribes
+        if (tribe.eliminated) return;
+
+        // Base chance for random events (10% per tribe per turn)
+        const EVENT_CHANCE = 0.10;
+
+        if (Math.random() < EVENT_CHANCE) {
+            const event = generateRandomEvent(tribe, state);
+            if (event) {
+                // Apply event effects
+                applyEventEffects(tribe, event, state);
+
+                // Add event to turn results
+                tribe.lastTurnResults.push({
+                    id: `random-event-${Date.now()}-${Math.random()}`,
+                    actionType: ActionType.Upkeep,
+                    actionData: {},
+                    result: event.message
+                });
+
+                console.log(`🎲 Random event for ${tribe.tribeName}: ${event.type}`);
+            }
+        }
+    });
+}
+
+// Generate a random event for a tribe
+function generateRandomEvent(tribe: any, state: any): any {
+    const events = [
+        // Environmental Events (30% weight)
+        { type: 'weather_storm', weight: 10, category: 'environmental' },
+        { type: 'drought', weight: 8, category: 'environmental' },
+        { type: 'harsh_winter', weight: 7, category: 'environmental' },
+        { type: 'good_weather', weight: 5, category: 'environmental' },
+
+        // Discovery Events (25% weight)
+        { type: 'resource_discovery', weight: 8, category: 'discovery' },
+        { type: 'ancient_cache', weight: 6, category: 'discovery' },
+        { type: 'wanderer_joins', weight: 6, category: 'discovery' },
+        { type: 'tech_insight', weight: 5, category: 'discovery' },
+
+        // Social Events (20% weight)
+        { type: 'morale_boost', weight: 7, category: 'social' },
+        { type: 'internal_conflict', weight: 6, category: 'social' },
+        { type: 'celebration', weight: 4, category: 'social' },
+        { type: 'desertion', weight: 3, category: 'social' },
+
+        // Disaster Events (15% weight)
+        { type: 'equipment_failure', weight: 5, category: 'disaster' },
+        { type: 'food_spoilage', weight: 4, category: 'disaster' },
+        { type: 'plague_outbreak', weight: 3, category: 'disaster' },
+        { type: 'raider_attack', weight: 3, category: 'disaster' },
+
+        // Mysterious Events (10% weight)
+        { type: 'strange_signals', weight: 3, category: 'mysterious' },
+        { type: 'ancient_artifact', weight: 3, category: 'mysterious' },
+        { type: 'prophetic_dream', weight: 2, category: 'mysterious' },
+        { type: 'time_anomaly', weight: 2, category: 'mysterious' }
+    ];
+
+    // Filter events based on tribe conditions
+    const availableEvents = events.filter(event => isEventApplicable(event, tribe, state));
+
+    if (availableEvents.length === 0) return null;
+
+    // Weighted random selection
+    const totalWeight = availableEvents.reduce((sum, event) => sum + event.weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (const event of availableEvents) {
+        if (random < event.weight) {
+            return generateEventDetails(event, tribe, state);
+        }
+        random -= event.weight;
+    }
+
+    return null;
+}
+
+// Check if an event is applicable to a tribe
+function isEventApplicable(event: any, tribe: any, state: any): boolean {
+    const totalTroops = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
+    const totalFood = tribe.globalResources?.food || 0;
+    const totalScrap = tribe.globalResources?.scrap || 0;
+    const morale = tribe.globalResources?.morale || 50;
+
+    switch (event.type) {
+        case 'drought':
+        case 'food_spoilage':
+            return totalFood > 10; // Need food to lose
+
+        case 'equipment_failure':
+            return totalScrap > 5; // Need equipment to fail
+
+        case 'desertion':
+            return totalTroops > 5 && morale < 40; // Low morale tribes with troops
+
+        case 'plague_outbreak':
+            return totalTroops > 10; // Need population for plague
+
+        case 'wanderer_joins':
+            return totalTroops < 200; // Don't give to massive tribes
+
+        case 'tech_insight':
+            return (tribe.currentResearch || tribe.researchQueue?.length > 0); // Must be researching
+
+        case 'raider_attack':
+            return totalTroops > 0; // Need troops to be attacked
+
+        default:
+            return true; // Most events are always applicable
+    }
+}
+
+// Generate detailed event information
+function generateEventDetails(event: any, tribe: any, state: any): any {
+    const totalTroops = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
+    const totalFood = tribe.globalResources?.food || 0;
+    const totalScrap = tribe.globalResources?.scrap || 0;
+
+    switch (event.type) {
+        case 'weather_storm':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { scrap: -Math.floor(totalScrap * 0.1 + Math.random() * 5) },
+                message: `⛈️ **SEVERE STORM!** A massive storm system swept through your territories, damaging equipment and structures. Your people weathered it as best they could, but some resources were lost to the elements.`
+            };
+
+        case 'drought':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { food: -Math.floor(totalFood * 0.15 + Math.random() * 10) },
+                message: `🌵 **DROUGHT CONDITIONS!** An extended dry period has affected your food production. Water sources have dwindled and crops have withered. Your tribe must adapt to these harsh conditions.`
+            };
+
+        case 'harsh_winter':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { food: -Math.floor(Math.random() * 8 + 3), morale: -Math.floor(Math.random() * 5 + 2) },
+                message: `❄️ **HARSH WINTER!** An unusually cold season has settled over the wasteland. Your people huddle around fires, consuming extra food for warmth while spirits remain low.`
+            };
+
+        case 'good_weather':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { food: Math.floor(Math.random() * 15 + 5), morale: Math.floor(Math.random() * 8 + 3) },
+                message: `☀️ **FAVORABLE WEATHER!** Perfect conditions have blessed your territories. Crops flourish, hunting is excellent, and your people's spirits soar under clear skies.`
+            };
+
+        case 'resource_discovery':
+            const scrapFound = Math.floor(Math.random() * 25 + 10);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { scrap: scrapFound },
+                message: `💎 **RESOURCE DISCOVERY!** Your scouts have uncovered a cache of valuable materials hidden in the ruins. ${scrapFound} units of scrap have been added to your stockpiles.`
+            };
+
+        case 'ancient_cache':
+            const foodFound = Math.floor(Math.random() * 20 + 10);
+            const weaponsFound = Math.floor(Math.random() * 3 + 1);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { food: foodFound, weapons: weaponsFound },
+                message: `🏺 **ANCIENT CACHE DISCOVERED!** Your people have found a sealed pre-war storage facility containing preserved supplies. Recovered: ${foodFound} food and ${weaponsFound} weapons.`
+            };
+
+        case 'wanderer_joins':
+            const newTroops = Math.floor(Math.random() * 3 + 1);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { troops: newTroops },
+                message: `🚶 **WANDERER JOINS!** A group of ${newTroops} wasteland survivors has approached your tribe, seeking shelter and purpose. They have been welcomed into your ranks.`
+            };
+
+        case 'tech_insight':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { research_boost: 0.2 },
+                message: `💡 **TECHNOLOGICAL INSIGHT!** One of your researchers has made a breakthrough! Current research progress has been significantly accelerated through this moment of inspiration.`
+            };
+
+        case 'morale_boost':
+            const moraleGain = Math.floor(Math.random() * 12 + 8);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { morale: moraleGain },
+                message: `🎉 **TRIBAL CELEBRATION!** Your people have found reason to celebrate - perhaps a successful hunt, a birth, or simply the joy of survival. Morale has improved significantly.`
+            };
+
+        case 'internal_conflict':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { morale: -Math.floor(Math.random() * 8 + 3), troops: -Math.floor(Math.random() * 2 + 1) },
+                message: `⚔️ **INTERNAL STRIFE!** Tensions within your tribe have boiled over into conflict. Some members have left, and overall morale has suffered from the discord.`
+            };
+
+        case 'equipment_failure':
+            const scrapLoss = Math.floor(totalScrap * 0.08 + Math.random() * 8);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { scrap: -scrapLoss },
+                message: `🔧 **EQUIPMENT FAILURE!** Critical machinery has broken down, requiring emergency repairs. ${scrapLoss} units of scrap have been consumed fixing essential equipment.`
+            };
+
+        case 'food_spoilage':
+            const foodLoss = Math.floor(totalFood * 0.12 + Math.random() * 6);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { food: -foodLoss },
+                message: `🦠 **FOOD SPOILAGE!** Poor storage conditions have led to contamination of your food supplies. ${foodLoss} units of food have been lost to spoilage.`
+            };
+
+        case 'plague_outbreak':
+            const troopLoss = Math.floor(totalTroops * 0.05 + Math.random() * 3);
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { troops: -troopLoss, morale: -Math.floor(Math.random() * 6 + 4) },
+                message: `🦠 **PLAGUE OUTBREAK!** A mysterious illness has spread through your population. ${troopLoss} members have been lost, and fear grips the survivors.`
+            };
+
+        case 'strange_signals':
+            return {
+                type: event.type,
+                category: event.category,
+                effects: { exploration_bonus: true },
+                message: `📡 **STRANGE SIGNALS!** Your scouts report unusual electromagnetic readings from the wasteland. These mysterious transmissions might lead to significant discoveries.`
+            };
+
+        default:
+            return null;
+    }
+}
+
+// Apply event effects to a tribe
+function applyEventEffects(tribe: any, event: any, state: any): void {
+    const effects = event.effects;
+
+    // Apply resource changes
+    if (effects.food) {
+        tribe.globalResources.food = Math.max(0, (tribe.globalResources.food || 0) + effects.food);
+    }
+
+    if (effects.scrap) {
+        tribe.globalResources.scrap = Math.max(0, (tribe.globalResources.scrap || 0) + effects.scrap);
+    }
+
+    if (effects.morale) {
+        tribe.globalResources.morale = Math.max(0, Math.min(100, (tribe.globalResources.morale || 50) + effects.morale));
+    }
+
+    // Apply troop changes to home garrison
+    if (effects.troops) {
+        const homeLocation = tribe.location;
+        if (!tribe.garrisons[homeLocation]) {
+            tribe.garrisons[homeLocation] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        tribe.garrisons[homeLocation].troops = Math.max(0, tribe.garrisons[homeLocation].troops + effects.troops);
+    }
+
+    // Apply weapon changes to home garrison
+    if (effects.weapons) {
+        const homeLocation = tribe.location;
+        if (!tribe.garrisons[homeLocation]) {
+            tribe.garrisons[homeLocation] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        tribe.garrisons[homeLocation].weapons = Math.max(0, (tribe.garrisons[homeLocation].weapons || 0) + effects.weapons);
+    }
+
+    // Apply research boost
+    if (effects.research_boost && tribe.currentResearch) {
+        const currentProgress = tribe.researchProgress || 0;
+        const boost = Math.floor(tribe.currentResearch.cost * effects.research_boost);
+        tribe.researchProgress = Math.min(tribe.currentResearch.cost, currentProgress + boost);
+    }
+
+    // Apply special effects
+    if (effects.exploration_bonus) {
+        // Grant temporary exploration bonus (could be used in scout actions)
+        if (!tribe.temporaryEffects) tribe.temporaryEffects = {};
+        tribe.temporaryEffects.exploration_bonus = {
+            duration: 3,
+            appliedTurn: state.turn
+        };
+    }
 }
 
 function trackTribeAbandonment(state: any): void {

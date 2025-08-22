@@ -3,10 +3,12 @@
 const { PrismaClient } = require('@prisma/client');
 
 async function resolveMigration() {
+  console.log('🚀 MIGRATION RESOLVER: Starting migration resolution process...');
   const prisma = new PrismaClient();
-  
+
   try {
-    console.log('🔧 Resolving failed migration...');
+    console.log('🔧 MIGRATION RESOLVER: Connecting to database...');
+    console.log('🔧 MIGRATION RESOLVER: Resolving failed migration...');
     
     // Check if the failed migration exists
     const failedMigration = await prisma.$queryRaw`

@@ -19,7 +19,9 @@ services:
       echo "=== Build complete ==="
     startCommand: |
       cd backend &&
+      echo "🔧 Starting safe migration process..." &&
       npm run db:migrate:safe &&
+      echo "✅ Migration complete, starting server..." &&
       npm start
     envVars:
       - key: NODE_ENV

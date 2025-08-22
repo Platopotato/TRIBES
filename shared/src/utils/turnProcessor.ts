@@ -3735,8 +3735,10 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         }
     }
 
-    // RESEARCH PROGRESS PROCESSING (only if home base exists)
-    if (tribe.currentResearch && tribe.currentResearch.length > 0 && hasHomeBase) {
+    // RESEARCH PROGRESS PROCESSING
+    // Research continues even without home base, but may be less efficient
+    if (tribe.currentResearch && tribe.currentResearch.length > 0) {
+        console.log(`🔬 PROCESSING RESEARCH: ${tribe.tribeName} has ${tribe.currentResearch.length} active research projects`);
         const completedProjects: string[] = [];
 
         // Process each research project
@@ -3745,12 +3747,21 @@ function processBasicUpkeep(tribe: any, state?: any): void {
             const researchResult = processTechnologyProgress(tribe, project);
 
             if (researchResult.message) {
-                tribe.lastTurnResults.push({
-                    id: `research-progress-${tribe.id}-${project.techId}`,
+                const resultEntry = {
+                    id: `research-progress-${tribe.id}-${project.techId}-${Date.now()}`,
                     actionType: ActionType.Technology,
-                    actionData: {},
+                    actionData: { techId: project.techId, location: project.location },
                     result: researchResult.message
-                });
+                };
+
+                tribe.lastTurnResults.push(resultEntry);
+
+                // Enhanced logging for research completion
+                if (researchResult.completed) {
+                    console.log(`🎓 RESEARCH COMPLETED: ${tribe.tribeName} finished ${project.techId} at ${project.location}`);
+                } else {
+                    console.log(`🔬 RESEARCH PROGRESS: ${tribe.tribeName} advancing ${project.techId} at ${project.location}`);
+                }
             }
 
             // Update research state
@@ -3758,15 +3769,23 @@ function processBasicUpkeep(tribe: any, state?: any): void {
                 tribe.completedTechs = tribe.completedTechs || [];
                 tribe.completedTechs.push(project.techId);
                 completedProjects.push(project.techId);
+
+                console.log(`✅ TECH COMPLETED: ${tribe.tribeName} now has ${tribe.completedTechs.length} completed technologies`);
             } else if (researchResult.newProgress !== undefined) {
                 tribe.currentResearch[i].progress = researchResult.newProgress;
             }
         }
 
         // Remove completed projects
+        const beforeCount = tribe.currentResearch.length;
         tribe.currentResearch = tribe.currentResearch.filter((project: ResearchProject) =>
             !completedProjects.includes(project.techId)
         );
+        const afterCount = tribe.currentResearch.length;
+
+        if (completedProjects.length > 0) {
+            console.log(`🎓 RESEARCH CLEANUP: ${tribe.tribeName} completed ${completedProjects.length} projects, removed from active research (${beforeCount} → ${afterCount})`);
+        }
     }
 
     // Check for tribe elimination (no garrisons remaining)
@@ -4208,22 +4227,43 @@ function processTechnologyProgress(tribe: any, project: ResearchProject): { mess
     if (!tech) {
         // Research cancelled due to missing tech data
         tribe.currentResearch = null;
+        console.log(`❌ RESEARCH ERROR: Technology ${project.techId} not found for ${tribe.tribeName}`);
         return { message: `❌ Research cancelled: Technology data not found.`, completed: true };
     }
 
-    const progressThisTurn = Math.floor(project.assignedTroops * 1);
+    // Base research progress: 1 point per troop per turn
+    let progressThisTurn = Math.floor(project.assignedTroops * 1);
+
+    // Apply home base efficiency modifier
+    const hasHomeBase = tribe.garrisons[tribe.location];
+    if (!hasHomeBase) {
+        // Research is 50% less efficient without home base
+        progressThisTurn = Math.floor(progressThisTurn * 0.5);
+        console.log(`🏠 RESEARCH PENALTY: ${tribe.tribeName} research efficiency reduced due to lost home base`);
+    }
+
     const newProgress = project.progress + progressThisTurn;
+
+    console.log(`🔬 RESEARCH DEBUG: ${tribe.tribeName} - ${tech.name}:`, {
+        currentProgress: project.progress,
+        progressThisTurn,
+        newProgress,
+        requiredPoints: tech.researchPoints,
+        assignedTroops: project.assignedTroops,
+        willComplete: newProgress >= tech.researchPoints
+    });
 
     if (newProgress >= tech.researchPoints) {
         // Research completed! Generate narrative description
         const completionNarrative = generateResearchCompletionNarrative(tech, project);
+        console.log(`🎓 RESEARCH COMPLETION: ${tribe.tribeName} completed ${tech.name}!`);
         return {
             message: completionNarrative,
             completed: true
         };
     } else {
         // Research continues
-        const progressNarrative = generateResearchProgressNarrative(tech, project, newProgress);
+        const progressNarrative = generateResearchProgressNarrative(tech, project, newProgress, tribe);
         return {
             message: progressNarrative,
             newProgress: newProgress
@@ -4273,14 +4313,18 @@ function generateResearchCompletionNarrative(tech: any, project: any): string {
     return `🎓 **RESEARCH COMPLETE!** Your scholars at ${project.location} have successfully mastered **${tech.name}**. ${tech.description}${effectText}`;
 }
 
-function generateResearchProgressNarrative(tech: any, project: any, newProgress: number): string {
+function generateResearchProgressNarrative(tech: any, project: any, newProgress: number, tribe?: any): string {
     const progressPercent = Math.floor((newProgress / tech.researchPoints) * 100);
 
+    // Check for home base penalty
+    const hasHomeBase = tribe?.garrisons?.[tribe.location];
+    const penaltyNote = !hasHomeBase ? " ⚠️ Research efficiency reduced without home base." : "";
+
     const progressNarratives: string[] = [
-        `🔬 Research on ${tech.name} progresses steadily at ${project.location}. Your ${project.assignedTroops} researchers work tirelessly, making incremental discoveries. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
-        `📚 The research team at ${project.location} continues their work on ${tech.name}. Ancient texts are studied, experiments conducted, and knowledge slowly accumulates. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
-        `🧪 Your scholars at ${project.location} delve deeper into the mysteries of ${tech.name}. Each day brings new insights and brings them closer to a breakthrough. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`,
-        `📖 The research into ${tech.name} at ${project.location} shows promising results. Your ${project.assignedTroops} dedicated researchers are methodically unlocking its secrets. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)`
+        `🔬 Research on ${tech.name} progresses steadily at ${project.location}. Your ${project.assignedTroops} researchers work tirelessly, making incremental discoveries. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)${penaltyNote}`,
+        `📚 The research team at ${project.location} continues their work on ${tech.name}. Ancient texts are studied, experiments conducted, and knowledge slowly accumulates. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)${penaltyNote}`,
+        `🧪 Your scholars at ${project.location} delve deeper into the mysteries of ${tech.name}. Each day brings new insights and brings them closer to a breakthrough. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)${penaltyNote}`,
+        `📖 The research into ${tech.name} at ${project.location} shows promising results. Your ${project.assignedTroops} dedicated researchers are methodically unlocking its secrets. (${newProgress}/${tech.researchPoints} progress, ${progressPercent}% complete)${penaltyNote}`
     ];
 
     return progressNarratives[Math.floor(Math.random() * progressNarratives.length)];

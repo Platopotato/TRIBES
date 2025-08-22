@@ -78,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [plannedActions, setPlannedActions] = useState<GameAction[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Backup planned actions to localStorage to prevent loss
+  // Backup planned actions to localStorage to prevent loss - Production Deploy
   useEffect(() => {
     if (plannedActions.length > 0 && playerTribe && !playerTribe.turnSubmitted) {
       const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;

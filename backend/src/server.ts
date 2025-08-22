@@ -45,8 +45,8 @@ async function resolveMigrationIssues() {
       } else {
         console.log('✅ SERVER STARTUP: No failed migrations found');
       }
-    } catch (migrationError) {
-      console.log('⚠️ SERVER STARTUP: Could not check migration table:', migrationError.message);
+    } catch (migrationError: any) {
+      console.log('⚠️ SERVER STARTUP: Could not check migration table:', migrationError?.message || migrationError);
     }
 
     // Add column if missing - this is critical for app functionality
@@ -71,8 +71,8 @@ async function resolveMigrationIssues() {
       } else {
         console.log('✅ SERVER STARTUP: Column already exists');
       }
-    } catch (columnError) {
-      console.error('❌ SERVER STARTUP: CRITICAL - Failed to add column:', columnError.message);
+    } catch (columnError: any) {
+      console.error('❌ SERVER STARTUP: CRITICAL - Failed to add column:', columnError?.message || columnError);
       console.error('❌ SERVER STARTUP: App database writes may fail!');
     }
 
@@ -83,8 +83,8 @@ async function resolveMigrationIssues() {
         SELECT "maxActionsOverride" FROM "tribes" LIMIT 1
       `;
       console.log('✅ SERVER STARTUP: Database schema verification successful');
-    } catch (verifyError) {
-      console.error('❌ SERVER STARTUP: Schema verification failed:', verifyError.message);
+    } catch (verifyError: any) {
+      console.error('❌ SERVER STARTUP: Schema verification failed:', verifyError?.message || verifyError);
       console.error('❌ SERVER STARTUP: Database writes may still fail!');
     }
 
@@ -96,7 +96,6 @@ async function resolveMigrationIssues() {
     // Don't exit - let the server try to start anyway
     console.log('⚠️ SERVER STARTUP: Continuing with server startup despite migration error...');
   }
-}
 }
 
 // Import shared types and utilities

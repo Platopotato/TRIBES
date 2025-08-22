@@ -272,7 +272,17 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
     // Chief bonus: +1 action per chief
     const chiefBonus = totalChiefs;
 
-    return baseActions + troopBonus + leadershipBonus + chiefBonus;
+    // BONUS TURN ACTIONS: +2 actions per bonus turn (vault discovery bonus)
+    const bonusTurnActions = (playerTribe.bonusTurns || 0) * 2;
+
+    const totalActions = baseActions + troopBonus + leadershipBonus + chiefBonus + bonusTurnActions;
+
+    // Log action calculation for debugging
+    if (bonusTurnActions > 0) {
+      console.log(`🎯 ACTION CALCULATION: Base(${baseActions}) + Troops(${troopBonus}) + Leadership(${leadershipBonus}) + Chiefs(${chiefBonus}) + BonusTurns(${bonusTurnActions}) = ${totalActions}`);
+    }
+
+    return totalActions;
   }, [playerTribe, totalTroops, totalChiefs]);
 
   // Consistent journey labels (A, B, C, ...) for the player's journeys
@@ -1001,6 +1011,19 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   </div>
                   <div className="text-blue-100 text-sm text-center mt-1">
                     Your planned actions were automatically recovered from backup.
+                  </div>
+                </div>
+              )}
+
+              {/* Bonus Turn Active Message */}
+              {playerTribe?.bonusTurns && playerTribe.bonusTurns > 0 && (
+                <div className="mt-4 bg-gradient-to-r from-amber-600/90 to-orange-600/90 border border-amber-400 p-4 rounded-lg animate-pulse">
+                  <div className="text-white font-bold text-center">
+                    🎯 BONUS TURN ACTIVE!
+                  </div>
+                  <div className="text-amber-100 text-sm text-center mt-1">
+                    You have {playerTribe.bonusTurns} bonus turn{playerTribe.bonusTurns > 1 ? 's' : ''} remaining!
+                    Extra actions available: +{(playerTribe.bonusTurns || 0) * 2}
                   </div>
                 </div>
               )}

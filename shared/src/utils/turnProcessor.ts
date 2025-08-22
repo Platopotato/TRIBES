@@ -4554,6 +4554,10 @@ function processVaultDiscovery(attackerTribe: any, location: string, state: any)
     if (!attackerTribe.bonusTurns) attackerTribe.bonusTurns = 0;
     attackerTribe.bonusTurns += 2;
 
+    // Track the source of bonus turns for proper messaging
+    if (!attackerTribe.bonusTurnSource) attackerTribe.bonusTurnSource = [];
+    attackerTribe.bonusTurnSource.push({ source: 'vault', count: 2, location: location });
+
     // Random asset discovery (50% chance)
     let assetReward = '';
     if (Math.random() < 0.5) {
@@ -4646,6 +4650,10 @@ function processVaultDiscoveryScavenging(tribe: any, location: string, state: an
     if (!tribe.bonusTurns) tribe.bonusTurns = 0;
     tribe.bonusTurns += 2;
 
+    // Track the source of bonus turns for proper messaging
+    if (!tribe.bonusTurnSource) tribe.bonusTurnSource = [];
+    tribe.bonusTurnSource.push({ source: 'vault', count: 2, location: location });
+
     // Random asset discovery (40% chance - slightly lower than attack)
     let assetReward = '';
     if (Math.random() < 0.4) {
@@ -4731,6 +4739,10 @@ function processBanditConquest(attackerTribe: any, defeatedTribe: any, location:
     if (!attackerTribe.bonusTurns) attackerTribe.bonusTurns = 0;
     attackerTribe.bonusTurns += 1;
 
+    // Track the source of bonus turns for proper messaging
+    if (!attackerTribe.bonusTurnSource) attackerTribe.bonusTurnSource = [];
+    attackerTribe.bonusTurnSource.push({ source: 'bandit', count: 1, location: location });
+
     // Generate epic conquest narrative
     const conquestMessage = `🏴‍☠️ **BANDIT CAMP CONQUERED!**
 
@@ -4747,7 +4759,7 @@ Your forces have successfully destroyed the ${defeatedTribe.tribeName} and claim
     return conquestMessage;
 }
 
-// Process bonus turns from bandit conquests
+// Process bonus turns from various sources (vaults, bandit conquests, etc.)
 function processBonusTurns(state: any): void {
     state.tribes.forEach((tribe: any) => {
         if (tribe.bonusTurns && tribe.bonusTurns > 0) {
@@ -4758,17 +4770,34 @@ function processBonusTurns(state: any): void {
             // Reduce bonus turn count
             tribe.bonusTurns -= 1;
 
+            // Determine the source of the bonus turn for proper messaging
+            let bonusMessage = `🎯 **BONUS TURN ACTIVE!** Plan and execute additional actions. Use this advantage wisely!`;
+
+            if (tribe.bonusTurnSource && tribe.bonusTurnSource.length > 0) {
+                const source = tribe.bonusTurnSource[0]; // Get the first/oldest source
+
+                if (source.source === 'vault') {
+                    bonusMessage = `🏛️ **VAULT DISCOVERY BONUS TURN!** Your breakthrough at the ancient vault grants you an additional turn to capitalize on this incredible find. Plan wisely!`;
+                } else if (source.source === 'bandit') {
+                    bonusMessage = `🏴‍☠️ **BANDIT CONQUEST BONUS TURN!** Your victory over the bandit camp grants you an additional turn to press your advantage. Strike while the iron is hot!`;
+                }
+
+                // Remove the used source
+                tribe.bonusTurnSource.shift();
+            }
+
             // Add notification about bonus turn
             tribe.lastTurnResults.push({
                 id: `bonus-turn-${tribe.id}-${Date.now()}`,
                 actionType: ActionType.Upkeep,
                 actionData: {},
-                result: `🎯 **BONUS TURN ACTIVE!** Your conquest of the bandit camp grants you an additional turn to plan and execute actions. Plan wisely!`
+                result: bonusMessage
             });
 
             // Clean up bonus turns if none remaining
             if (tribe.bonusTurns <= 0) {
                 delete tribe.bonusTurns;
+                delete tribe.bonusTurnSource; // Clean up source tracking
             }
         }
     });

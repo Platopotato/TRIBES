@@ -199,6 +199,26 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
                                 );
                             })}
                         </g>
+
+                        {/* Data Points */}
+                        <g>
+                            {chartData.map(([tribeId, data]) => {
+                                const isHovered = hoveredTribeId === tribeId;
+                                return data.map((point, index) => (
+                                    <circle
+                                        key={`${tribeId}-${index}`}
+                                        cx={xScale(point.turn)}
+                                        cy={yScale(point.score)}
+                                        r={isHovered ? 6 : 4}
+                                        fill={tribeColorMap.get(tribeId) || '#A0AEC0'}
+                                        stroke="white"
+                                        strokeWidth={isHovered ? 2 : 1}
+                                        className="transition-all duration-200"
+                                        opacity={hoveredTribeId === null || isHovered ? 1 : 0.7}
+                                    />
+                                ));
+                            })}
+                        </g>
                     </svg>
                 </div>
                 <aside className="lg:w-56 flex-shrink-0">

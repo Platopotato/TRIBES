@@ -166,7 +166,8 @@ function pathBlockedByHostileOutpost(path: string[], tribe: any, state: any, ign
     if (!ownerId) continue;
     const owner = state.tribes.find((t: any) => t.id === ownerId);
     if (!owner) continue;
-    if (!isAllied(tribe, owner)) {
+    // Allow passage if tribe owns the outpost or is allied with the owner
+    if (tribe.id !== ownerId && !isAllied(tribe, owner)) {
       return { blockedAt: key, ownerId };
     }
   }

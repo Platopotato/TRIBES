@@ -525,6 +525,11 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     const turnRecord = detailedHistory.find(record => record.turn === targetTurn);
 
     if (!turnRecord) {
+      // If no detailed history exists, generate summary from current game state
+      if (detailedHistory.length === 0 && turnsBack === 1) {
+        return generateCurrentStateNewsletter();
+      }
+
       return {
         error: `No detailed history found for turn ${targetTurn}`,
         availableTurns: detailedHistory.map(r => r.turn)
@@ -572,6 +577,69 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     };
 
     return newsletterData;
+  };
+
+  const generateCurrentStateNewsletter = () => {
+    // Generate newsletter summary from current game state when no detailed history exists
+    const currentTurn = gameState.turn;
+
+    // Calculate scores and rank tribes
+    const tribesWithScores = allTribes.map(tribe => {
+      const troops = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
+      const garrisons = Object.keys(tribe.garrisons || {}).length;
+      const chiefs = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
+      const chiefNames = Object.values(tribe.garrisons || {})
+        .flatMap(garrison => garrison.chiefs || [])
+        .map(chief => chief.name);
+
+      // Simple score calculation (can be improved)
+      const score = troops * 10 + garrisons * 50 + chiefs * 100 + (tribe.globalResources?.food || 0) + (tribe.globalResources?.scrap || 0);
+
+      return {
+        name: tribe.tribeName,
+        player: tribe.playerName,
+        isAI: tribe.isAI || false,
+        rank: 0, // Will be set after sorting
+        score,
+        troops,
+        garrisons,
+        chiefs,
+        chiefNames,
+        actions: tribe.lastTurnResults.map(result => ({
+          type: result.actionType,
+          location: result.actionData?.location || 'Unknown',
+          result: result.result || 'No result',
+          success: !result.result?.includes('failed') && !result.result?.includes('error'),
+          resourcesSpent: {},
+          resourcesGained: {},
+          troopsInvolved: 0
+        })),
+        majorEvents: [],
+        resourceChanges: {
+          food: { before: 0, after: tribe.globalResources?.food || 0, change: 0 },
+          scrap: { before: 0, after: tribe.globalResources?.scrap || 0, change: 0 },
+          morale: { before: 50, after: tribe.globalResources?.morale || 50, change: 0 }
+        },
+        territoryChanges: { gained: [], lost: [], netChange: 0 },
+        militaryChanges: { troopsGained: 0, troopsLost: 0, weaponsGained: 0, weaponsLost: 0, netTroopChange: 0, netWeaponChange: 0 },
+        researchProgress: { started: [], completed: [], ongoing: tribe.currentResearch?.map(r => r.name) || [] },
+        diplomaticEvents: []
+      };
+    }).sort((a, b) => b.score - a.score).map((tribe, index) => ({ ...tribe, rank: index + 1 }));
+
+    return {
+      turn: currentTurn,
+      summary: `Current game state summary for Turn ${currentTurn}. ${tribesWithScores.filter(t => !t.isAI).length} player tribes and ${tribesWithScores.filter(t => t.isAI).length} AI tribes are active.`,
+      globalEvents: ['Game in progress - detailed history will be available after turn processing'],
+      tribes: tribesWithScores,
+      statistics: {
+        totalActions: tribesWithScores.reduce((sum, tribe) => sum + tribe.actions.length, 0),
+        researchCompletions: 0,
+        majorEvents: 0,
+        activePlayers: tribesWithScores.filter(t => !t.isAI).length,
+        aiTribes: tribesWithScores.filter(t => t.isAI).length
+      }
+    };
   };
 
   const generateTurnSummary = (turnsBack: number = 1) => {

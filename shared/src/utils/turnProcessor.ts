@@ -640,10 +640,13 @@ function processRandomEvents(state: any): void {
         // Skip eliminated tribes
         if (tribe.eliminated) return;
 
-        // Base chance for random events (10% per tribe per turn)
-        const EVENT_CHANCE = 0.10;
+        // Increased chance for random events (25% per tribe per turn for better visibility)
+        const EVENT_CHANCE = 0.25;
+
+        console.log(`🎲 Checking random events for ${tribe.tribeName} (${(EVENT_CHANCE * 100).toFixed(0)}% chance)...`);
 
         if (Math.random() < EVENT_CHANCE) {
+            console.log(`🎲 Event triggered for ${tribe.tribeName}, generating event...`);
             const event = generateRandomEvent(tribe, state);
             if (event) {
                 // Apply event effects
@@ -657,8 +660,12 @@ function processRandomEvents(state: any): void {
                     result: event.message
                 });
 
-                console.log(`🎲 Random event for ${tribe.tribeName}: ${event.type}`);
+                console.log(`🎲 ✅ Random event applied to ${tribe.tribeName}: ${event.type}`);
+            } else {
+                console.log(`🎲 ❌ No applicable events found for ${tribe.tribeName}`);
             }
+        } else {
+            console.log(`🎲 No event triggered for ${tribe.tribeName} this turn`);
         }
     });
 }
@@ -700,7 +707,11 @@ function generateRandomEvent(tribe: any, state: any): any {
     // Filter events based on tribe conditions
     const availableEvents = events.filter(event => isEventApplicable(event, tribe, state));
 
-    if (availableEvents.length === 0) return null;
+    console.log(`🎲 ${tribe.tribeName}: ${availableEvents.length}/${events.length} events available`);
+    if (availableEvents.length === 0) {
+        console.log(`🎲 ${tribe.tribeName}: No applicable events (troops: ${Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) => sum + garrison.troops, 0)}, food: ${tribe.globalResources?.food || 0}, scrap: ${tribe.globalResources?.scrap || 0}, morale: ${tribe.globalResources?.morale || 50})`);
+        return null;
+    }
 
     // Weighted random selection
     const totalWeight = availableEvents.reduce((sum, event) => sum + event.weight, 0);

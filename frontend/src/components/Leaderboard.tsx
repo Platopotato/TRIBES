@@ -32,12 +32,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
 
             // Get previous turn rank from history
             let previousRank = null;
-            let rankChange = null;
             if (gameState.history && gameState.history.length > 0) {
                 const lastTurnHistory = gameState.history[gameState.history.length - 1];
-                const tribeRecord = lastTurnHistory.tribeRecords.find(record => record.tribeId === tribe.id);
+                // Calculate ranks from scores since TribeHistoryRecord doesn't store rank
+                const sortedRecords = lastTurnHistory.tribeRecords
+                    .sort((a, b) => b.score - a.score);
+                const tribeRecord = sortedRecords.find(record => record.tribeId === tribe.id);
                 if (tribeRecord) {
-                    previousRank = tribeRecord.rank;
+                    previousRank = sortedRecords.indexOf(tribeRecord) + 1;
                 }
             }
 

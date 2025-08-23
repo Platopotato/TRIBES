@@ -22,13 +22,10 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
     }, [tribes]);
 
     const { chartData, maxScore, turnDomain } = useMemo(() => {
-        if (history.length < 1) {
-            return { chartData: [], maxScore: 0, turnDomain: [1, 1] };
-        }
-
         const dataByTribe: { [key: string]: { turn: number, score: number }[] } = {};
         let maxS = 0;
 
+        // Process historical data
         history.forEach(turnRecord => {
             if (!turnRecord.tribeRecords) {
                 console.warn('📊 Missing tribeRecords in turn:', turnRecord);
@@ -46,8 +43,40 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             });
         });
 
-        const firstTurn = history[0]?.turn || 1;
-        const lastTurn = history[history.length - 1]?.turn || 1;
+        // Add current turn data for all tribes to ensure we have at least 2 points for graphing
+        tribes.forEach(tribe => {
+            if (!dataByTribe[tribe.id]) {
+                dataByTribe[tribe.id] = [];
+            }
+
+            // Add current turn data point
+            const currentScore = tribe.score || 0;
+            const currentTurn = history.length > 0 ? (history[history.length - 1]?.turn || 1) + 1 : 1;
+
+            // Only add if we don't already have this turn's data
+            const hasCurrentTurn = dataByTribe[tribe.id].some(point => point.turn === currentTurn);
+            if (!hasCurrentTurn) {
+                dataByTribe[tribe.id].push({ turn: currentTurn, score: currentScore });
+                if (currentScore > maxS) {
+                    maxS = currentScore;
+                }
+            }
+
+            // If we still only have 1 data point, add a previous turn with same score for continuity
+            if (dataByTribe[tribe.id].length === 1) {
+                const prevTurn = Math.max(1, currentTurn - 1);
+                dataByTribe[tribe.id].unshift({ turn: prevTurn, score: currentScore });
+            }
+        });
+
+        const firstTurn = Math.min(
+            ...Object.values(dataByTribe).flatMap(data => data.map(p => p.turn)),
+            1
+        );
+        const lastTurn = Math.max(
+            ...Object.values(dataByTribe).flatMap(data => data.map(p => p.turn)),
+            1
+        );
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,

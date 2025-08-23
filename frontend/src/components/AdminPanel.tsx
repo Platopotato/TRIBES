@@ -625,11 +625,13 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         researchProgress: {
           started: [],
           completed: [],
-          ongoing: Array.isArray(tribe.currentResearch)
-            ? tribe.currentResearch.map(r => r.techId)
-            : tribe.currentResearch
-              ? [tribe.currentResearch.techId]
-              : []
+          ongoing: (() => {
+            if (!tribe.currentResearch) return [];
+            if (Array.isArray(tribe.currentResearch)) {
+              return tribe.currentResearch.map((r: any) => r.techId);
+            }
+            return [(tribe.currentResearch as any).techId];
+          })()
         },
         diplomaticEvents: []
       };

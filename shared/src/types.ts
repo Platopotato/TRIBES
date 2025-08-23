@@ -259,6 +259,7 @@ export enum ActionType {
   Sabotage = 'Sabotage',
   Upkeep = 'Upkeep', // Not user-selectable, for results only
   Technology = 'Technology', // Not user-selectable, for results only
+  RandomEvent = 'Random Event', // Not user-selectable, for random events only
   RespondToTrade = 'Respond to Trade',
   ReleasePrisoner = 'Release Prisoner',
   ExchangePrisoners = 'Exchange Prisoners',

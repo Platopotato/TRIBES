@@ -655,7 +655,7 @@ function processRandomEvents(state: any): void {
                 // Add event to turn results
                 tribe.lastTurnResults.push({
                     id: `random-event-${Date.now()}-${Math.random()}`,
-                    actionType: ActionType.Upkeep,
+                    actionType: ActionType.RandomEvent,
                     actionData: {},
                     result: event.message
                 });

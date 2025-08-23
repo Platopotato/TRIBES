@@ -752,7 +752,11 @@ function isEventApplicable(event: any, tribe: any, state: any): boolean {
             return totalTroops < 200; // Don't give to massive tribes
 
         case 'tech_insight':
-            return (tribe.currentResearch || tribe.researchQueue?.length > 0); // Must be researching
+            // Must be researching - handle both array and single object cases
+            const hasResearch = Array.isArray(tribe.currentResearch)
+                ? tribe.currentResearch.length > 0
+                : !!tribe.currentResearch;
+            return hasResearch || (tribe.researchQueue?.length > 0);
 
         case 'raider_attack':
             return totalTroops > 0; // Need troops to be attacked

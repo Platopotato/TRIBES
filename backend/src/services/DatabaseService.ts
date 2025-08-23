@@ -752,7 +752,7 @@ export class DatabaseService {
 
     // This is a simplified conversion - in a real implementation,
     // you'd need to properly convert all the nested structures
-    return {
+    const convertedGameState: GameState = {
       mapData: dbGameState.hexes.map((hex: any) => ({
         q: hex.q,
         r: hex.r,
@@ -833,6 +833,8 @@ export class DatabaseService {
 
     const endTime = Date.now();
     console.log(`✅ DB CONVERSION: Completed in ${endTime - startTime}ms`);
+
+    return convertedGameState;
   }
 
   private async validateAndCleanGameState(gameState: GameState): Promise<GameState> {

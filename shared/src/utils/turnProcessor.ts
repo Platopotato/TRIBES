@@ -5264,6 +5264,11 @@ function generateDetailedTurnHistory(state: any, tribesWithScores: any[]): any {
         // Extract major events and diplomatic events
         const { majorEvents, diplomaticEvents } = extractSignificantEvents(tribe);
 
+        // Extract chief names from all garrisons
+        const chiefNames = Object.values(tribe.garrisons || {})
+            .flatMap((garrison: any) => garrison.chiefs || [])
+            .map((chief: any) => chief.name);
+
         return {
             tribeId: tribe.id,
             tribeName: tribe.tribeName,
@@ -5274,6 +5279,7 @@ function generateDetailedTurnHistory(state: any, tribesWithScores: any[]): any {
             troops: tribeData.troops,
             garrisons: tribeData.garrisons,
             chiefs: tribeData.chiefs,
+            chiefNames: chiefNames,
             rank: index + 1,
             actions,
             majorEvents,

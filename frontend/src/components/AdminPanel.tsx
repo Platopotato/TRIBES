@@ -542,6 +542,10 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         isAI: tribe.isAI,
         rank: tribe.rank,
         score: tribe.score,
+        troops: tribe.troops,
+        garrisons: tribe.garrisons,
+        chiefs: tribe.chiefs,
+        chiefNames: tribe.chiefNames || [],
         actions: tribe.actions.map(action => ({
           type: action.actionType,
           location: action.location,
@@ -2455,6 +2459,11 @@ GAME STATISTICS:
                                   {tribe.isAI && <span className="text-xs bg-blue-600 px-2 py-1 rounded ml-2">AI</span>}
                                 </h4>
                                 <p className="text-sm text-neutral-400">Player: {tribe.player}</p>
+                                <div className="flex items-center space-x-4 mt-2 text-sm">
+                                  <span className="text-blue-300">👥 {tribe.troops || 0} troops</span>
+                                  <span className="text-purple-300">🏛️ {tribe.garrisons || 0} garrisons</span>
+                                  <span className="text-yellow-300">👑 {tribe.chiefs || 0} chiefs</span>
+                                </div>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-green-400">{tribe.score}</div>
@@ -2497,6 +2506,16 @@ GAME STATISTICS:
                               </div>
                             )}
 
+                            {/* Chiefs */}
+                            {tribe.chiefNames && tribe.chiefNames.length > 0 && (
+                              <div className="mb-3">
+                                <h5 className="font-semibold text-yellow-300 mb-2">👑 Chiefs & Leaders</h5>
+                                <div className="text-sm text-neutral-300">
+                                  {tribe.chiefNames.join(', ')}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Research Progress */}
                             {(tribe.researchProgress.completed.length > 0 || tribe.researchProgress.started.length > 0) && (
                               <div className="mb-3">
@@ -2523,9 +2542,9 @@ GAME STATISTICS:
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                               <div>
                                 <h6 className="font-semibold text-amber-300">Resources</h6>
-                                <div>Food: {tribe.resourceChanges.food.change > 0 ? '+' : ''}{tribe.resourceChanges.food.change}</div>
-                                <div>Scrap: {tribe.resourceChanges.scrap.change > 0 ? '+' : ''}{tribe.resourceChanges.scrap.change}</div>
-                                <div>Morale: {tribe.resourceChanges.morale.change > 0 ? '+' : ''}{tribe.resourceChanges.morale.change}</div>
+                                <div>🍖 Food: <span className="text-green-400">{tribe.resourceChanges.food.after}</span> ({tribe.resourceChanges.food.change > 0 ? '+' : ''}{tribe.resourceChanges.food.change})</div>
+                                <div>🔧 Scrap: <span className="text-blue-400">{tribe.resourceChanges.scrap.after}</span> ({tribe.resourceChanges.scrap.change > 0 ? '+' : ''}{tribe.resourceChanges.scrap.change})</div>
+                                <div>😊 Morale: <span className="text-purple-400">{tribe.resourceChanges.morale.after}</span> ({tribe.resourceChanges.morale.change > 0 ? '+' : ''}{tribe.resourceChanges.morale.change})</div>
                               </div>
                               <div>
                                 <h6 className="font-semibold text-amber-300">Territory</h6>

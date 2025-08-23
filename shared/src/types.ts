@@ -429,6 +429,7 @@ export interface DetailedTribeHistoryRecord extends TribeHistoryRecord {
     playerName: string;
     isAI: boolean;
     aiType?: AIType;
+    chiefNames: string[];
     actions: DetailedActionRecord[];
     majorEvents: string[];
     resourceChanges: {

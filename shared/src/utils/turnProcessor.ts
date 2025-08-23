@@ -424,16 +424,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // CRITICAL FIX: Filter out any undefined values from exploredHexes
         tribe.exploredHexes = (tribe.exploredHexes || []).filter(hex => hex !== undefined && hex !== null);
 
-        // DEBUG: Add debugging info about action processing
-        const actionCount = (tribe.actions || []).length;
-        if (actionCount > 0) {
-            tribe.lastTurnResults.push({
-                id: `debug-${tribe.id}`,
-                actionType: ActionType.Upkeep,
-                actionData: {},
-                result: `🔍 DEBUG: Starting to process ${actionCount} actions for ${tribe.tribeName}`
-            });
-        }
+
 
         // Process each action
         for (const action of tribe.actions || []) {

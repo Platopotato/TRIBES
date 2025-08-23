@@ -622,7 +622,15 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         },
         territoryChanges: { gained: [], lost: [], netChange: 0 },
         militaryChanges: { troopsGained: 0, troopsLost: 0, weaponsGained: 0, weaponsLost: 0, netTroopChange: 0, netWeaponChange: 0 },
-        researchProgress: { started: [], completed: [], ongoing: tribe.currentResearch?.map(r => r.techId) || [] },
+        researchProgress: {
+          started: [],
+          completed: [],
+          ongoing: Array.isArray(tribe.currentResearch)
+            ? tribe.currentResearch.map(r => r.techId)
+            : tribe.currentResearch
+              ? [tribe.currentResearch.techId]
+              : []
+        },
         diplomaticEvents: []
       };
     }).sort((a, b) => b.score - a.score).map((tribe, index) => ({ ...tribe, rank: index + 1 }));

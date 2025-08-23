@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { TurnHistoryRecord, Tribe } from '@radix-tribes/shared';
+import { calculateTribeScore } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
 
@@ -50,7 +51,7 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             }
 
             // Add current turn data point
-            const currentScore = tribe.score || 0;
+            const currentScore = calculateTribeScore(tribe);
             const currentTurn = history.length > 0 ? (history[history.length - 1]?.turn || 1) + 1 : 1;
 
             // Only add if we don't already have this turn's data

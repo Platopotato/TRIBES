@@ -102,32 +102,20 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         sampleHistory: history.slice(0, 2)
     });
 
-    if (history.length < 1) {
+    if (chartData.length < 1) {
         return (
             <Card title="📈 Tribal Growth Trends">
                 <div className="h-96 flex items-center justify-center">
                     <div className="text-center">
-                        <p className="text-slate-400 italic mb-2">No historical data available yet.</p>
-                        <p className="text-slate-500 text-sm">Charts will appear after the first turn is processed.</p>
+                        <p className="text-slate-400 italic mb-2">No tribal data available.</p>
+                        <p className="text-slate-500 text-sm">Charts will appear when tribes are present.</p>
                     </div>
                 </div>
             </Card>
         );
     }
 
-    if (history.length < 2) {
-        return (
-            <Card title="📈 Tribal Growth Trends">
-                <div className="h-96 flex items-center justify-center">
-                    <div className="text-center">
-                        <p className="text-slate-400 italic mb-2">Building historical data...</p>
-                        <p className="text-slate-500 text-sm">Growth trends will appear after turn {history[0]?.turn + 1 || 2}.</p>
-                        <p className="text-slate-600 text-xs mt-2">Current: Turn {history[0]?.turn || 1} recorded</p>
-                    </div>
-                </div>
-            </Card>
-        );
-    }
+
     
     const margin = { top: 20, right: 20, bottom: 40, left: 60 };
     const width = 800; // Fixed width for SVG coordinate system

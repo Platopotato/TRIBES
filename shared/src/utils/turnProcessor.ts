@@ -200,8 +200,33 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         },
     };
 
+    // TECHNOLOGIES: Apply completed research effects
+    for (const techId of tribe.completedTechs || []) {
+        const tech = getTechnology(techId);
+        if (!tech) continue;
+        for (const e of tech.effects) {
+            switch (e.type) {
+                case TechnologyEffectType.MovementSpeedBonus:
+                    effects.movementSpeedBonus *= (1 + e.value);
+                    break;
+                case TechnologyEffectType.ScavengeYieldBonus:
+                    if (e.resource) effects.scavengeBonuses[e.resource] += e.value;
+                    break;
+                case TechnologyEffectType.CombatBonusAttack:
+                    effects.globalCombatAttackBonus += e.value;
+                    break;
+                case TechnologyEffectType.CombatBonusDefense:
+                    if (e.terrain) {
+                        effects.terrainDefenseBonus[e.terrain] = (effects.terrainDefenseBonus[e.terrain] || 0) + e.value;
+                    } else {
+                        effects.globalCombatDefenseBonus += e.value;
+                    }
+                    break;
+            }
+        }
+    }
 
-    // Assets
+    // ASSETS: Apply asset effects
     for (const assetName of tribe.assets || []) {
         const asset = getAsset(assetName);
         if (!asset) continue;
@@ -233,6 +258,25 @@ function getCombinedEffects(tribe: any): CombinedEffects {
     }
 
     return effects;
+}
+
+// Calculate visibility range bonuses from technologies
+function getVisibilityRangeBonus(tribe: any): number {
+    let bonus = 0;
+
+    // Check completed technologies for visibility bonuses
+    for (const techId of tribe.completedTechs || []) {
+        const tech = getTechnology(techId);
+        if (!tech) continue;
+        for (const effect of tech.effects) {
+            if (effect.type === TechnologyEffectType.VisibilityRangeBonus) {
+                bonus += effect.value;
+            }
+        }
+    }
+
+    return bonus;
+}
 
 // Diplomacy helpers (module scope)
 function isAtWar(a: any, b: any): boolean {
@@ -2808,9 +2852,11 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
 	        return `🔍 Scout party dispatched from ${startLocation} to ${location}. Arrival in ${etaTurns} turn(s).`;
 	    }
 
-    // ENHANCED SCOUTING: Add scouted hex + 1 radius to explored hexes
+    // ENHANCED SCOUTING: Add scouted hex + radius to explored hexes (with technology bonuses)
     const { q, r } = parseHexCoords(location);
-    const scoutRange = 1; // Scouts reveal 1 hex radius around target
+    const baseScoutRange = 1; // Base scouts reveal 1 hex radius around target
+    const visibilityBonus = getVisibilityRangeBonus(tribe); // Technology bonuses like Reconnaissance
+    const scoutRange = baseScoutRange + visibilityBonus;
     const revealedHexes = getHexesInRange({ q, r }, scoutRange);
 
     // Add all revealed hexes to explored hexes

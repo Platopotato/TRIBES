@@ -54,10 +54,13 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             const currentScore = calculateTribeScore(tribe);
             const currentTurn = history.length > 0 ? (history[history.length - 1]?.turn || 1) + 1 : 1;
 
+            console.log(`📊 Processing tribe ${tribe.tribeName}: currentTurn=${currentTurn}, historyLength=${history.length}, currentScore=${currentScore}`);
+
             // Only add if we don't already have this turn's data
             const hasCurrentTurn = dataByTribe[tribe.id].some(point => point.turn === currentTurn);
             if (!hasCurrentTurn) {
                 dataByTribe[tribe.id].push({ turn: currentTurn, score: currentScore });
+                console.log(`📊 Added current turn data for ${tribe.tribeName}: Turn ${currentTurn}, Score ${currentScore}`);
                 if (currentScore > maxS) {
                     maxS = currentScore;
                 }
@@ -73,16 +76,19 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
                 console.log(`📊 Added synthetic previous point for ${tribe.tribeName}: Turn ${prevTurn}, Score ${prevScore} (gap: ${existingPoint.turn - prevTurn})`);
             }
 
-            // If still no historical data, create a minimal 2-point trend with proper spacing
+            // If still no historical data, create a minimal 2-point trend with FORCED spacing
             if (dataByTribe[tribe.id].length === 0) {
                 const score = currentScore;
-                const startTurn = Math.max(1, currentTurn - 3); // Ensure 3-turn spread
+                // FORCE different turn numbers to ensure X-axis spread
+                const turn1 = 1;
+                const turn2 = 5;
+                const turn3 = 10;
                 dataByTribe[tribe.id] = [
-                    { turn: startTurn, score: Math.max(0, score * 0.4) },
-                    { turn: Math.max(1, currentTurn - 1), score: Math.max(0, score * 0.7) },
-                    { turn: currentTurn, score: score }
+                    { turn: turn1, score: Math.max(0, score * 0.4) },
+                    { turn: turn2, score: Math.max(0, score * 0.7) },
+                    { turn: turn3, score: score }
                 ];
-                console.log(`📊 Created minimal trend for ${tribe.tribeName}: 3 points spanning turns ${startTurn}-${currentTurn}`);
+                console.log(`📊 Created FORCED spread trend for ${tribe.tribeName}: turns ${turn1}, ${turn2}, ${turn3} with scores ${score * 0.4}, ${score * 0.7}, ${score}`);
             }
         });
 
@@ -90,10 +96,16 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         const firstTurn = allTurns.length > 0 ? Math.min(...allTurns) : 1;
         const lastTurn = allTurns.length > 0 ? Math.max(...allTurns) : 1;
 
-        // CRITICAL FIX: Ensure minimum turn range for proper X-axis scaling
-        const minTurnRange = 2; // Minimum range to ensure proper scaling
-        const adjustedFirstTurn = firstTurn;
-        const adjustedLastTurn = Math.max(lastTurn, firstTurn + minTurnRange);
+        // FORCE proper turn range for X-axis scaling
+        const adjustedFirstTurn = Math.min(firstTurn, 1);
+        const adjustedLastTurn = Math.max(lastTurn, 10); // Force minimum range of 1-10
+
+        console.log(`📊 Turn domain calculation:`, {
+            allTurns: allTurns.slice(0, 10), // Show first 10 turns
+            originalRange: [firstTurn, lastTurn],
+            adjustedRange: [adjustedFirstTurn, adjustedLastTurn],
+            domainWidth: adjustedLastTurn - adjustedFirstTurn
+        });
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,
@@ -146,8 +158,17 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
     const height = 400; // Fixed height
 
     const xScale = (turn: number) => {
-        if (turnDomain[1] - turnDomain[0] === 0) return margin.left;
-        return margin.left + (turn - turnDomain[0]) / (turnDomain[1] - turnDomain[0]) * (width - margin.left - margin.right);
+        const domainWidth = turnDomain[1] - turnDomain[0];
+        const chartWidth = width - margin.left - margin.right;
+
+        if (domainWidth === 0) {
+            console.warn('🚨 X-axis domain width is 0!', { turnDomain, turn });
+            return margin.left;
+        }
+
+        const scaledX = margin.left + (turn - turnDomain[0]) / domainWidth * chartWidth;
+        console.log(`📊 X-scale: turn ${turn} → x ${scaledX} (domain: ${turnDomain[0]}-${turnDomain[1]}, width: ${domainWidth})`);
+        return scaledX;
     };
 
     const yScale = (score: number) => {

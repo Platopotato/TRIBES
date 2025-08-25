@@ -1305,6 +1305,30 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
         attackerGarrison.troops -= atkLosses;
         attackerGarrison.weapons = (attackerGarrison.weapons || 0) - atkWeaponsLoss;
 
+        // CRITICAL FIX: Handle chiefs before deleting defender garrison
+        if (defenderGarrison.chiefs && defenderGarrison.chiefs.length > 0) {
+            console.log(`🏃 CHIEF RETREAT: ${defenderGarrison.chiefs.length} chiefs retreating from eliminated garrison at ${hexLocation} to ${defenderTribe.location}`);
+
+            // Ensure home base garrison exists
+            if (!defenderTribe.garrisons[defenderTribe.location]) {
+                defenderTribe.garrisons[defenderTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+            }
+            if (!defenderTribe.garrisons[defenderTribe.location].chiefs) {
+                defenderTribe.garrisons[defenderTribe.location].chiefs = [];
+            }
+
+            // Move chiefs to home base
+            defenderTribe.garrisons[defenderTribe.location].chiefs.push(...defenderGarrison.chiefs);
+
+            // Add result message
+            defenderTribe.lastTurnResults.push({
+                id: `chief-retreat-colocated-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `🏃 Chiefs ${defenderGarrison.chiefs.map((c: any) => c.name).join(', ')} retreated from ${hexLocation} to home base after garrison was eliminated.`
+            });
+        }
+
         // Defender is completely eliminated from this hex
         delete defenderTribe.garrisons[hexLocation];
 
@@ -1337,6 +1361,31 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
         // Apply losses
         defenderGarrison.troops -= defLosses;
         defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
+
+        // CRITICAL FIX: Handle chiefs before deleting attacker garrison
+        const attackerGarrison = attackerTribe.garrisons[hexLocation];
+        if (attackerGarrison && attackerGarrison.chiefs && attackerGarrison.chiefs.length > 0) {
+            console.log(`🏃 CHIEF RETREAT: ${attackerGarrison.chiefs.length} chiefs retreating from defeated garrison at ${hexLocation} to ${attackerTribe.location}`);
+
+            // Ensure home base garrison exists
+            if (!attackerTribe.garrisons[attackerTribe.location]) {
+                attackerTribe.garrisons[attackerTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+            }
+            if (!attackerTribe.garrisons[attackerTribe.location].chiefs) {
+                attackerTribe.garrisons[attackerTribe.location].chiefs = [];
+            }
+
+            // Move chiefs to home base
+            attackerTribe.garrisons[attackerTribe.location].chiefs.push(...attackerGarrison.chiefs);
+
+            // Add result message
+            attackerTribe.lastTurnResults.push({
+                id: `chief-retreat-colocated-defeat-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `🏃 Chiefs ${attackerGarrison.chiefs.map((c: any) => c.name).join(', ')} retreated from ${hexLocation} to home base after defeat.`
+            });
+        }
 
         // Attacker is completely eliminated from this hex
         delete attackerTribe.garrisons[hexLocation];
@@ -1785,8 +1834,61 @@ function resolveContestedArrivalAtHex(destKey: string, arrivals: Array<{ journey
             const g = tribe.garrisons[destKey];
             g.troops = survivors;
             g.weapons = s.weapons;
-            if (g.troops <= 0 && g.weapons <= 0 && (!g.chiefs || g.chiefs.length === 0)) delete tribe.garrisons[destKey];
+
+            // CRITICAL FIX: Handle chiefs when garrison is wiped out
+            if (g.troops <= 0 && g.weapons <= 0) {
+                // If garrison is completely wiped, chiefs retreat to home base if possible
+                if (g.chiefs && g.chiefs.length > 0) {
+                    console.log(`🏃 CHIEF RETREAT: ${g.chiefs.length} chiefs retreating from wiped garrison at ${destKey} to ${tribe.location}`);
+
+                    // Ensure home base garrison exists
+                    if (!tribe.garrisons[tribe.location]) {
+                        tribe.garrisons[tribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                    }
+                    if (!tribe.garrisons[tribe.location].chiefs) {
+                        tribe.garrisons[tribe.location].chiefs = [];
+                    }
+
+                    // Move chiefs to home base
+                    tribe.garrisons[tribe.location].chiefs.push(...g.chiefs);
+
+                    // Add result message
+                    tribe.lastTurnResults.push({
+                        id: `chief-retreat-${Date.now()}`,
+                        actionType: ActionType.Attack,
+                        actionData: {},
+                        result: `🏃 Chiefs ${g.chiefs.map((c: any) => c.name).join(', ')} retreated from ${destKey} to home base after garrison was wiped out.`
+                    });
+                }
+
+                // Now safe to delete the garrison
+                delete tribe.garrisons[destKey];
+            }
         } else {
+            // CRITICAL FIX: Handle chiefs from arriving losers
+            if (s.chiefs && s.chiefs.length > 0) {
+                console.log(`🏃 CHIEF RETREAT: ${s.chiefs.length} chiefs from failed arrival retreating to ${tribe.location}`);
+
+                // Ensure home base garrison exists
+                if (!tribe.garrisons[tribe.location]) {
+                    tribe.garrisons[tribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                }
+                if (!tribe.garrisons[tribe.location].chiefs) {
+                    tribe.garrisons[tribe.location].chiefs = [];
+                }
+
+                // Move chiefs to home base
+                tribe.garrisons[tribe.location].chiefs.push(...s.chiefs);
+
+                // Add result message
+                tribe.lastTurnResults.push({
+                    id: `chief-retreat-arrival-${Date.now()}`,
+                    actionType: ActionType.Attack,
+                    actionData: {},
+                    result: `🏃 Chiefs ${s.chiefs.map((c: any) => c.name).join(', ')} retreated to home base after failed assault on ${destKey}.`
+                });
+            }
+
             // Arriving losers: remove survivors (no retreat in MVP)
             // Their troops are considered routed and lost
         }
@@ -3520,6 +3622,36 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             result: battleNarrative.defenderMessage
         });
 
+        // CRITICAL FIX: Clean up wiped out defender garrison and handle chiefs
+        if (defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0) {
+            // Handle chiefs before deleting garrison
+            if (defenderGarrison.chiefs && defenderGarrison.chiefs.length > 0) {
+                console.log(`🏃 CHIEF RETREAT: ${defenderGarrison.chiefs.length} chiefs retreating from wiped garrison at ${targetLocation} to ${defendingTribe.location}`);
+
+                // Ensure home base garrison exists
+                if (!defendingTribe.garrisons[defendingTribe.location]) {
+                    defendingTribe.garrisons[defendingTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                }
+                if (!defendingTribe.garrisons[defendingTribe.location].chiefs) {
+                    defendingTribe.garrisons[defendingTribe.location].chiefs = [];
+                }
+
+                // Move chiefs to home base
+                defendingTribe.garrisons[defendingTribe.location].chiefs.push(...defenderGarrison.chiefs);
+
+                // Add result message
+                defendingTribe.lastTurnResults.push({
+                    id: `chief-retreat-attack-${Date.now()}`,
+                    actionType: ActionType.Attack,
+                    actionData: {},
+                    result: `🏃 Chiefs ${defenderGarrison.chiefs.map((c: any) => c.name).join(', ')} retreated from ${targetLocation} to home base after garrison was wiped out.`
+                });
+            }
+
+            // Delete the wiped garrison
+            delete defendingTribe.garrisons[targetLocation];
+        }
+
         return battleNarrative.returnMessage;
     } else {
         // Defender wins — use casualty model
@@ -3562,6 +3694,36 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             actionData: {},
             result: battleNarrative.defenderMessage
         });
+
+        // CRITICAL FIX: Clean up wiped out defender garrison and handle chiefs
+        if (defenderGarrison.troops <= 0 && defenderGarrison.weapons <= 0) {
+            // Handle chiefs before deleting garrison
+            if (defenderGarrison.chiefs && defenderGarrison.chiefs.length > 0) {
+                console.log(`🏃 CHIEF RETREAT: ${defenderGarrison.chiefs.length} chiefs retreating from wiped garrison at ${targetLocation} to ${defendingTribe.location}`);
+
+                // Ensure home base garrison exists
+                if (!defendingTribe.garrisons[defendingTribe.location]) {
+                    defendingTribe.garrisons[defendingTribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                }
+                if (!defendingTribe.garrisons[defendingTribe.location].chiefs) {
+                    defendingTribe.garrisons[defendingTribe.location].chiefs = [];
+                }
+
+                // Move chiefs to home base
+                defendingTribe.garrisons[defendingTribe.location].chiefs.push(...defenderGarrison.chiefs);
+
+                // Add result message
+                defendingTribe.lastTurnResults.push({
+                    id: `chief-retreat-defend-${Date.now()}`,
+                    actionType: ActionType.Attack,
+                    actionData: {},
+                    result: `🏃 Chiefs ${defenderGarrison.chiefs.map((c: any) => c.name).join(', ')} retreated from ${targetLocation} to home base after garrison was wiped out.`
+                });
+            }
+
+            // Delete the wiped garrison
+            delete defendingTribe.garrisons[targetLocation];
+        }
 
         return battleNarrative.returnMessage;
     }

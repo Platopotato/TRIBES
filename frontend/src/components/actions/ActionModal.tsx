@@ -323,6 +323,24 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       console.log('✅ Using selected location:', selectedHexForDisplay, 'for action:', draftAction.actionType);
     }
 
+    // CRITICAL VALIDATION: Check required location fields
+    const actionsRequiringTargetLocation = [ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost];
+    const actionsRequiringFinishLocation = [ActionType.Move];
+
+    if (actionsRequiringTargetLocation.includes(draftAction.actionType)) {
+      if (!finalActionData.target_location || finalActionData.target_location.trim() === '') {
+        alert("❌ This action requires a target location to be selected. Please click 'Select Location' and choose a hex on the map.");
+        return;
+      }
+    }
+
+    if (actionsRequiringFinishLocation.includes(draftAction.actionType)) {
+      if (!finalActionData.finish_location || finalActionData.finish_location.trim() === '') {
+        alert("❌ This action requires a destination to be selected. Please click 'Select Location' and choose a hex on the map.");
+        return;
+      }
+    }
+
     // Ensure Build Outpost always passes 5 builders
     if (draftAction.actionType === ActionType.BuildOutpost) {
       finalActionData.troops = 5;
@@ -339,7 +357,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       const hasChiefs = chiefsToMove && Array.isArray(chiefsToMove) && chiefsToMove.length > 0;
 
       if (!hasTroops && !hasChiefs) {
-        alert("This action requires at least one troop or chief to be assigned.");
+        alert("❌ This action requires at least one troop or chief to be assigned.");
         return;
       }
     }
@@ -389,23 +407,37 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             return <p className="text-lg font-mono bg-slate-800 px-3 py-1 rounded-md">{value}</p>
         case 'targetLocation':
             console.log(`🎯 Rendering targetLocation field '${field.name}' with value:`, value);
+            const isLocationEmpty = !value || value.trim() === '';
             return (
                 <div className="flex flex-col space-y-2">
                     <input
                         type="text"
                         value={value || ''}
-                        placeholder="Tap 'Select Location' below..."
+                        placeholder="⚠️ REQUIRED: Select a location below..."
                         readOnly
-                        className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-slate-200 font-mono"
+                        className={`w-full border rounded-md p-2 font-mono ${
+                            isLocationEmpty
+                                ? 'bg-red-900/20 border-red-500 text-red-300 placeholder-red-400'
+                                : 'bg-slate-800 border-slate-600 text-slate-200'
+                        }`}
                     />
                     <Button
                         type="button"
                         variant="primary"
                         onClick={() => handleSelectOnMap(field.name)}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
+                        className={`w-full font-bold ${
+                            isLocationEmpty
+                                ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
                     >
-                        📍 Select Location
+                        {isLocationEmpty ? '⚠️ SELECT LOCATION (REQUIRED)' : '📍 Change Location'}
                     </Button>
+                    {isLocationEmpty && (
+                        <p className="text-xs text-red-400 italic">
+                            ⚠️ This action requires a location to be selected
+                        </p>
+                    )}
                 </div>
             )
         case 'number':
@@ -927,7 +959,29 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
                 <div className="flex justify-between pt-4 border-t border-slate-700">
                     <Button type="button" variant="secondary" onClick={handleBack}>Back</Button>
-                    <Button type="submit" disabled={ACTION_DEFINITIONS[selectedActionType].isPlaceholder}>Add Action</Button>
+                    {(() => {
+                        // Check if required location fields are missing
+                        const actionsRequiringTargetLocation = [ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost];
+                        const actionsRequiringFinishLocation = [ActionType.Move];
+
+                        const needsTargetLocation = actionsRequiringTargetLocation.includes(selectedActionType);
+                        const needsFinishLocation = actionsRequiringFinishLocation.includes(selectedActionType);
+
+                        const hasTargetLocation = draftAction?.actionData?.target_location || selectedHexForDisplay;
+                        const hasFinishLocation = draftAction?.actionData?.finish_location || selectedHexForDisplay;
+
+                        const missingLocation = (needsTargetLocation && !hasTargetLocation) || (needsFinishLocation && !hasFinishLocation);
+
+                        return (
+                            <Button
+                                type="submit"
+                                disabled={ACTION_DEFINITIONS[selectedActionType].isPlaceholder || missingLocation}
+                                className={missingLocation ? 'opacity-50 cursor-not-allowed' : ''}
+                            >
+                                {missingLocation ? '⚠️ Select Location First' : 'Add Action'}
+                            </Button>
+                        );
+                    })()}
                 </div>
             </form>
           ) : (

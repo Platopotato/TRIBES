@@ -22,7 +22,7 @@ interface MapEditorProps {
 const MAP_RADIUS = 40;
 const MAX_START_LOCATIONS = 50;
 
-type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi';
+type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi' | 'place_fortified_poi';
 type BrushSize = 'single' | 'cluster';
 
 const formatHexCoords = (q: number, r: number) => `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
@@ -50,6 +50,21 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [mapFileToLoad, setMapFileToLoad] = useState<string | null>(null);
+
+    // Fortified POI tool state
+    const [selectedTribeOwner, setSelectedTribeOwner] = useState<string>('admin');
+    const [selectedFortifiedPOIType, setSelectedFortifiedPOIType] = useState<POIType>(POIType.Outpost);
+
+    // Get available tribes for ownership selection
+    const availableTribes = useMemo(() => {
+        const tribes = [{ id: 'admin', name: 'Admin/Neutral' }];
+        if (gameState?.tribes) {
+            gameState.tribes.forEach((tribe: any) => {
+                tribes.push({ id: tribe.id, name: `${tribe.tribeName} (${tribe.playerName})` });
+            });
+        }
+        return tribes;
+    }, [gameState]);
     
     const mapDataMap = useMemo(() => {
         const newMap = new Map<string, HexData>();
@@ -106,6 +121,19 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
                     newHex.poi = poiWithoutFortification;
                     hexUpdated = true;
                 }
+            } else if (activeBrush === 'place_fortified_poi') {
+                // ENHANCED: Place a fortified POI with selected tribe ownership
+                const hexCoordsStr = formatHexCoords(hexCoords.q, hexCoords.r);
+                newHex.poi = {
+                    id: `poi-${hexCoords.q}-${hexCoords.r}`,
+                    type: selectedFortifiedPOIType,
+                    difficulty: 5,
+                    rarity: POI_RARITY_MAP[selectedFortifiedPOIType] || 'Common',
+                    fortified: true,
+                    outpostOwner: selectedTribeOwner
+                };
+                hexUpdated = true;
+                console.log(`🏰 Placed fortified ${selectedFortifiedPOIType} owned by ${selectedTribeOwner} at ${hexCoordsStr}`);
             } else if (activeBrush === 'clear_terrain') {
                  if (newHex.terrain !== TerrainType.Water) {
                     newHex.terrain = TerrainType.Water;
@@ -289,12 +317,66 @@ const MapEditor: React.FC<MapEditorProps> = (props) => {
                 </div>
             </header>
             <main className="flex-grow flex gap-4 overflow-hidden">
-                <TerrainToolbar 
-                    activeBrush={activeBrush} 
-                    onSelectBrush={setActiveBrush}
-                    brushSize={brushSize}
-                    onBrushSizeChange={setBrushSize}
-                />
+                <div className="flex flex-col gap-4 w-64 flex-shrink-0">
+                    <TerrainToolbar
+                        activeBrush={activeBrush}
+                        onSelectBrush={setActiveBrush}
+                        brushSize={brushSize}
+                        onBrushSizeChange={setBrushSize}
+                    />
+
+                    {/* ENHANCED: Fortified POI Tool */}
+                    <Card title="🏰 Fortified POI Tool" className="flex-shrink-0">
+                        <div className="space-y-3">
+                            <p className="text-xs text-slate-400">Place fortified POIs with specific tribe ownership</p>
+
+                            {/* POI Type Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">POI Type:</label>
+                                <select
+                                    value={selectedFortifiedPOIType}
+                                    onChange={(e) => setSelectedFortifiedPOIType(e.target.value as POIType)}
+                                    className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 text-sm"
+                                >
+                                    {Object.values(POIType).map(poi => (
+                                        <option key={poi} value={poi}>{poi}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tribe Owner Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Owner:</label>
+                                <select
+                                    value={selectedTribeOwner}
+                                    onChange={(e) => setSelectedTribeOwner(e.target.value)}
+                                    className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 text-sm"
+                                >
+                                    {availableTribes.map(tribe => (
+                                        <option key={tribe.id} value={tribe.id}>{tribe.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Activate Tool Button */}
+                            <button
+                                onClick={() => setActiveBrush('place_fortified_poi')}
+                                className={`w-full p-2 rounded-md text-sm font-medium transition-colors ${
+                                    activeBrush === 'place_fortified_poi'
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-slate-600 hover:bg-slate-500 text-slate-200'
+                                }`}
+                            >
+                                {activeBrush === 'place_fortified_poi' ? '✅ Tool Active' : '🏰 Activate Tool'}
+                            </button>
+
+                            <div className="text-xs text-slate-400 bg-slate-800 p-2 rounded">
+                                <strong>Usage:</strong> Select POI type and owner, then click "Activate Tool" and click on map hexes to place fortified POIs.
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
                 <div className="flex-grow h-full">
                     <MapView 
                         mapData={editedMap}

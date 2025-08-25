@@ -6,7 +6,7 @@ import { TerrainType, POIType } from '../../types';
 import Card from '../ui/Card';
 import { POI_SYMBOLS, POI_COLORS } from '../../constants';
 
-type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi';
+type Brush = TerrainType | POIType | 'clear_poi' | 'clear_terrain' | 'set_start_location' | 'fortify_poi' | 'unfortify_poi' | 'place_fortified_poi';
 type BrushSize = 'single' | 'cluster';
 
 interface TerrainToolbarProps {
@@ -87,6 +87,10 @@ const TerrainToolbar: React.FC<TerrainToolbarProps> = ({ activeBrush, onSelectBr
                         <BrushButton brush="unfortify_poi" activeBrush={activeBrush} onSelect={handleSelect} title="Remove Fortification">
                             <div className="w-6 h-6 mr-2 rounded-sm flex items-center justify-center font-bold text-lg bg-slate-600">🚫</div>
                             <span className="font-semibold">Remove Fortification</span>
+                        </BrushButton>
+                        <BrushButton brush="place_fortified_poi" activeBrush={activeBrush} onSelect={handleSelect} title="Place Fortified POI with Ownership">
+                            <div className="w-6 h-6 mr-2 rounded-sm flex items-center justify-center font-bold text-lg bg-purple-600">👑</div>
+                            <span className="font-semibold">Place Fortified POI</span>
                         </BrushButton>
                     </div>
                 </div>

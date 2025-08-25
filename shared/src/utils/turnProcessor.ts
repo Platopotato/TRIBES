@@ -3879,8 +3879,14 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     }
 
     const totalFoodConsumption = Math.ceil(troopConsumption + chiefConsumption);
-    const initialFood = tribe.globalResources.food;
-    const foodShortage = Math.max(0, totalFoodConsumption - initialFood);
+
+    // CRITICAL FIX: Process POI income BEFORE calculating food shortage and morale
+    // POI PASSIVE INCOME SYSTEM
+    const poiIncome = processPOIPassiveIncome(tribe, state);
+
+    // NOW calculate food situation with POI income included
+    const foodAfterIncome = tribe.globalResources.food; // Food after POI income
+    const foodShortage = Math.max(0, totalFoodConsumption - foodAfterIncome);
 
     // Apply food consumption
     tribe.globalResources.food = Math.max(0, tribe.globalResources.food - totalFoodConsumption);
@@ -3893,15 +3899,12 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     };
 
     let upkeepMessage = `Upkeep: ${totalTroops} troops + ${totalChiefs} chiefs consumed ${totalFoodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
-
-    // POI PASSIVE INCOME SYSTEM
-    const poiIncome = processPOIPassiveIncome(tribe, state);
     if (poiIncome.message) {
         upkeepMessage += ` ${poiIncome.message}`;
     }
 
-    // ENHANCED MORALE SYSTEM: Handle ration and starvation effects
-    const moraleEffects = processEnhancedMoraleSystem(tribe, initialFood, totalFoodConsumption, foodShortage, moraleChange, totalTroops);
+    // ENHANCED MORALE SYSTEM: Handle ration and starvation effects (using food AFTER POI income)
+    const moraleEffects = processEnhancedMoraleSystem(tribe, foodAfterIncome, totalFoodConsumption, foodShortage, moraleChange, totalTroops);
     if (moraleEffects.message) {
         upkeepMessage += ` ${moraleEffects.message}`;
     }

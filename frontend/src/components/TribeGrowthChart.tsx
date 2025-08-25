@@ -63,41 +63,45 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
                 }
             }
 
-            // ENHANCED: Ensure every tribe has at least 2 data points for line drawing
+            // ENHANCED: Ensure every tribe has at least 2 data points for line drawing with proper spacing
             if (dataByTribe[tribe.id].length === 1) {
                 const existingPoint = dataByTribe[tribe.id][0];
-                const prevTurn = Math.max(1, existingPoint.turn - 1);
+                const prevTurn = Math.max(1, existingPoint.turn - 2); // Ensure at least 2-turn gap
                 // Add a previous point with slightly lower score to show growth
-                const prevScore = Math.max(0, existingPoint.score * 0.8);
+                const prevScore = Math.max(0, existingPoint.score * 0.7);
                 dataByTribe[tribe.id].unshift({ turn: prevTurn, score: prevScore });
-                console.log(`📊 Added synthetic previous point for ${tribe.tribeName}: Turn ${prevTurn}, Score ${prevScore}`);
+                console.log(`📊 Added synthetic previous point for ${tribe.tribeName}: Turn ${prevTurn}, Score ${prevScore} (gap: ${existingPoint.turn - prevTurn})`);
             }
 
-            // If still no historical data, create a minimal 2-point trend
+            // If still no historical data, create a minimal 2-point trend with proper spacing
             if (dataByTribe[tribe.id].length === 0) {
                 const score = currentScore;
+                const startTurn = Math.max(1, currentTurn - 3); // Ensure 3-turn spread
                 dataByTribe[tribe.id] = [
-                    { turn: Math.max(1, currentTurn - 1), score: Math.max(0, score * 0.5) },
+                    { turn: startTurn, score: Math.max(0, score * 0.4) },
+                    { turn: Math.max(1, currentTurn - 1), score: Math.max(0, score * 0.7) },
                     { turn: currentTurn, score: score }
                 ];
-                console.log(`📊 Created minimal trend for ${tribe.tribeName}: 2 points`);
+                console.log(`📊 Created minimal trend for ${tribe.tribeName}: 3 points spanning turns ${startTurn}-${currentTurn}`);
             }
         });
 
-        const firstTurn = Math.min(
-            ...Object.values(dataByTribe).flatMap(data => data.map(p => p.turn)),
-            1
-        );
-        const lastTurn = Math.max(
-            ...Object.values(dataByTribe).flatMap(data => data.map(p => p.turn)),
-            1
-        );
+        const allTurns = Object.values(dataByTribe).flatMap(data => data.map(p => p.turn));
+        const firstTurn = allTurns.length > 0 ? Math.min(...allTurns) : 1;
+        const lastTurn = allTurns.length > 0 ? Math.max(...allTurns) : 1;
+
+        // CRITICAL FIX: Ensure minimum turn range for proper X-axis scaling
+        const minTurnRange = 2; // Minimum range to ensure proper scaling
+        const adjustedFirstTurn = firstTurn;
+        const adjustedLastTurn = Math.max(lastTurn, firstTurn + minTurnRange);
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,
             dataPoints: Object.values(dataByTribe).reduce((sum, data) => sum + data.length, 0),
             maxScore: maxS,
-            turnRange: [firstTurn, lastTurn],
+            originalTurnRange: [firstTurn, lastTurn],
+            adjustedTurnRange: [adjustedFirstTurn, adjustedLastTurn],
+            turnDomainWidth: adjustedLastTurn - adjustedFirstTurn,
             tribeDataDetails: Object.entries(dataByTribe).map(([tribeId, data]) => ({
                 tribeId,
                 points: data.length,
@@ -109,7 +113,7 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
         return {
             chartData: Object.entries(dataByTribe),
             maxScore: maxS > 0 ? maxS * 1.1 : 100, // Give some headroom, avoid dividing by zero
-            turnDomain: [firstTurn, lastTurn]
+            turnDomain: [adjustedFirstTurn, adjustedLastTurn]
         };
     }, [history]);
     
@@ -191,7 +195,8 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
 
                         {/* X Axis */}
                         <g className="text-xs text-slate-400">
-                           {history.map(({ turn }) => (
+                           {/* ENHANCED: Generate ticks for full turn range, not just history */}
+                           {Array.from({ length: turnDomain[1] - turnDomain[0] + 1 }, (_, i) => turnDomain[0] + i).map(turn => (
                                 <g key={`x-tick-${turn}`} transform={`translate(${xScale(turn)}, 0)`}>
                                      <line y1={margin.top} y2={height - margin.bottom} stroke="#475569" strokeWidth="0.5" strokeDasharray="2,3"/>
                                      <text x="0" y={height - margin.bottom + 15} textAnchor="middle" fill="currentColor">{`T${turn}`}</text>

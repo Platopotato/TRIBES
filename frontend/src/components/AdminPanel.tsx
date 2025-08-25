@@ -536,119 +536,30 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       };
     }
 
-    // Generate comprehensive newsletter content
+    // SIMPLIFIED: Generate clean newsletter content matching desired format
     const newsletterData = {
       turn: targetTurn,
-      summary: turnRecord.turnSummary,
-      globalEvents: turnRecord.globalEvents,
       tribes: turnRecord.tribeRecords.map(tribe => ({
-        name: tribe.tribeName,
         player: tribe.playerName,
-        isAI: tribe.isAI,
-        rank: tribe.rank,
-        score: tribe.score,
-        troops: tribe.troops,
-        garrisons: tribe.garrisons,
-        chiefs: tribe.chiefs,
-        chiefNames: tribe.chiefNames || [],
-        actions: tribe.actions.map(action => ({
-          type: action.actionType,
-          location: action.location,
-          result: action.result,
-          success: action.success,
-          resourcesSpent: action.resourcesSpent,
-          resourcesGained: action.resourcesGained,
-          troopsInvolved: action.troopsInvolved
-        })),
-        majorEvents: tribe.majorEvents,
-        resourceChanges: tribe.resourceChanges,
-        territoryChanges: tribe.territoryChanges,
-        militaryChanges: tribe.militaryChanges,
-        researchProgress: tribe.researchProgress,
-        diplomaticEvents: tribe.diplomaticEvents
-      })),
-      statistics: {
-        totalActions: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.actions.length, 0),
-        researchCompletions: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.researchProgress.completed.length, 0),
-        majorEvents: turnRecord.tribeRecords.reduce((sum, tribe) => sum + tribe.majorEvents.length, 0),
-        activePlayers: turnRecord.tribeRecords.filter(t => !t.isAI).length,
-        aiTribes: turnRecord.tribeRecords.filter(t => t.isAI).length
-      }
+        name: tribe.tribeName,
+        results: tribe.actions.map(action => action.result).filter(result => result) // Extract result strings from actions
+      }))
     };
 
     return newsletterData;
   };
 
   const generateCurrentStateNewsletter = () => {
-    // Generate newsletter summary from current game state when no detailed history exists
+    // SIMPLIFIED: Generate clean newsletter from current game state
     const currentTurn = gameState.turn;
-
-    // Calculate scores and rank tribes
-    const tribesWithScores = allTribes.map(tribe => {
-      const troops = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
-      const garrisons = Object.keys(tribe.garrisons || {}).length;
-      const chiefs = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
-      const chiefNames = Object.values(tribe.garrisons || {})
-        .flatMap(garrison => garrison.chiefs || [])
-        .map(chief => chief.name);
-
-      // Simple score calculation (can be improved)
-      const score = troops * 10 + garrisons * 50 + chiefs * 100 + (tribe.globalResources?.food || 0) + (tribe.globalResources?.scrap || 0);
-
-      return {
-        name: tribe.tribeName,
-        player: tribe.playerName,
-        isAI: tribe.isAI || false,
-        rank: 0, // Will be set after sorting
-        score,
-        troops,
-        garrisons,
-        chiefs,
-        chiefNames,
-        actions: tribe.lastTurnResults.map(result => ({
-          type: result.actionType,
-          location: result.actionData?.location || 'Unknown',
-          result: result.result || 'No result',
-          success: !result.result?.includes('failed') && !result.result?.includes('error'),
-          resourcesSpent: {},
-          resourcesGained: {},
-          troopsInvolved: 0
-        })),
-        majorEvents: [],
-        resourceChanges: {
-          food: { before: 0, after: tribe.globalResources?.food || 0, change: 0 },
-          scrap: { before: 0, after: tribe.globalResources?.scrap || 0, change: 0 },
-          morale: { before: 50, after: tribe.globalResources?.morale || 50, change: 0 }
-        },
-        territoryChanges: { gained: [], lost: [], netChange: 0 },
-        militaryChanges: { troopsGained: 0, troopsLost: 0, weaponsGained: 0, weaponsLost: 0, netTroopChange: 0, netWeaponChange: 0 },
-        researchProgress: {
-          started: [],
-          completed: [],
-          ongoing: (() => {
-            if (!tribe.currentResearch) return [];
-            if (Array.isArray(tribe.currentResearch)) {
-              return tribe.currentResearch.map((r: any) => r.techId);
-            }
-            return [(tribe.currentResearch as any).techId];
-          })()
-        },
-        diplomaticEvents: []
-      };
-    }).sort((a, b) => b.score - a.score).map((tribe, index) => ({ ...tribe, rank: index + 1 }));
 
     return {
       turn: currentTurn,
-      summary: `Current game state summary for Turn ${currentTurn}. ${tribesWithScores.filter(t => !t.isAI).length} player tribes and ${tribesWithScores.filter(t => t.isAI).length} AI tribes are active.`,
-      globalEvents: ['Game in progress - detailed history will be available after turn processing'],
-      tribes: tribesWithScores,
-      statistics: {
-        totalActions: tribesWithScores.reduce((sum, tribe) => sum + tribe.actions.length, 0),
-        researchCompletions: 0,
-        majorEvents: 0,
-        activePlayers: tribesWithScores.filter(t => !t.isAI).length,
-        aiTribes: tribesWithScores.filter(t => t.isAI).length
-      }
+      tribes: allTribes.map(tribe => ({
+        player: tribe.playerName,
+        name: tribe.tribeName,
+        results: tribe.lastTurnResults?.map(result => result.result) || []
+      }))
     };
   };
 
@@ -2487,159 +2398,43 @@ GAME STATISTICS:
 
                 return (
                   <div className="space-y-6">
-                    {/* Turn Overview */}
+                    {/* SIMPLIFIED: Clean newsletter format */}
                     <div className="bg-neutral-700 rounded-lg p-4">
-                      <h3 className="text-xl font-bold text-amber-300 mb-3">Turn Overview</h3>
-                      <p className="text-neutral-300 mb-2">{newsletterData.summary}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">{newsletterData.statistics.totalActions}</div>
-                          <div className="text-sm text-neutral-400">Total Actions</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-400">{newsletterData.statistics.researchCompletions}</div>
-                          <div className="text-sm text-neutral-400">Research Completed</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-400">{newsletterData.statistics.majorEvents}</div>
-                          <div className="text-sm text-neutral-400">Major Events</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-amber-400">{newsletterData.statistics.activePlayers}</div>
-                          <div className="text-sm text-neutral-400">Active Players</div>
-                        </div>
+                      <h3 className="text-xl font-bold text-amber-300 mb-3">Turn {newsletterData.turn} Newsletter</h3>
+                      <p className="text-neutral-300 mb-4">Simplified format for easy copying to newsletter</p>
+
+                      {/* JSON Preview for Copy/Paste */}
+                      <div className="bg-neutral-800 rounded-lg p-4">
+                        <h4 className="text-lg font-bold text-blue-300 mb-2">JSON Format (for newsletter)</h4>
+                        <pre className="text-xs text-neutral-300 bg-neutral-900 rounded p-3 overflow-auto max-h-96">
+                          {JSON.stringify(newsletterData, null, 2)}
+                        </pre>
                       </div>
                     </div>
 
-                    {/* Global Events */}
-                    {newsletterData.globalEvents.length > 0 && (
-                      <div className="bg-neutral-700 rounded-lg p-4">
-                        <h3 className="text-xl font-bold text-red-400 mb-3">🌍 Global Events</h3>
-                        <ul className="space-y-2">
-                          {newsletterData.globalEvents.map((event, index) => (
-                            <li key={index} className="text-neutral-300">• {event}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Tribe Actions */}
+                    {/* Tribe Results Preview */}
                     <div className="space-y-4">
-                      <h3 className="text-xl font-bold text-amber-300">📋 Detailed Tribe Actions</h3>
-                      {newsletterData.tribes
-                        .sort((a, b) => a.rank - b.rank)
-                        .map((tribe, index) => (
+                      <h3 className="text-xl font-bold text-amber-300">📋 Tribe Results Preview</h3>
+                      {newsletterData.tribes.map((tribe, index) => (
                           <div key={index} className="bg-neutral-700 rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h4 className="text-lg font-bold text-amber-300">
-                                  #{tribe.rank} {tribe.name}
-                                  {tribe.isAI && <span className="text-xs bg-blue-600 px-2 py-1 rounded ml-2">AI</span>}
-                                </h4>
-                                <p className="text-sm text-neutral-400">Player: {tribe.player}</p>
-                                <div className="flex items-center space-x-4 mt-2 text-sm">
-                                  <span className="text-blue-300">👥 {tribe.troops || 0} troops</span>
-                                  <span className="text-purple-300">🏛️ {tribe.garrisons || 0} garrisons</span>
-                                  <span className="text-yellow-300">👑 {tribe.chiefs || 0} chiefs</span>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-green-400">{tribe.score}</div>
-                                <div className="text-xs text-neutral-400">Score</div>
-                              </div>
-                            </div>
+                            <h4 className="text-lg font-bold text-amber-300 mb-2">
+                              {tribe.name} (Player: {tribe.player})
+                            </h4>
 
-                            {/* Actions */}
-                            {tribe.actions.length > 0 && (
-                              <div className="mb-3">
-                                <h5 className="font-semibold text-blue-300 mb-2">Actions Taken ({tribe.actions.length})</h5>
-                                <div className="space-y-1 max-h-40 overflow-y-auto">
-                                  {tribe.actions.map((action, actionIndex) => (
-                                    <div key={actionIndex} className="text-sm bg-neutral-800 p-2 rounded">
-                                      <div className="flex justify-between items-start">
-                                        <span className="font-medium text-amber-400">{action.type}</span>
-                                        <span className={`text-xs px-2 py-1 rounded ${action.success ? 'bg-green-600' : 'bg-red-600'}`}>
-                                          {action.success ? 'Success' : 'Failed'}
-                                        </span>
-                                      </div>
-                                      {action.location && (
-                                        <div className="text-xs text-neutral-400">Location: {action.location}</div>
-                                      )}
-                                      <div className="text-neutral-300 mt-1">{action.result}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Major Events */}
-                            {tribe.majorEvents.length > 0 && (
-                              <div className="mb-3">
-                                <h5 className="font-semibold text-purple-300 mb-2">Major Events</h5>
-                                <ul className="space-y-1">
-                                  {tribe.majorEvents.map((event, eventIndex) => (
-                                    <li key={eventIndex} className="text-sm text-neutral-300">• {event}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {/* Chiefs */}
-                            {tribe.chiefNames && tribe.chiefNames.length > 0 && (
-                              <div className="mb-3">
-                                <h5 className="font-semibold text-yellow-300 mb-2">👑 Chiefs & Leaders</h5>
-                                <div className="text-sm text-neutral-300">
-                                  {tribe.chiefNames.join(', ')}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Research Progress */}
-                            {(tribe.researchProgress.completed.length > 0 || tribe.researchProgress.started.length > 0) && (
-                              <div className="mb-3">
-                                <h5 className="font-semibold text-green-300 mb-2">🔬 Research Progress</h5>
-                                {tribe.researchProgress.completed.length > 0 && (
-                                  <div className="text-sm">
-                                    <span className="text-green-400">Completed:</span> {tribe.researchProgress.completed.join(', ')}
+                            {/* Action Results */}
+                            {tribe.results.length > 0 ? (
+                              <div className="space-y-1">
+                                <h5 className="font-semibold text-green-300 mb-2">Results:</h5>
+                                {tribe.results.map((result, resultIndex) => (
+                                  <div key={resultIndex} className="text-sm text-neutral-300 bg-neutral-800 rounded p-2">
+                                    {result}
                                   </div>
-                                )}
-                                {tribe.researchProgress.started.length > 0 && (
-                                  <div className="text-sm">
-                                    <span className="text-blue-400">Started:</span> {tribe.researchProgress.started.join(', ')}
-                                  </div>
-                                )}
-                                {tribe.researchProgress.ongoing.length > 0 && (
-                                  <div className="text-sm">
-                                    <span className="text-yellow-400">Ongoing:</span> {tribe.researchProgress.ongoing.join(', ')}
-                                  </div>
-                                )}
+                                ))}
                               </div>
+                            ) : (
+                              <div className="text-sm text-neutral-400 italic">No actions taken this turn</div>
                             )}
 
-                            {/* Resource & Territory Changes */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                              <div>
-                                <h6 className="font-semibold text-amber-300">Resources</h6>
-                                <div>🍖 Food: <span className="text-green-400">{tribe.resourceChanges.food.after}</span> ({tribe.resourceChanges.food.change > 0 ? '+' : ''}{tribe.resourceChanges.food.change})</div>
-                                <div>🔧 Scrap: <span className="text-blue-400">{tribe.resourceChanges.scrap.after}</span> ({tribe.resourceChanges.scrap.change > 0 ? '+' : ''}{tribe.resourceChanges.scrap.change})</div>
-                                <div>😊 Morale: <span className="text-purple-400">{tribe.resourceChanges.morale.after}</span> ({tribe.resourceChanges.morale.change > 0 ? '+' : ''}{tribe.resourceChanges.morale.change})</div>
-                              </div>
-                              <div>
-                                <h6 className="font-semibold text-amber-300">Territory</h6>
-                                <div>Net Change: {tribe.territoryChanges.netChange > 0 ? '+' : ''}{tribe.territoryChanges.netChange}</div>
-                                {tribe.territoryChanges.gained.length > 0 && (
-                                  <div className="text-green-400">Gained: {tribe.territoryChanges.gained.length}</div>
-                                )}
-                                {tribe.territoryChanges.lost.length > 0 && (
-                                  <div className="text-red-400">Lost: {tribe.territoryChanges.lost.length}</div>
-                                )}
-                              </div>
-                              <div>
-                                <h6 className="font-semibold text-amber-300">Military</h6>
-                                <div>Troops: {tribe.militaryChanges.netTroopChange > 0 ? '+' : ''}{tribe.militaryChanges.netTroopChange}</div>
-                                <div>Weapons: {tribe.militaryChanges.netWeaponChange > 0 ? '+' : ''}{tribe.militaryChanges.netWeaponChange}</div>
-                              </div>
-                            </div>
                           </div>
                         ))}
                     </div>

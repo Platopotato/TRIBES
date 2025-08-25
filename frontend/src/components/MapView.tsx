@@ -752,6 +752,49 @@ const MapView: React.FC<MapViewProps> = (props) => {
          if (!exploredSet.has(hexCoords) && playerTribe) {
           return;
         }
+
+        // ENHANCED TRIBE INFORMATION: Show detailed tribe info when hovering over occupied hexes
+        const tribesOnHex = visibleTribesByLocation.get(hexCoords) || [];
+        if (tribesOnHex.length > 0) {
+          const tribeDetails = tribesOnHex.map(tribe => {
+            const garrison = tribe.garrisons[hexCoords];
+            const troops = garrison?.troops || 0;
+            const weapons = garrison?.weapons || 0;
+            const chiefs = garrison?.chiefs || [];
+            const chiefNames = chiefs.map((c: any) => c.name).join(', ');
+
+            // Tribe name with relationship indicator
+            let tribeInfo = `🏛️ ${tribe.tribeName}`;
+            if (tribe.id === playerTribe?.id) {
+              tribeInfo += ' (You)';
+            } else {
+              const diplomacy = playerTribe?.diplomacy?.[tribe.id]?.status;
+              if (diplomacy === 'Alliance') tribeInfo += ' 🤝 (Ally)';
+              else if (diplomacy === 'War') tribeInfo += ' ⚔️ (Enemy)';
+              else tribeInfo += ' 🤷 (Neutral)';
+            }
+
+            // Force composition details
+            const forceDetails = [];
+            if (troops > 0) forceDetails.push(`👥 ${troops} troops`);
+            if (weapons > 0) forceDetails.push(`⚔️ ${weapons} weapons`);
+            if (chiefs.length > 0) {
+              if (chiefs.length === 1) {
+                forceDetails.push(`👑 Chief: ${chiefNames}`);
+              } else {
+                forceDetails.push(`👑 Chiefs: ${chiefNames}`);
+              }
+            }
+
+            if (forceDetails.length > 0) {
+              tribeInfo += `\n  ${forceDetails.join('\n  ')}`;
+            }
+
+            return tribeInfo;
+          }).join('\n\n');
+
+          content = `${content}\n\n${tribeDetails}`;
+        }
       }
 
       setHoveredHexInfo({
@@ -793,11 +836,13 @@ const MapView: React.FC<MapViewProps> = (props) => {
             </div>
         )}
         {hoveredHexInfo && (
-            <div 
-                className="absolute z-30 p-2 text-sm font-bold bg-slate-900/80 text-amber-400 rounded-md pointer-events-none"
+            <div
+                className="absolute z-30 p-3 text-sm bg-slate-900/95 text-amber-400 rounded-md pointer-events-none border border-slate-700 shadow-lg max-w-xs"
                 style={{ top: `${hoveredHexInfo.y + 15}px`, left: `${hoveredHexInfo.x + 15}px` }}
             >
-                {hoveredHexInfo.content}
+                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">
+                    {hoveredHexInfo.content}
+                </pre>
             </div>
         )}
         <div className="absolute top-2 right-2 z-20 flex flex-col space-y-1">

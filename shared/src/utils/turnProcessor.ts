@@ -4057,6 +4057,28 @@ function processMoraleSystem(tribe: any, initialFood: number, foodConsumption: n
             const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
             (garrison as any).troops -= toRemove;
             troopsLost += toRemove;
+
+            // CRITICAL FIX: Handle chiefs when garrison becomes empty due to desertion
+            if ((garrison as any).troops <= 0 && (garrison as any).weapons <= 0 && (garrison as any).chiefs && (garrison as any).chiefs.length > 0) {
+                console.log(`🏃 CHIEF RETREAT: ${(garrison as any).chiefs.length} chiefs retreating from abandoned garrison at ${location} to ${tribe.location}`);
+
+                // Ensure home base garrison exists
+                if (!tribe.garrisons[tribe.location]) {
+                    tribe.garrisons[tribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                }
+                if (!tribe.garrisons[tribe.location].chiefs) {
+                    tribe.garrisons[tribe.location].chiefs = [];
+                }
+
+                // Move chiefs to home base
+                tribe.garrisons[tribe.location].chiefs.push(...(garrison as any).chiefs);
+
+                // Add result message
+                moraleMessages.push(`🏃 Chiefs ${(garrison as any).chiefs.map((c: any) => c.name).join(', ')} retreated from ${location} to home base after troops deserted.`);
+
+                // Clear chiefs from abandoned garrison
+                (garrison as any).chiefs = [];
+            }
         }
 
         if (troopsLost > 0) {
@@ -4150,6 +4172,28 @@ function processEnhancedMoraleSystem(tribe: any, initialFood: number, foodConsum
             const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
             (garrison as any).troops -= toRemove;
             troopsLost += toRemove;
+
+            // CRITICAL FIX: Handle chiefs when garrison becomes empty due to desertion
+            if ((garrison as any).troops <= 0 && (garrison as any).weapons <= 0 && (garrison as any).chiefs && (garrison as any).chiefs.length > 0) {
+                console.log(`🏃 CHIEF RETREAT: ${(garrison as any).chiefs.length} chiefs retreating from abandoned garrison at ${location} to ${tribe.location}`);
+
+                // Ensure home base garrison exists
+                if (!tribe.garrisons[tribe.location]) {
+                    tribe.garrisons[tribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                }
+                if (!tribe.garrisons[tribe.location].chiefs) {
+                    tribe.garrisons[tribe.location].chiefs = [];
+                }
+
+                // Move chiefs to home base
+                tribe.garrisons[tribe.location].chiefs.push(...(garrison as any).chiefs);
+
+                // Add result message
+                moraleMessages.push(`🏃 Chiefs ${(garrison as any).chiefs.map((c: any) => c.name).join(', ')} retreated from ${location} to home base after troops deserted.`);
+
+                // Clear chiefs from abandoned garrison
+                (garrison as any).chiefs = [];
+            }
         }
 
         if (troopsLost > 0) {

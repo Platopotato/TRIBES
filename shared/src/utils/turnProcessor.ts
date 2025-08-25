@@ -290,8 +290,6 @@ function isAllied(a: any, b: any): boolean {
     return s1 === 'Alliance' || s2 === 'Alliance';
 }
 
-}
-
 // --- COORDINATE CONVERSION UTILITIES ---
 function convertToStandardFormat(coords: string): string {
     // Handle different coordinate formats and convert to standard "051.044" format
@@ -320,17 +318,6 @@ function convertToStandardFormat(coords: string): string {
 }
 
 // --- PHASE 1 RESTORATION: BASIC ACTIONS ---
-// Diplomacy helpers (module scope)
-function isAtWar(a: any, b: any): boolean {
-    const s1 = a?.diplomacy?.[b?.id]?.status;
-    const s2 = b?.diplomacy?.[a?.id]?.status;
-    return s1 === 'War' || s2 === 'War';
-}
-function isAllied(a: any, b: any): boolean {
-    const s1 = a?.diplomacy?.[b?.id]?.status;
-    const s2 = b?.diplomacy?.[a?.id]?.status;
-    return s1 === 'Alliance' || s2 === 'Alliance';
-}
 
 // Terrain and narrative helpers
 function getTerrainAt(hexKey: string, state: any): TerrainType | undefined {
@@ -1363,7 +1350,6 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
         defenderGarrison.weapons = (defenderGarrison.weapons || 0) - defWeaponsLoss;
 
         // CRITICAL FIX: Handle chiefs before deleting attacker garrison
-        const attackerGarrison = attackerTribe.garrisons[hexLocation];
         if (attackerGarrison && attackerGarrison.chiefs && attackerGarrison.chiefs.length > 0) {
             console.log(`🏃 CHIEF RETREAT: ${attackerGarrison.chiefs.length} chiefs retreating from defeated garrison at ${hexLocation} to ${attackerTribe.location}`);
 

@@ -2610,7 +2610,7 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     // SOPHISTICATED MOVEMENT SYSTEM WITH TERRAIN-BASED PATHFINDING
     const startLocation = action.actionData?.start_location || action.actionData?.fromLocation;
     const destination = action.actionData?.finish_location || action.actionData?.toLocation;
-    const troopsToMove = action.actionData?.troops || 1;
+    const troopsToMove = action.actionData?.troops || 0; // CRITICAL FIX: Allow 0 troops for chief-only movement
     const weaponsToMove = action.actionData?.weapons || 0;
     const chiefsToMove = action.actionData?.chiefsToMove || [];
 
@@ -2649,6 +2649,14 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 
     if (invalidChiefs.length > 0) {
         return `❌ Chiefs not available at ${startLocation}: ${invalidChiefs.join(', ')}.`;
+    }
+
+    // CRITICAL FIX: Validate that there's something to move (troops OR chiefs)
+    const hasMovingTroops = troopsToMove > 0;
+    const hasMovingChiefs = chiefsToMove.length > 0;
+
+    if (!hasMovingTroops && !hasMovingChiefs) {
+        return `❌ Movement requires at least one troop or chief to be assigned.`;
     }
 
     // COORDINATE NORMALIZATION: Handle different coordinate formats
@@ -2922,7 +2930,7 @@ function processScoutAction(tribe: any, action: any, state?: any): string {
 	    const effectsForScout = getCombinedEffects(tribe);
 	    const etaTurns = Math.ceil(pathInfo.cost / effectsForScout.movementSpeedBonus);
 	    if (etaTurns > 1) {
-	        const troops = Math.max(1, action.actionData.troops || 1);
+	        const troops = action.actionData.troops || 0; // CRITICAL FIX: Allow 0 troops for chief-only scouting
 	        const weapons = Math.max(0, action.actionData.weapons || 0);
 	        const chiefsToMove: string[] = action.actionData.chiefsToMove || [];
 	        const startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[convertToStandardFormat(startLocation)];
@@ -3418,7 +3426,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     // Accept both camelCase and snake_case inputs from UI/AI
     const targetLocation = convertToStandardFormat(action.actionData.targetLocation || action.actionData.target_location);
     const attackerLocation = convertToStandardFormat(action.actionData.fromLocation || action.actionData.start_location);
-    const troopsToAttack = action.actionData.troops || 1;
+    const troopsToAttack = action.actionData.troops || 0; // CRITICAL FIX: Allow 0 troops for chief-only attacks
 
     const attackerGarrison = tribe.garrisons[attackerLocation] || tribe.garrisons[convertToStandardFormat(attackerLocation)];
 

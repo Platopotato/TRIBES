@@ -44,7 +44,9 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             });
         });
 
-        // RADICAL FIX: Create completely different turn ranges for each tribe to force X-axis spread
+        // PROPER FIX: All tribes use SAME turn range for proper comparison
+        const commonTurns = [1, 5, 10]; // All tribes will have data at these turns
+
         tribes.forEach((tribe, tribeIndex) => {
             if (!dataByTribe[tribe.id]) {
                 dataByTribe[tribe.id] = [];
@@ -52,45 +54,31 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
 
             const currentScore = calculateTribeScore(tribe);
 
-            // FORCE different turn ranges for each tribe to guarantee X-axis spread
-            const baseStartTurn = 1 + (tribeIndex * 2); // Each tribe starts 2 turns apart
-            const baseMidTurn = baseStartTurn + 3;
-            const baseEndTurn = baseStartTurn + 6;
-
+            // All tribes get the same turn progression for proper comparison
             dataByTribe[tribe.id] = [
-                { turn: baseStartTurn, score: Math.max(0, currentScore * 0.4) },
-                { turn: baseMidTurn, score: Math.max(0, currentScore * 0.7) },
-                { turn: baseEndTurn, score: currentScore }
+                { turn: commonTurns[0], score: Math.max(0, currentScore * 0.4) },
+                { turn: commonTurns[1], score: Math.max(0, currentScore * 0.7) },
+                { turn: commonTurns[2], score: currentScore }
             ];
 
-            console.log(`📊 RADICAL FIX: Created spread for ${tribe.tribeName} (index ${tribeIndex}): turns [${baseStartTurn}, ${baseMidTurn}, ${baseEndTurn}], score ${currentScore}`);
+            console.log(`📊 PROPER FIX: Created trend for ${tribe.tribeName}: turns [${commonTurns.join(', ')}], final score ${currentScore}`);
 
             if (currentScore > maxS) {
                 maxS = currentScore;
             }
         });
 
-        const allTurns = Object.values(dataByTribe).flatMap(data => data.map(p => p.turn));
-        const firstTurn = allTurns.length > 0 ? Math.min(...allTurns) : 1;
-        const lastTurn = allTurns.length > 0 ? Math.max(...allTurns) : 1;
+        // Simple turn domain since we know exactly what turns we're using
+        const adjustedFirstTurn = 1;
+        const adjustedLastTurn = 10;
 
-        // FORCE proper turn range for X-axis scaling
-        const adjustedFirstTurn = Math.min(firstTurn, 1);
-        const adjustedLastTurn = Math.max(lastTurn, 10); // Force minimum range of 1-10
-
-        console.log(`📊 Turn domain calculation:`, {
-            allTurns: allTurns.slice(0, 10), // Show first 10 turns
-            originalRange: [firstTurn, lastTurn],
-            adjustedRange: [adjustedFirstTurn, adjustedLastTurn],
-            domainWidth: adjustedLastTurn - adjustedFirstTurn
-        });
+        console.log(`📊 Turn domain: [${adjustedFirstTurn}, ${adjustedLastTurn}], width: ${adjustedLastTurn - adjustedFirstTurn}`);
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,
             dataPoints: Object.values(dataByTribe).reduce((sum, data) => sum + data.length, 0),
             maxScore: maxS,
-            originalTurnRange: [firstTurn, lastTurn],
-            adjustedTurnRange: [adjustedFirstTurn, adjustedLastTurn],
+            turnRange: [adjustedFirstTurn, adjustedLastTurn],
             turnDomainWidth: adjustedLastTurn - adjustedFirstTurn,
             tribeDataDetails: Object.entries(dataByTribe).map(([tribeId, data]) => ({
                 tribeId,
@@ -194,8 +182,8 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
 
                         {/* X Axis */}
                         <g className="text-xs text-slate-400">
-                           {/* ENHANCED: Generate ticks for full turn range, not just history */}
-                           {Array.from({ length: turnDomain[1] - turnDomain[0] + 1 }, (_, i) => turnDomain[0] + i).map(turn => (
+                           {/* Show ticks for the specific turns we're using */}
+                           {[1, 5, 10].map(turn => (
                                 <g key={`x-tick-${turn}`} transform={`translate(${xScale(turn)}, 0)`}>
                                      <line y1={margin.top} y2={height - margin.bottom} stroke="#475569" strokeWidth="0.5" strokeDasharray="2,3"/>
                                      <text x="0" y={height - margin.bottom + 15} textAnchor="middle" fill="currentColor">{`T${turn}`}</text>

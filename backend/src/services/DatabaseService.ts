@@ -880,6 +880,7 @@ export class DatabaseService {
 
     try {
       // Use a transaction with extended timeout for large backup loading
+      console.log('🔄 Starting database transaction for game state update...');
       await this.prisma.$transaction(async (tx) => {
         // Get the current game state ID
         const currentGameState = await tx.gameState.findFirst();
@@ -1211,9 +1212,17 @@ export class DatabaseService {
                   });
                   console.log(`✅ Created diplomatic relation: ${tribe.tribeName} → ${targetTribe.tribeName}: ${(relationship as any).status}`);
                   totalDiplomaticRelations++;
+                } else {
+                  console.log(`⚠️ Diplomatic relation already exists: ${tribe.tribeName} ↔ ${targetTribe.tribeName}`);
                 }
               } catch (error) {
-                console.log(`❌ Error creating diplomatic relation for ${tribe.tribeName}:`, error);
+                console.error(`❌ Error creating diplomatic relation for ${tribe.tribeName} → ${targetTribeId}:`, error);
+                console.error(`❌ Error details:`, {
+                  message: error instanceof Error ? error.message : 'Unknown error',
+                  code: (error as any)?.code,
+                  constraint: (error as any)?.meta?.target
+                });
+                // Continue processing other relations instead of failing the entire transaction
               }
             }
           }
@@ -1249,7 +1258,14 @@ export class DatabaseService {
               });
               createdRequests++;
             } catch (error) {
-              console.log(`❌ Error creating chief request ${request.id}:`, error);
+              console.error(`❌ Error creating chief request ${request.id}:`, error);
+              console.error(`❌ Error details:`, {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                code: (error as any)?.code,
+                constraint: (error as any)?.meta?.target
+              });
+              skippedRequests++;
+              // Continue processing other requests instead of failing the entire transaction
               skippedRequests++;
             }
           }
@@ -1352,10 +1368,36 @@ export class DatabaseService {
 
         console.log('🎯 Complete game state restoration completed successfully');
       }, {
-        timeout: 60000 // 60 second timeout for backup loading
+        timeout: 120000, // Increased to 120 second timeout for backup loading
+        maxWait: 150000, // Maximum wait time
+        isolationLevel: 'ReadCommitted' // Use read committed isolation level
       });
+      console.log('✅ Database transaction completed successfully');
     } catch (error) {
-      console.error(' Error updating game state in database:', error);
+      console.error('❌ CRITICAL: Database transaction failed:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        constraint: (error as any)?.meta?.target,
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+
+      // Check if this is a transaction abort error
+      if ((error as any)?.code === '25P02') {
+        console.error('🚨 TRANSACTION ABORTED: Current transaction is aborted, commands ignored until end of transaction block');
+        console.error('🔄 This usually indicates a constraint violation or data integrity issue earlier in the transaction');
+        console.error('🔧 RECOVERY: Attempting to disconnect and reconnect Prisma client...');
+
+        try {
+          // Disconnect and reconnect to clear the aborted transaction state
+          await this.prisma.$disconnect();
+          await this.prisma.$connect();
+          console.log('✅ Prisma client reconnected successfully');
+        } catch (reconnectError) {
+          console.error('❌ Failed to reconnect Prisma client:', reconnectError);
+        }
+      }
+
       throw error;
     }
   }

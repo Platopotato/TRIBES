@@ -1347,7 +1347,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <div className="mt-2 text-sm text-slate-300">
               {shouldUseMobileUI
                 ? "Tap a hex to select it, then confirm to use it in your action."
-                : "Click a hex to select it. Drag to pan the map, scroll to zoom."
+                : "Click a hex to select it. Hover over territories to see tribe details. Drag to pan the map, scroll to zoom."
               }
             </div>
           </div>

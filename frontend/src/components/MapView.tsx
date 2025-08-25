@@ -837,7 +837,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
         )}
         {hoveredHexInfo && (
             <div
-                className="absolute z-30 p-3 text-sm bg-slate-900/95 text-amber-400 rounded-md pointer-events-none border border-slate-700 shadow-lg max-w-xs"
+                className="absolute z-[60] p-3 text-sm bg-slate-900/95 text-amber-400 rounded-md pointer-events-none border border-slate-700 shadow-lg max-w-xs"
                 style={{ top: `${hoveredHexInfo.y + 15}px`, left: `${hoveredHexInfo.x + 15}px` }}
             >
                 <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">

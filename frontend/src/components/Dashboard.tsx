@@ -78,28 +78,53 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [plannedActions, setPlannedActions] = useState<GameAction[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Backup planned actions to localStorage to prevent loss - Production Deploy
+  // ENHANCED: Backup planned actions to localStorage with timestamp and metadata
   useEffect(() => {
     if (plannedActions.length > 0 && playerTribe && !playerTribe.turnSubmitted) {
       const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
-      localStorage.setItem(backupKey, JSON.stringify(plannedActions));
-      console.log('💾 Backed up', plannedActions.length, 'planned actions to localStorage');
+      const backupData = {
+        actions: plannedActions,
+        timestamp: Date.now(),
+        turn: turn,
+        tribeId: playerTribe.id,
+        tribeName: playerTribe.tribeName
+      };
+      localStorage.setItem(backupKey, JSON.stringify(backupData));
+      console.log('💾 ENHANCED BACKUP:', plannedActions.length, 'planned actions saved with timestamp');
     }
   }, [plannedActions, playerTribe, turn]);
 
-  // Restore planned actions from localStorage on component mount
+  // ENHANCED: Restore planned actions from localStorage with better recovery logic
   useEffect(() => {
-    if (playerTribe && !playerTribe.turnSubmitted && plannedActions.length === 0) {
+    if (playerTribe && !playerTribe.turnSubmitted) {
       const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
       const backup = localStorage.getItem(backupKey);
       if (backup) {
         try {
-          const restoredActions = JSON.parse(backup);
-          if (restoredActions.length > 0) {
-            setPlannedActions(restoredActions);
-            setShowRestoredMessage(true);
-            setTimeout(() => setShowRestoredMessage(false), 5000);
-            console.log('🔄 Restored', restoredActions.length, 'planned actions from localStorage');
+          const backupData = JSON.parse(backup);
+
+          // Handle both old format (array) and new format (object with metadata)
+          const restoredActions = Array.isArray(backupData) ? backupData : backupData.actions;
+          const backupTimestamp = backupData.timestamp || 0;
+          const backupAge = Date.now() - backupTimestamp;
+
+          if (restoredActions && restoredActions.length > 0) {
+            // CRITICAL FIX: Always restore if we have backup and no current actions,
+            // or if current actions are fewer than backup (indicating loss)
+            // Also check backup age - don't restore very old backups (older than 1 hour)
+            const shouldRestore = (plannedActions.length === 0 || plannedActions.length < restoredActions.length)
+                                  && backupAge < 3600000; // 1 hour in milliseconds
+
+            if (shouldRestore) {
+              console.log(`🔄 RECOVERY: Restoring ${restoredActions.length} planned actions from localStorage`);
+              console.log(`📊 Backup info: age=${Math.round(backupAge/1000)}s, current=${plannedActions.length}, backup=${restoredActions.length}`);
+              setPlannedActions(restoredActions);
+              setShowRestoredMessage(true);
+              setTimeout(() => setShowRestoredMessage(false), 5000);
+            } else if (backupAge >= 3600000) {
+              console.log('🧹 Removing old backup (>1 hour old)');
+              localStorage.removeItem(backupKey);
+            }
           }
         } catch (error) {
           console.error('❌ Failed to restore planned actions:', error);
@@ -107,7 +132,35 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         }
       }
     }
-  }, [playerTribe, turn]);
+  }, [playerTribe, turn, plannedActions.length]); // Added plannedActions.length to dependencies
+
+  // CRITICAL: Periodic backup check to recover from unexpected action loss
+  useEffect(() => {
+    if (!playerTribe || playerTribe.turnSubmitted) return;
+
+    const checkInterval = setInterval(() => {
+      const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+      const backup = localStorage.getItem(backupKey);
+
+      if (backup && plannedActions.length === 0) {
+        try {
+          const backupData = JSON.parse(backup);
+          const restoredActions = Array.isArray(backupData) ? backupData : backupData.actions;
+
+          if (restoredActions && restoredActions.length > 0) {
+            console.log('🚨 EMERGENCY RECOVERY: Found actions in backup but none in memory, restoring...');
+            setPlannedActions(restoredActions);
+            setShowRestoredMessage(true);
+            setTimeout(() => setShowRestoredMessage(false), 5000);
+          }
+        } catch (error) {
+          console.error('❌ Emergency recovery failed:', error);
+        }
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [playerTribe, turn, plannedActions.length]);
   const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isCodexOpen, setIsCodexOpen] = useState(false);
@@ -193,15 +246,28 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             setView('planning');
             setTurnSubmitted(false);
         }
-        // Only clear planned actions if turn was actually submitted or we're viewing results
-        if (playerTribe.turnSubmitted || (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0)) {
-            console.log('🧹 Clearing planned actions - turn submitted or results available');
+        // ENHANCED: More conservative clearing logic with better backup preservation
+        const shouldClearActions = playerTribe.turnSubmitted && (playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0);
+
+        if (shouldClearActions) {
+            console.log('🧹 CONFIRMED CLEAR: Turn submitted AND results available - clearing planned actions');
             setPlannedActions([]);
-            // Clear localStorage backup when turn is submitted
+            // Clear localStorage backup only when we're absolutely sure the turn is complete
             const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
             localStorage.removeItem(backupKey);
+            console.log('🧹 Backup cleared for completed turn');
         } else {
-            console.log('💾 Preserving planned actions - turn not submitted yet');
+            console.log('💾 PRESERVING: Actions preserved - turnSubmitted:', playerTribe.turnSubmitted, 'hasResults:', !!(playerTribe.lastTurnResults && playerTribe.lastTurnResults.length > 0));
+
+            // Extra safety: If we have a backup but no current actions, and turn is not submitted, restore
+            if (plannedActions.length === 0 && !playerTribe.turnSubmitted) {
+              const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+              const backup = localStorage.getItem(backupKey);
+              if (backup) {
+                console.log('🔄 SAFETY RESTORE: Found backup while preserving actions');
+                // This will be handled by the restoration useEffect
+              }
+            }
         }
     }
   }, [playerTribe, playerTribe?.turnSubmitted, playerTribe?.lastTurnResults]);

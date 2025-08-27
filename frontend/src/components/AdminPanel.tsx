@@ -403,6 +403,43 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     client.saveNewsletter(newsletter);
   };
 
+  // Newsletter backup and restore handlers
+  const handleExportAllNewsletters = () => {
+    console.log('📰 Exporting all newsletters...');
+    client.exportAllNewsletters();
+  };
+
+  const handleImportAllNewsletters = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importData = JSON.parse(content);
+
+        if (!importData.newsletters || !Array.isArray(importData.newsletters)) {
+          alert('Invalid newsletter backup file: newsletters array not found');
+          return;
+        }
+
+        const count = importData.newsletters.length;
+        if (confirm(`Import ${count} newsletters from backup? This will update existing newsletters for the same turns.`)) {
+          console.log(`📰 Importing ${count} newsletters...`);
+          client.importAllNewsletters(importData);
+        }
+      } catch (error) {
+        console.error('Error parsing newsletter backup file:', error);
+        alert('Error reading newsletter backup file. Please ensure it\'s a valid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+  };
+
   // AI Management handlers
   const handleAddAITribe = () => {
     if (!selectedSpawnLocation) {
@@ -450,11 +487,62 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setBackupList(backupList);
     };
 
+    // Newsletter backup/restore event handlers
+    const handleNewsletterExportReady = (exportData: any) => {
+      console.log('📰 Newsletter export ready:', exportData);
+
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `newsletters-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert(`✅ Newsletter backup downloaded!\n\n${exportData.totalNewsletters} newsletters exported.`);
+    };
+
+    const handleNewsletterExportError = (error: any) => {
+      console.error('❌ Newsletter export error:', error);
+      alert(`❌ Error exporting newsletters: ${error.error || 'Unknown error'}`);
+    };
+
+    const handleNewsletterImportComplete = (result: any) => {
+      console.log('📰 Newsletter import complete:', result);
+      alert(`✅ Newsletter import complete!\n\n• ${result.imported} new newsletters imported\n• ${result.updated} existing newsletters updated\n• ${result.skipped} newsletters skipped\n• ${result.total} total newsletters processed`);
+    };
+
+    const handleNewsletterImportError = (error: any) => {
+      console.error('❌ Newsletter import error:', error);
+      alert(`❌ Error importing newsletters: ${error.error || 'Unknown error'}`);
+    };
+
+    // Set up event listeners
     client.setBackupStatusCallback(handleBackupStatus);
+
+    // Add newsletter event listeners to socket
+    const socket = client.getSocket();
+    if (socket) {
+      socket.on('admin:newsletterExportReady', handleNewsletterExportReady);
+      socket.on('admin:newsletterExportError', handleNewsletterExportError);
+      socket.on('admin:newsletterImportComplete', handleNewsletterImportComplete);
+      socket.on('admin:newsletterImportError', handleNewsletterImportError);
+    }
+
     client.getBackupStatus();
 
     return () => {
       client.setBackupStatusCallback(null);
+      if (socket) {
+        socket.off('admin:newsletterExportReady', handleNewsletterExportReady);
+        socket.off('admin:newsletterExportError', handleNewsletterExportError);
+        socket.off('admin:newsletterImportComplete', handleNewsletterImportComplete);
+        socket.off('admin:newsletterImportError', handleNewsletterImportError);
+      }
     };
   }, []);
 
@@ -1267,6 +1355,48 @@ GAME STATISTICS:
                   onUnpublish={handleUnpublishNewsletter}
                   onUploadNewsletter={handleUploadNewsletter}
                 />
+
+                {/* Newsletter Backup & Restore Section */}
+                <div className="border-t border-neutral-600 pt-4 mt-4">
+                  <h3 className="text-lg font-semibold text-amber-300 mb-3">📦 Newsletter Backup & Restore</h3>
+                  <p className="text-neutral-400 text-sm mb-4">
+                    Export all newsletters to a backup file or restore from a previous backup.
+                  </p>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={handleExportAllNewsletters}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Export All Newsletters
+                    </Button>
+
+                    <label className="inline-block">
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportAllNewsletters}
+                        className="hidden"
+                      />
+                      <span className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg cursor-pointer transition-colors duration-200">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        Import Newsletter Backup
+                      </span>
+                    </label>
+
+                    <div className="text-xs text-neutral-500 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Total: {gameState.newsletter?.newsletters?.length || 0} newsletters
+                    </div>
+                  </div>
+                </div>
               </div>
             </Card>
 

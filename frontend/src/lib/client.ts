@@ -9,6 +9,9 @@ let currentUser: User | null = null;
 // Export function to get current user
 export const getCurrentUser = (): User | null => currentUser;
 
+// Export function to get socket for direct event handling
+export const getSocket = (): Socket | null => socket;
+
 // Helper function to create a typed emitter
 const createEmitter = <T>(eventName: string) => (payload: T) => {
     console.log(`Attempting to emit ${eventName}:`, payload);
@@ -416,6 +419,10 @@ export const changePassword = createEmitter<{ currentPassword: string, newPasswo
 export const saveNewsletter = createEmitter<any>('admin:saveNewsletter');
 export const publishNewsletter = createEmitter<string>('admin:publishNewsletter');
 export const unpublishNewsletter = createEmitter<string>('admin:unpublishNewsletter');
+
+// Newsletter backup and restore functions
+export const exportAllNewsletters = () => socket.emit('admin:exportAllNewsletters');
+export const importAllNewsletters = createEmitter<any>('admin:importAllNewsletters');
 
 // AI Management emitters
 export const addAITribe = createEmitter<any>('admin:addAITribe');

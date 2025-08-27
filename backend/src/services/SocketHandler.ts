@@ -622,6 +622,117 @@ export class SocketHandler {
       }
     });
 
+    // Newsletter backup and restore handlers
+    socket.on('admin:exportAllNewsletters', async () => {
+      console.log(`📰 Admin exporting all newsletters`);
+      try {
+        const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
+
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          totalNewsletters: news.newsletters.length,
+          newsletters: news.newsletters.map((newsletter: any) => ({
+            id: newsletter.id,
+            turn: newsletter.turn,
+            title: newsletter.title,
+            content: newsletter.content,
+            isPublished: newsletter.isPublished,
+            publishedAt: newsletter.publishedAt
+          }))
+        };
+
+        socket.emit('admin:newsletterExportReady', exportData);
+        console.log(`✅ Newsletter export ready: ${news.newsletters.length} newsletters`);
+      } catch (error) {
+        console.error(`❌ Error exporting newsletters:`, error);
+        socket.emit('admin:newsletterExportError', { error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
+
+    socket.on('admin:importAllNewsletters', async (importData: any) => {
+      console.log(`📰 Admin importing newsletters: ${importData.newsletters?.length || 0} newsletters`);
+      try {
+        if (!importData.newsletters || !Array.isArray(importData.newsletters)) {
+          throw new Error('Invalid import data: newsletters array is required');
+        }
+
+        const gameState = await this.gameService.getGameState();
+        if (!gameState) {
+          throw new Error('No game state found');
+        }
+
+        // Get current newsletter state
+        const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
+
+        // Process imported newsletters
+        let importedCount = 0;
+        let updatedCount = 0;
+        let skippedCount = 0;
+
+        for (const importedNewsletter of importData.newsletters) {
+          try {
+            // Validate newsletter data
+            if (!importedNewsletter.turn || !importedNewsletter.title || !importedNewsletter.content) {
+              console.log(`⚠️ Skipping invalid newsletter: missing required fields`);
+              skippedCount++;
+              continue;
+            }
+
+            // Check if newsletter already exists for this turn
+            const existingIndex = news.newsletters.findIndex((n: any) => n.turn === importedNewsletter.turn);
+
+            const newsletter = {
+              id: importedNewsletter.id || `newsletter-${Date.now()}-${importedNewsletter.turn}`,
+              turn: importedNewsletter.turn,
+              title: importedNewsletter.title,
+              content: importedNewsletter.content,
+              isPublished: importedNewsletter.isPublished || false,
+              publishedAt: importedNewsletter.publishedAt || new Date()
+            };
+
+            if (existingIndex >= 0) {
+              // Update existing newsletter
+              news.newsletters[existingIndex] = newsletter;
+              updatedCount++;
+              console.log(`✅ Updated newsletter for turn ${newsletter.turn}: ${newsletter.title}`);
+            } else {
+              // Add new newsletter
+              news.newsletters.push(newsletter);
+              importedCount++;
+              console.log(`✅ Imported new newsletter for turn ${newsletter.turn}: ${newsletter.title}`);
+            }
+
+            // Set as current newsletter if it's for the current turn
+            if (newsletter.turn === gameState.turn) {
+              news.currentNewsletter = newsletter;
+            }
+          } catch (newsletterError) {
+            console.error(`❌ Error processing newsletter for turn ${importedNewsletter.turn}:`, newsletterError);
+            skippedCount++;
+          }
+        }
+
+        // Persist the updated newsletter state
+        (this.gameService as any).database?.setNewsletterState?.(news);
+
+        await emitGameState();
+
+        const result = {
+          success: true,
+          imported: importedCount,
+          updated: updatedCount,
+          skipped: skippedCount,
+          total: importedCount + updatedCount
+        };
+
+        socket.emit('admin:newsletterImportComplete', result);
+        console.log(`✅ Newsletter import complete: ${result.imported} imported, ${result.updated} updated, ${result.skipped} skipped`);
+      } catch (error) {
+        console.error(`❌ Error importing newsletters:`, error);
+        socket.emit('admin:newsletterImportError', { error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
+
     socket.on('admin:publishNewsletter', async (newsletterId: string) => {
       console.log(`📰 Admin publishing newsletter ${newsletterId}`);
       try {

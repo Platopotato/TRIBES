@@ -1579,6 +1579,37 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // Check for abandoned home base scavenging opportunity
     const scavengedResources = checkForAbandonedHomeBaseScavenging(tribe, destKey, state);
 
+    // CRITICAL FIX: Check if hex has an empty outpost to capture
+    const { q, r } = parseHexCoords(destKey);
+    const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+    if (hasOutpostDefenses(hex) && occupantTribes.length === 0) {
+        const prevOwnerId = getOutpostOwnerTribeId(hex);
+        const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+
+        // Transfer outpost ownership to the arriving tribe
+        setOutpostOwner(hex, tribe.id, destKey);
+
+        const captureMsg = `🏴‍☠️ Empty outpost at ${destKey} captured by ${tribe.tribeName}. Banner replaced.`;
+        tribe.lastTurnResults.push({
+            id: `outpost-capture-peaceful-${destKey}-${state.turn}`,
+            actionType: ActionType.Move,
+            actionData: {},
+            result: captureMsg
+        });
+
+        // Notify previous owner if they still exist
+        if (prevOwner) {
+            prevOwner.lastTurnResults.push({
+                id: `outpost-lost-peaceful-${destKey}-${state.turn}`,
+                actionType: ActionType.Move,
+                actionData: {},
+                result: `⚠️ Your abandoned outpost at ${destKey} was captured by ${tribe.tribeName}.`
+            });
+        }
+
+        console.log(`🏴‍☠️ PEACEFUL OUTPOST CAPTURE: ${tribe.tribeName} captured empty outpost at ${destKey} from ${prevOwner?.tribeName || 'unknown'}`);
+    }
+
     // Otherwise, stack with allies or empty hex: create/update your garrison
     if (!tribe.garrisons[destKey]) {
         tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
@@ -2732,6 +2763,40 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     if (isFastTrackable) {
         // INSTANT MOVEMENT for short distances
         const destKey = convertToStandardFormat(destination);
+
+        // CRITICAL FIX: Check if hex has an empty outpost to capture (fast-track movement)
+        const { q, r } = parseHexCoords(destKey);
+        const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+        const occupantTribes = state.tribes.filter((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+
+        if (hasOutpostDefenses(hex) && occupantTribes.length === 0) {
+            const prevOwnerId = getOutpostOwnerTribeId(hex);
+            const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+
+            // Transfer outpost ownership to the arriving tribe
+            setOutpostOwner(hex, tribe.id, destKey);
+
+            const captureMsg = `🏴‍☠️ Empty outpost at ${destKey} captured by ${tribe.tribeName}. Banner replaced.`;
+            tribe.lastTurnResults.push({
+                id: `outpost-capture-fasttrack-${destKey}-${state.turn}`,
+                actionType: ActionType.Move,
+                actionData: {},
+                result: captureMsg
+            });
+
+            // Notify previous owner if they still exist
+            if (prevOwner) {
+                prevOwner.lastTurnResults.push({
+                    id: `outpost-lost-fasttrack-${destKey}-${state.turn}`,
+                    actionType: ActionType.Move,
+                    actionData: {},
+                    result: `⚠️ Your abandoned outpost at ${destKey} was captured by ${tribe.tribeName}.`
+                });
+            }
+
+            console.log(`🏴‍☠️ FAST-TRACK OUTPOST CAPTURE: ${tribe.tribeName} captured empty outpost at ${destKey} from ${prevOwner?.tribeName || 'unknown'}`);
+        }
+
         if (!tribe.garrisons[destKey]) {
             tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
         }

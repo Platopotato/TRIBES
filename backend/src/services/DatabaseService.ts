@@ -1139,25 +1139,53 @@ export class DatabaseService {
 
                 if (hex) {
                   const garrison = garrisonData as any;
-                  await tx.garrison.create({
-                    data: {
-                      hexQ: q,
-                      hexR: r,
-                      troops: garrison.troops || 0,
-                      weapons: garrison.weapons || 0,
-                      chiefs: garrison.chiefs || [],
-                      tribeId: tribe.id,
-                      hexId: hex.id
+
+                  // ENHANCED: Check for existing garrison to prevent duplicates
+                  const existingGarrison = await tx.garrison.findFirst({
+                    where: {
+                      hexId: hex.id,
+                      tribeId: tribe.id
                     }
                   });
-                  console.log(`✅ Created garrison for ${tribe.tribeName} at ${hexCoord}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
-                  garrisonCount++;
-                  totalGarrisons++;
+
+                  if (!existingGarrison) {
+                    await tx.garrison.create({
+                      data: {
+                        hexQ: q,
+                        hexR: r,
+                        troops: garrison.troops || 0,
+                        weapons: garrison.weapons || 0,
+                        chiefs: garrison.chiefs || [],
+                        tribeId: tribe.id,
+                        hexId: hex.id
+                      }
+                    });
+                    console.log(`✅ Created garrison for ${tribe.tribeName} at ${hexCoord}: ${garrison.troops} troops, ${garrison.weapons} weapons`);
+                    garrisonCount++;
+                    totalGarrisons++;
+                  } else {
+                    console.log(`⚠️ Garrison already exists for ${tribe.tribeName} at ${hexCoord} - updating instead`);
+                    await tx.garrison.update({
+                      where: { id: existingGarrison.id },
+                      data: {
+                        troops: garrison.troops || 0,
+                        weapons: garrison.weapons || 0,
+                        chiefs: garrison.chiefs || []
+                      }
+                    });
+                    console.log(`✅ Updated existing garrison for ${tribe.tribeName} at ${hexCoord}`);
+                  }
                 } else {
                   console.log(`❌ Hex not found for coordinates q=${q}, r=${r} (${hexCoord})`);
                 }
               } catch (garrisonError) {
                 console.log(`❌ Error creating garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
+
+                // CRITICAL: If this is a transaction abort error, we need to stop immediately
+                if ((garrisonError as any)?.code === '25P02') {
+                  console.error('🚨 TRANSACTION ABORTED during garrison creation - stopping transaction');
+                  throw garrisonError; // Re-throw to abort the entire transaction
+                }
               }
             }
 
@@ -1192,7 +1220,7 @@ export class DatabaseService {
                   continue;
                 }
 
-                // Check if relation already exists (to avoid duplicates)
+                // ENHANCED: More thorough duplicate checking to prevent constraint violations
                 const existingRelation = await tx.diplomaticRelation.findFirst({
                   where: {
                     OR: [
@@ -1203,6 +1231,12 @@ export class DatabaseService {
                 });
 
                 if (!existingRelation) {
+                  // Additional validation before creation
+                  if (tribe.id === targetTribeId) {
+                    console.log(`⚠️ Skipping self-diplomatic relation for ${tribe.tribeName}`);
+                    continue;
+                  }
+
                   await tx.diplomaticRelation.create({
                     data: {
                       fromTribeId: tribe.id,
@@ -1222,6 +1256,12 @@ export class DatabaseService {
                   code: (error as any)?.code,
                   constraint: (error as any)?.meta?.target
                 });
+
+                // CRITICAL: If this is a transaction abort error, we need to stop immediately
+                if ((error as any)?.code === '25P02') {
+                  console.error('🚨 TRANSACTION ABORTED during diplomatic relation creation - stopping transaction');
+                  throw error; // Re-throw to abort the entire transaction
+                }
                 // Continue processing other relations instead of failing the entire transaction
               }
             }

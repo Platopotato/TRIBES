@@ -56,10 +56,19 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const handleAddChief = (location: string, chiefName: string) => {
     if (!editingGarrisons || !selectedTribe) return;
     const chief = ALL_CHIEFS.find(c => c.name === chiefName);
-    if (!chief) return;
+    if (!chief) {
+      console.error(`❌ Chief ${chiefName} not found in ALL_CHIEFS`);
+      return;
+    }
 
     const currentChiefs = editingGarrisons[location]?.chiefs || [];
-    if (currentChiefs.some(c => c.name === chiefName)) return; // Already has this chief
+    if (currentChiefs.some(c => c.name === chiefName)) {
+      console.warn(`⚠️ Chief ${chiefName} already exists at ${location}`);
+      return; // Already has this chief
+    }
+
+    console.log(`➕ Adding chief ${chiefName} to ${location}`);
+    console.log('Before addition:', currentChiefs.map(c => c.name));
 
     setEditingGarrisons({
       ...editingGarrisons,
@@ -71,12 +80,21 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   };
 
   const handleRemoveChief = (location: string, chiefName: string) => {
-    if (!editingGarrisons) return;
+    if (!editingGarrisons || !editingGarrisons[location]) return;
+
+    console.log(`🗑️ Removing chief ${chiefName} from ${location}`);
+    console.log('Before removal:', editingGarrisons[location].chiefs?.map(c => c.name));
+
+    const currentChiefs = editingGarrisons[location].chiefs || [];
+    const filteredChiefs = currentChiefs.filter(c => c.name !== chiefName);
+
+    console.log('After removal:', filteredChiefs.map(c => c.name));
+
     setEditingGarrisons({
       ...editingGarrisons,
       [location]: {
         ...editingGarrisons[location],
-        chiefs: editingGarrisons[location].chiefs.filter(c => c.name !== chiefName)
+        chiefs: filteredChiefs
       }
     });
   };
@@ -165,11 +183,13 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   };
 
   const availableChiefs = useMemo(() => {
-    if (!selectedTribe || !editingGarrisons) return ALL_CHIEFS;
+    if (!selectedTribe || !editingGarrisons) return ALL_CHIEFS.sort((a, b) => a.name.localeCompare(b.name));
     const assignedChiefs = Object.values(editingGarrisons)
       .flatMap(g => g.chiefs || [])
       .map(c => c.name);
-    return ALL_CHIEFS.filter(chief => !assignedChiefs.includes(chief.name));
+    return ALL_CHIEFS
+      .filter(chief => !assignedChiefs.includes(chief.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedTribe, editingGarrisons]);
 
   const availableAssets = useMemo(() => {
@@ -431,7 +451,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
                   <div>
                     <label className="text-xs text-slate-400 mb-1 block">Chiefs</label>
-                    {garrison.chiefs?.map(chief => (
+                    {garrison.chiefs?.sort((a, b) => a.name.localeCompare(b.name)).map(chief => (
                       <div key={chief.name} className="flex items-center justify-between p-1 bg-slate-800 rounded mb-1">
                         <span className="text-xs text-slate-200">{chief.name}</span>
                         <Button
@@ -444,10 +464,15 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                       </div>
                     ))}
                     {availableChiefs.length > 0 && (
-                      <select 
-                        onChange={(e) => e.target.value && handleAddChief(location, e.target.value)}
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddChief(location, e.target.value);
+                            e.target.value = ""; // Reset selection after adding
+                          }
+                        }}
                         className="w-full px-2 py-1 bg-slate-700 text-white rounded border border-slate-600 text-xs"
-                        value=""
+                        defaultValue=""
                       >
                         <option value="">Add Chief...</option>
                         {availableChiefs.map(chief => (

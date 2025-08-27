@@ -181,6 +181,16 @@ interface CombinedEffects {
     globalCombatAttackBonus: number; // additive percentage
     globalCombatDefenseBonus: number; // additive percentage
     terrainDefenseBonus: Partial<Record<TerrainType, number>>; // additive percentage by terrain
+    // NEW: Additional technology effect bonuses
+    researchSpeedBonus: number; // additive percentage
+    recruitmentCostReduction: number; // additive percentage
+    weaponProductionBonus: number; // additive percentage
+    tradeBonus: number; // additive percentage
+    sabotageResistance: number; // additive percentage
+    sabotageEffectiveness: number; // additive percentage
+    terrainMovementBonus: Partial<Record<TerrainType, number>>; // additive percentage by terrain
+    resourceCapacityBonus: number; // additive percentage
+    chiefRecruitmentBonus: number; // additive percentage
 }
 
 function getCombinedEffects(tribe: any): CombinedEffects {
@@ -198,6 +208,16 @@ function getCombinedEffects(tribe: any): CombinedEffects {
             [TerrainType.Wasteland]: 0.0,     // 0% - barren, no advantage
             [TerrainType.Plains]: -0.05,      // -5% defense penalty - open ground
         },
+        // NEW: Additional technology effect bonuses
+        researchSpeedBonus: 0,
+        recruitmentCostReduction: 0,
+        weaponProductionBonus: 0,
+        tradeBonus: 0,
+        sabotageResistance: 0,
+        sabotageEffectiveness: 0,
+        terrainMovementBonus: {},
+        resourceCapacityBonus: 0,
+        chiefRecruitmentBonus: 0,
     };
 
     // TECHNOLOGIES: Apply completed research effects
@@ -221,6 +241,36 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     } else {
                         effects.globalCombatDefenseBonus += e.value;
                     }
+                    break;
+                // NEW: Missing technology effect implementations
+                case TechnologyEffectType.ResearchSpeedBonus:
+                    effects.researchSpeedBonus += e.value;
+                    break;
+                case TechnologyEffectType.RecruitmentCostReduction:
+                    effects.recruitmentCostReduction += e.value;
+                    break;
+                case TechnologyEffectType.WeaponProductionBonus:
+                    effects.weaponProductionBonus += e.value;
+                    break;
+                case TechnologyEffectType.TradeBonus:
+                    effects.tradeBonus += e.value;
+                    break;
+                case TechnologyEffectType.SabotageResistance:
+                    effects.sabotageResistance += e.value;
+                    break;
+                case TechnologyEffectType.SabotageEffectiveness:
+                    effects.sabotageEffectiveness += e.value;
+                    break;
+                case TechnologyEffectType.TerrainMovementBonus:
+                    if (e.terrain) {
+                        effects.terrainMovementBonus[e.terrain] = (effects.terrainMovementBonus[e.terrain] || 0) + e.value;
+                    }
+                    break;
+                case TechnologyEffectType.ResourceCapacityBonus:
+                    effects.resourceCapacityBonus += e.value;
+                    break;
+                case TechnologyEffectType.ChiefRecruitmentBonus:
+                    effects.chiefRecruitmentBonus += e.value;
                     break;
             }
         }
@@ -247,6 +297,36 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     } else {
                         effects.globalCombatDefenseBonus += e.value;
                     }
+                    break;
+                // NEW: Missing asset effect implementations (same as technologies)
+                case TechnologyEffectType.ResearchSpeedBonus:
+                    effects.researchSpeedBonus += e.value;
+                    break;
+                case TechnologyEffectType.RecruitmentCostReduction:
+                    effects.recruitmentCostReduction += e.value;
+                    break;
+                case TechnologyEffectType.WeaponProductionBonus:
+                    effects.weaponProductionBonus += e.value;
+                    break;
+                case TechnologyEffectType.TradeBonus:
+                    effects.tradeBonus += e.value;
+                    break;
+                case TechnologyEffectType.SabotageResistance:
+                    effects.sabotageResistance += e.value;
+                    break;
+                case TechnologyEffectType.SabotageEffectiveness:
+                    effects.sabotageEffectiveness += e.value;
+                    break;
+                case TechnologyEffectType.TerrainMovementBonus:
+                    if (e.terrain) {
+                        effects.terrainMovementBonus[e.terrain] = (effects.terrainMovementBonus[e.terrain] || 0) + e.value;
+                    }
+                    break;
+                case TechnologyEffectType.ResourceCapacityBonus:
+                    effects.resourceCapacityBonus += e.value;
+                    break;
+                case TechnologyEffectType.ChiefRecruitmentBonus:
+                    effects.chiefRecruitmentBonus += e.value;
                     break;
             }
         }
@@ -2422,7 +2502,17 @@ function processRecruitAction(tribe: any, action: any): string {
 
     // Apply recruitment efficiency from rations
     const recruitmentEfficiency = tribe.rationEffects?.recruitmentEfficiency || 1.0;
-    const baseTroopsRecruited = Math.floor(foodOffered / 2); // 2 food per troop base
+
+    // NEW: Apply recruitment cost reduction from technologies/assets
+    const effects = getCombinedEffects(tribe);
+    let actualFoodCost = foodOffered;
+    if (effects.recruitmentCostReduction > 0) {
+        const reduction = Math.floor(foodOffered * effects.recruitmentCostReduction);
+        actualFoodCost = Math.max(1, foodOffered - reduction); // Minimum 1 food cost
+        console.log(`💰 RECRUITMENT COST REDUCTION: ${tribe.tribeName} saved ${reduction} food (${Math.round(effects.recruitmentCostReduction * 100)}% reduction)`);
+    }
+
+    const baseTroopsRecruited = Math.floor(foodOffered / 2); // 2 food per troop base (use original offer for troop calculation)
     let troopsRecruited = Math.max(1, Math.floor(baseTroopsRecruited * recruitmentEfficiency));
 
     // Generous rations bonus: 20% chance of extra recruit
@@ -2430,8 +2520,8 @@ function processRecruitAction(tribe: any, action: any): string {
         troopsRecruited += 1;
     }
 
-    // Recruit troops
-    tribe.globalResources.food -= foodOffered;
+    // Recruit troops (use actual cost after reductions)
+    tribe.globalResources.food -= actualFoodCost;
     garrison.troops += troopsRecruited;
 
     let efficiencyMessage = '';
@@ -2647,11 +2737,23 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
         return `Insufficient scrap to build weapons. Need ${scrapCost} scrap, have ${tribe.globalResources.scrap}.`;
     }
 
+    // NEW: Apply weapon production bonus from technologies/assets
+    const effects = getCombinedEffects(tribe);
+    let weaponsProduced = 1;
+    if (effects.weaponProductionBonus > 0) {
+        const bonusChance = effects.weaponProductionBonus;
+        if (Math.random() < bonusChance) {
+            weaponsProduced += 1;
+            console.log(`🔨 WEAPON PRODUCTION BONUS: ${tribe.tribeName} produced extra weapon (${Math.round(bonusChance * 100)}% chance)`);
+        }
+    }
+
     // Build weapons
     tribe.globalResources.scrap -= scrapCost;
-    garrison.weapons += 1;
+    garrison.weapons += weaponsProduced;
 
-    return `Successfully built 1 weapon at ${location}. Cost: ${scrapCost} scrap.`;
+    const bonusMessage = weaponsProduced > 1 ? ` (Bonus: +${weaponsProduced - 1} extra weapon!)` : '';
+    return `Successfully built ${weaponsProduced} weapon${weaponsProduced > 1 ? 's' : ''} at ${location}. Cost: ${scrapCost} scrap.${bonusMessage}`;
 }
 
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---
@@ -4629,6 +4731,14 @@ function processTechnologyProgress(tribe: any, project: ResearchProject): { mess
     // Base research progress: 1 point per troop per turn
     let progressThisTurn = Math.floor(project.assignedTroops * 1);
 
+    // NEW: Apply research speed bonus from technologies/assets
+    const effects = getCombinedEffects(tribe);
+    if (effects.researchSpeedBonus > 0) {
+        const bonus = Math.floor(progressThisTurn * effects.researchSpeedBonus);
+        progressThisTurn += bonus;
+        console.log(`🚀 RESEARCH SPEED BONUS: ${tribe.tribeName} gained +${bonus} research points from technology bonuses (+${Math.round(effects.researchSpeedBonus * 100)}%)`);
+    }
+
     // Apply home base efficiency modifier
     const hasHomeBase = tribe.garrisons[tribe.location];
     if (!hasHomeBase) {
@@ -4884,9 +4994,22 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
     const operativeBonus = Math.min(troops * 0.05, 0.3); // +5% per operative, max 30%
     const distancePenalty = Math.min(pathInfo.cost * 0.05, 0.4); // -5% per distance unit, max 40%
 
+    // NEW: Apply sabotage effectiveness and resistance bonuses
+    const attackerEffects = getCombinedEffects(tribe);
+    const defenderEffects = getCombinedEffects(targetTribe);
+    const effectivenessBonus = attackerEffects.sabotageEffectiveness; // Attacker's effectiveness bonus
+    const resistanceBonus = defenderEffects.sabotageResistance; // Defender's resistance bonus
+
     const successRate = Math.max(0.1, Math.min(0.95,
-        baseSuccessRate + chiefBonus + operativeBonus - distancePenalty
+        baseSuccessRate + chiefBonus + operativeBonus - distancePenalty + effectivenessBonus - resistanceBonus
     ));
+
+    if (effectivenessBonus > 0) {
+        console.log(`🕵️ SABOTAGE EFFECTIVENESS: ${tribe.tribeName} gained +${Math.round(effectivenessBonus * 100)}% success rate`);
+    }
+    if (resistanceBonus > 0) {
+        console.log(`🛡️ SABOTAGE RESISTANCE: ${targetTribe.tribeName} reduced sabotage success by ${Math.round(resistanceBonus * 100)}%`);
+    }
 
     const missionSuccess = Math.random() < successRate;
     const detectionRate = missionSuccess ? 0.2 : 0.7; // 20% if success, 70% if failed

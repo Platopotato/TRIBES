@@ -4064,6 +4064,27 @@ function processBasicUpkeep(tribe: any, state?: any): void {
                 tribe.completedTechs.push(project.techId);
                 completedProjects.push(project.techId);
 
+                // CRITICAL FIX: Apply technology morale bonuses immediately when completed
+                const tech = getTechnology(project.techId);
+                if (tech) {
+                    for (const effect of tech.effects) {
+                        if (effect.type === TechnologyEffectType.MoraleBonus) {
+                            const oldMorale = tribe.globalResources.morale;
+                            tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + effect.value);
+                            const actualBonus = tribe.globalResources.morale - oldMorale;
+                            if (actualBonus > 0) {
+                                tribe.lastTurnResults.push({
+                                    id: `tech-morale-bonus-${project.techId}-${Date.now()}`,
+                                    actionType: ActionType.Technology,
+                                    actionData: {},
+                                    result: `🏥 ${tech.name} completed! Morale increased by ${actualBonus} (capped at 100). Current morale: ${tribe.globalResources.morale}/100.`
+                                });
+                                console.log(`🏥 MORALE BONUS: ${tribe.tribeName} gained +${actualBonus} morale from ${tech.name} (${oldMorale} → ${tribe.globalResources.morale})`);
+                            }
+                        }
+                    }
+                }
+
                 console.log(`✅ TECH COMPLETED: ${tribe.tribeName} now has ${tribe.completedTechs.length} completed technologies`);
             } else if (researchResult.newProgress !== undefined) {
                 tribe.currentResearch[i].progress = researchResult.newProgress;

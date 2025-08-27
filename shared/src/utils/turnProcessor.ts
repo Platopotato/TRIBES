@@ -1120,6 +1120,19 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
                     const { q, r } = parseHexCoords(destKey);
                     const revealedHexes = getHexesInRange({ q, r }, 1);
                     revealedHexes.forEach(hex => { if (!tribe.exploredHexes.includes(hex)) tribe.exploredHexes.push(hex); });
+
+                    // CRITICAL FIX: Return chiefs to home base after scouting
+                    if (journey.force.chiefs && journey.force.chiefs.length > 0) {
+                        if (!tribe.garrisons[tribe.location]) {
+                            tribe.garrisons[tribe.location] = { troops: 0, weapons: 0, chiefs: [] };
+                        }
+                        if (!tribe.garrisons[tribe.location].chiefs) {
+                            tribe.garrisons[tribe.location].chiefs = [];
+                        }
+                        tribe.garrisons[tribe.location].chiefs.push(...journey.force.chiefs);
+                        console.log(`👑 SCOUT RETURN: ${journey.force.chiefs.length} chiefs returned from scouting ${destKey} to home base ${tribe.location}`);
+                    }
+
                     tribe.lastTurnResults.push({ id: `scout-arrival-${journey.id}`, actionType: ActionType.Scout, actionData: {}, result: `🔍 Scouts arrived at ${destKey} and completed reconnaissance. Area mapped.` });
                 } else if (journey.type === JourneyType.Scavenge) {
                     const pseudoAction = { actionData: { location: destKey, target_location: destKey, resource_type: journey.scavengeType || 'food', troops: journey.force.troops, weapons: journey.force.weapons } };
@@ -1128,6 +1141,14 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
                     const g = tribe.garrisons[destKey];
                     g.troops += journey.force.troops;
                     g.weapons = (g.weapons || 0) + (journey.force.weapons || 0);
+
+                    // CRITICAL FIX: Handle chiefs in scavenging journeys
+                    if (journey.force.chiefs && journey.force.chiefs.length > 0) {
+                        if (!g.chiefs) g.chiefs = [];
+                        g.chiefs.push(...journey.force.chiefs);
+                        console.log(`👑 SCAVENGE ARRIVAL: ${journey.force.chiefs.length} chiefs arrived at scavenging location ${destKey}`);
+                    }
+
                     const result = processScavengeAction(tribe, pseudoAction, state);
                     tribe.lastTurnResults.push({ id: `scavenge-arrival-${journey.id}`, actionType: ActionType.Scavenge, actionData: {}, result });
                 } else {
@@ -1460,8 +1481,10 @@ function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTrib
             result: `🛡️ **AMBUSH FAILED!** ${attackerTribe.tribeName} forces broke through your position at ${encounterLocation}! **Your losses:** ${defLosses} troops, ${defWeaponsLoss} weapons. **Enemy losses:** ${atkLosses} troops, ${atkWeaponsLoss} weapons.`
         });
 
-        // Journey continues if any forces remain
-        if (journey.force.troops <= 0 && (journey.force.weapons || 0) <= 0) {
+        // CRITICAL FIX: Journey continues if ANY forces remain (including chiefs!)
+        const hasRemainingForces = journey.force.troops > 0 || (journey.force.weapons || 0) > 0 || (journey.force.chiefs && journey.force.chiefs.length > 0);
+
+        if (!hasRemainingForces) {
             // Force completely destroyed - remove journey
             const journeyIndex = state.journeys.findIndex((j: any) => j.id === journey.id);
             if (journeyIndex >= 0) {
@@ -1473,6 +1496,15 @@ function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTrib
                 actionType: ActionType.Attack,
                 actionData: {},
                 result: `💀 Your forces were completely destroyed in the encounter at ${encounterLocation}. The mission has failed.`
+            });
+        } else if (journey.force.chiefs && journey.force.chiefs.length > 0 && journey.force.troops <= 0 && (journey.force.weapons || 0) <= 0) {
+            // CHIEF-ONLY MISSION: Chiefs survived but no troops/weapons remain
+            console.log(`👑 CHIEF-ONLY MISSION: ${journey.force.chiefs.length} chiefs continuing journey ${journey.id} after combat at ${encounterLocation}`);
+            attackerTribe.lastTurnResults.push({
+                id: `chief-mission-continues-${Date.now()}`,
+                actionType: ActionType.Attack,
+                actionData: {},
+                result: `👑 Your chiefs survived the encounter at ${encounterLocation} and continue their mission despite losing all troops and weapons.`
             });
         }
 

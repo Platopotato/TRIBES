@@ -1171,14 +1171,23 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
                 const nextHex = journey.path[0];
                 journey.currentLocation = nextHex;
 
-                // Check for enemy encounters during movement
-                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+                // FOG OF WAR: Reveal hexes that troops pass through during movement
+                if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack ||
+                    journey.type === JourneyType.BuildOutpost || journey.type === JourneyType.Scavenge) {
                     const tribe = state.tribes.find((t: any) => t.id === journey.ownerTribeId);
                     if (tribe) {
-                        const enemyEncounter = checkForEnemyEncounter(journey, tribe, state, nextHex);
-                        if (enemyEncounter) {
-                            // Combat interrupts movement - journey will be handled in encounter resolution
-                            return true; // Keep journey for now, will be resolved in encounter processing
+                        // Reveal the hex the troops are currently passing through
+                        if (!tribe.exploredHexes.includes(nextHex)) {
+                            tribe.exploredHexes.push(nextHex);
+                        }
+
+                        // Check for enemy encounters during movement (only for Move/Attack)
+                        if (journey.type === JourneyType.Move || journey.type === JourneyType.Attack) {
+                            const enemyEncounter = checkForEnemyEncounter(journey, tribe, state, nextHex);
+                            if (enemyEncounter) {
+                                // Combat interrupts movement - journey will be handled in encounter resolution
+                                return true; // Keep journey for now, will be resolved in encounter processing
+                            }
                         }
                     }
                 }
@@ -1198,7 +1207,11 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
                     resolveTradeArrival(journey, tribe, state);
                 } else if (journey.type === JourneyType.Scout) {
                     const { q, r } = parseHexCoords(destKey);
-                    const revealedHexes = getHexesInRange({ q, r }, 1);
+                    // FOG OF WAR: Apply reconnaissance technology bonus to scout range
+                    const baseScoutRange = 1; // Base scouts reveal 1 hex radius around target
+                    const visibilityBonus = getVisibilityRangeBonus(tribe); // Technology bonuses like Reconnaissance
+                    const scoutRange = baseScoutRange + visibilityBonus;
+                    const revealedHexes = getHexesInRange({ q, r }, scoutRange);
                     revealedHexes.forEach(hex => { if (!tribe.exploredHexes.includes(hex)) tribe.exploredHexes.push(hex); });
 
                     // CRITICAL FIX: Return chiefs to home base after scouting
@@ -2915,10 +2928,17 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         if (!destGarrison.chiefs) destGarrison.chiefs = [];
         destGarrison.chiefs.push(...movingChiefs);
 
-        // Add to explored hexes
+        // FOG OF WAR: Add destination and path hexes to explored hexes for fast movement
         if (!tribe.exploredHexes.includes(destKey)) {
             tribe.exploredHexes.push(destKey);
         }
+
+        // Also reveal all hexes along the path for fast movement
+        pathInfo.path.forEach(pathHex => {
+            if (!tribe.exploredHexes.includes(pathHex)) {
+                tribe.exploredHexes.push(pathHex);
+            }
+        });
 
         const moveDetails = [];
         if (troopsToMove > 0) moveDetails.push(`${troopsToMove} troops`);

@@ -442,6 +442,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const formatHex = (q: number, r: number): string => formatHexCoords(q, r);
 
   const handleAddAction = (action: GameAction) => {
+    // Check action limit before adding
+    if (plannedActions.length >= maxActions) {
+      alert(`❌ Cannot add action: You have reached the maximum of ${maxActions} actions per turn.`);
+      return;
+    }
+
     setPlannedActions(prev => [...prev, action]);
     setIsModalOpen(false);
     setDraftAction(null);
@@ -578,6 +584,30 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   };
 
   const handleStartResearch = (techId: string, location: string, assignedTroops: number) => {
+    // Validate troop availability considering planned actions
+    const garrison = playerTribe?.garrisons[location];
+    if (!garrison) {
+      alert(`❌ Cannot start research: No garrison found at ${location}.`);
+      return;
+    }
+
+    // Calculate troops already allocated to planned actions at this location
+    const allocatedTroops = plannedActions
+      .filter(action =>
+        action.actionData.location === location ||
+        action.actionData.start_location === location
+      )
+      .reduce((total, action) => {
+        return total + (action.actionData.assignedTroops || action.actionData.troops || 0);
+      }, 0);
+
+    const availableTroops = garrison.troops - allocatedTroops;
+
+    if (availableTroops < assignedTroops) {
+      alert(`❌ Cannot start research: Not enough available troops at ${location}. Need ${assignedTroops}, have ${availableTroops} available (${garrison.troops} total - ${allocatedTroops} already allocated).`);
+      return;
+    }
+
     const action: GameAction = {
       id: `research-${Date.now()}`,
       actionType: ActionType.StartResearch,

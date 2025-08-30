@@ -313,18 +313,26 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-blue-400">Active Journeys</h3>
               <div className="text-sm text-slate-300">
-                {gameState.journeys.length} total journeys
+                {gameState.journeys?.length || 0} total journeys
               </div>
             </div>
             <div className="text-xs text-slate-400 mb-3">
               View and manage all player journeys. Remove stuck or problematic journeys as needed.
             </div>
+            {/* Debug info */}
+            <div className="text-xs text-yellow-400 mb-2">
+              Debug: journeys array exists: {gameState.journeys ? 'Yes' : 'No'},
+              length: {gameState.journeys?.length || 0}
+            </div>
           </div>
 
-          {gameState.journeys.length === 0 ? (
+          {(!gameState.journeys || gameState.journeys.length === 0) ? (
             <div className="text-center py-8 text-slate-400">
               <p className="text-lg">No active journeys</p>
               <p className="text-sm">All tribes are currently at their home locations</p>
+              <div className="text-xs text-yellow-400 mt-2">
+                Debug: gameState.journeys = {JSON.stringify(gameState.journeys)}
+              </div>
             </div>
           ) : (
             <div className="space-y-4 max-h-96 overflow-y-auto">

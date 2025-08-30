@@ -4732,9 +4732,12 @@ function processStartResearchAction(tribe: any, action: any): string {
     // Start research
     tribe.globalResources.scrap -= tech.cost.scrap;
 
-    // Initialize currentResearch array if it doesn't exist
+    // Initialize currentResearch array if it doesn't exist or convert single object to array
     if (!tribe.currentResearch) {
         tribe.currentResearch = [];
+    } else if (!Array.isArray(tribe.currentResearch)) {
+        // Convert single research object to array
+        tribe.currentResearch = [tribe.currentResearch];
     }
 
     // Add new research project

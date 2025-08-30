@@ -1,9 +1,10 @@
 /** @jsxImportSource react */
 import React from 'react';
-import { GameAction, GamePhase } from '@radix-tribes/shared';
+import { GameAction, GamePhase, ActionType } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { ACTION_DEFINITIONS } from './actions/actionDefinitions';
+import { getTechnology } from '@radix-tribes/shared';
 
 interface ActionPanelProps {
   actions: GameAction[];
@@ -23,8 +24,28 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
   console.log('  - isPlanning:', isPlanning);
   console.log('  - Will show:', isPlanning ? 'Add Action button' : 'Processing...');
   
+  const getActionDisplayName = (action: GameAction): string => {
+    if (action.actionType === ActionType.StartResearch && action.actionData.techId) {
+      const tech = getTechnology(action.actionData.techId);
+      return `Start Research: ${tech?.name || 'Unknown Technology'}`;
+    }
+    return action.actionType;
+  };
+
   const renderActionDetails = (action: GameAction) => {
     const { actionType, actionData } = action;
+
+    // Special handling for research actions
+    if (actionType === ActionType.StartResearch) {
+      const tech = getTechnology(actionData.techId);
+      return [
+        `Location: ${actionData.location}`,
+        `Researchers: ${actionData.assignedTroops}`,
+        tech ? `Cost: ${tech.cost.scrap} scrap` : ''
+      ].filter(Boolean).join(' • ');
+    }
+
+    // Generic handling for other actions
     const definition = ACTION_DEFINITIONS[actionType];
     if (!definition) return "Unknown Action";
 
@@ -74,7 +95,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
             {actions.map(action => (
               <li key={action.id} className="text-sm p-3 bg-slate-900/50 rounded-md flex justify-between items-start group border border-slate-700">
                 <div className="flex-1 min-w-0">
-                    <div className="font-bold text-amber-400 text-base">{action.actionType}</div>
+                    <div className="font-bold text-amber-400 text-base">{getActionDisplayName(action)}</div>
                     <div className="text-slate-300 text-xs mt-1 break-words">{renderActionDetails(action)}</div>
                 </div>
                 {isPlanning && (

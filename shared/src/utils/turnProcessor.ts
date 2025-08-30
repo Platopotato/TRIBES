@@ -4699,8 +4699,12 @@ function processStartResearchAction(tribe: any, action: any): string {
     if (!tech) return `❌ Start Research failed: Technology '${techId}' not found.`;
 
     // Check if already researching this specific technology
-    if (tribe.currentResearch && tribe.currentResearch.some((project: ResearchProject) => project.techId === techId)) {
-        return `❌ Start Research failed: Already researching ${tech.name}.`;
+    // Handle both array and single object formats for currentResearch
+    if (tribe.currentResearch) {
+        const researchArray = Array.isArray(tribe.currentResearch) ? tribe.currentResearch : [tribe.currentResearch];
+        if (researchArray.some((project: ResearchProject) => project.techId === techId)) {
+            return `❌ Start Research failed: Already researching ${tech.name}.`;
+        }
     }
 
     if (tribe.globalResources.scrap < tech.cost.scrap) {

@@ -2725,7 +2725,13 @@ function processSetRationAction(tribe: any, action: any): string {
 }
 
 function processBuildWeaponsAction(tribe: any, action: any): string {
-    const location = convertToStandardFormat(action.actionData.location);
+    // Handle both 'location' and 'start_location' field names for compatibility
+    const locationRaw = action.actionData.start_location || action.actionData.location;
+    if (!locationRaw) {
+        return `❌ Build weapons failed: No location specified.`;
+    }
+
+    const location = convertToStandardFormat(locationRaw);
     const garrison = tribe.garrisons[location] || tribe.garrisons[convertToStandardFormat(location)];
 
     if (!garrison) {

@@ -91,6 +91,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       };
       localStorage.setItem(backupKey, JSON.stringify(backupData));
       console.log('💾 ENHANCED BACKUP:', plannedActions.length, 'planned actions saved with timestamp');
+      console.log('💾 BACKUP ACTION IDs:', plannedActions.map(a => a.id));
+    } else if (plannedActions.length === 0 && playerTribe && !playerTribe.turnSubmitted) {
+      // Clear backup when no actions remain
+      const backupKey = `plannedActions_${playerTribe.id}_turn_${turn}`;
+      localStorage.removeItem(backupKey);
+      console.log('🧹 BACKUP: Cleared backup (no actions remaining)');
     }
   }, [plannedActions, playerTribe, turn]);
 
@@ -118,6 +124,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             if (shouldRestore) {
               console.log(`🔄 RECOVERY: Restoring ${restoredActions.length} planned actions from localStorage`);
               console.log(`📊 Backup info: age=${Math.round(backupAge/1000)}s, current=${plannedActions.length}, backup=${restoredActions.length}`);
+              console.log(`🔄 RECOVERY: Restored action IDs:`, restoredActions.map(a => a.id));
               setPlannedActions(restoredActions);
               setShowRestoredMessage(true);
               setTimeout(() => setShowRestoredMessage(false), 5000);
@@ -149,6 +156,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
           if (restoredActions && restoredActions.length > 0) {
             console.log('🚨 EMERGENCY RECOVERY: Found actions in backup but none in memory, restoring...');
+            console.log('🚨 EMERGENCY RECOVERY: Restored action IDs:', restoredActions.map(a => a.id));
             setPlannedActions(restoredActions);
             setShowRestoredMessage(true);
             setTimeout(() => setShowRestoredMessage(false), 5000);
@@ -440,7 +448,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   };
 
   const handleDeleteAction = (actionId: string) => {
-    setPlannedActions(prev => prev.filter(action => action.id !== actionId));
+    console.log('🗑️ DELETE ACTION: Attempting to delete action with ID:', actionId);
+    console.log('🗑️ DELETE ACTION: Current actions before deletion:', plannedActions.map(a => ({ id: a.id, type: a.actionType })));
+
+    setPlannedActions(prev => {
+      const filtered = prev.filter(action => action.id !== actionId);
+      console.log('🗑️ DELETE ACTION: Actions after deletion:', filtered.map(a => ({ id: a.id, type: a.actionType })));
+      return filtered;
+    });
   };
 
   const handleConfirmActions = () => {

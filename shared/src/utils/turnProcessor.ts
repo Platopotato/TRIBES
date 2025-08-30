@@ -4941,19 +4941,10 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
         return `❌ Sabotage failed: Missing required mission parameters.`;
     }
 
-    if (!troops || troops < 1) {
-        return `❌ Sabotage failed: At least 1 operative required.`;
-    }
-
     // Get source garrison
     const sourceGarrison = tribe.garrisons[start_location];
     if (!sourceGarrison) {
         return `❌ Sabotage failed: No garrison found at ${start_location}.`;
-    }
-
-    // Check if we have enough operatives
-    if (sourceGarrison.troops < troops) {
-        return `❌ Sabotage failed: Not enough operatives at ${start_location}. Have ${sourceGarrison.troops}, need ${troops}.`;
     }
 
     // Check for chiefs
@@ -4963,6 +4954,19 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
 
     if (selectedChiefs.length > 0 && movingChiefs.length !== selectedChiefs.length) {
         return `❌ Sabotage failed: Some selected chiefs not available at ${start_location}.`;
+    }
+
+    // Validate that we have at least troops OR chiefs (allow chiefs-only sabotage)
+    const hasTroops = troops && troops > 0;
+    const hasChiefs = movingChiefs.length > 0;
+
+    if (!hasTroops && !hasChiefs) {
+        return `❌ Sabotage failed: At least 1 operative (troop or chief) required.`;
+    }
+
+    // If using troops, validate we have enough
+    if (hasTroops && sourceGarrison.troops < troops) {
+        return `❌ Sabotage failed: Not enough operatives at ${start_location}. Have ${sourceGarrison.troops}, need ${troops}.`;
     }
 
     // Find target tribe
@@ -4984,14 +4988,16 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
         return `❌ Sabotage failed: No path to target location.`;
     }
 
-    // Deduct operatives from source garrison
-    sourceGarrison.troops -= troops;
+    // Deduct operatives from source garrison (only if troops > 0)
+    if (hasTroops) {
+        sourceGarrison.troops -= troops;
+    }
     sourceGarrison.chiefs = availableChiefs.filter((c: any) => !selectedChiefs.includes(c.name));
 
     // Calculate success probability
     const baseSuccessRate = 0.6; // 60% base success
     const chiefBonus = movingChiefs.length * 0.15; // +15% per chief
-    const operativeBonus = Math.min(troops * 0.05, 0.3); // +5% per operative, max 30%
+    const operativeBonus = hasTroops ? Math.min(troops * 0.05, 0.3) : 0; // +5% per operative, max 30%
     const distancePenalty = Math.min(pathInfo.cost * 0.05, 0.4); // -5% per distance unit, max 40%
 
     // NEW: Apply sabotage effectiveness and resistance bonuses
@@ -5018,7 +5024,7 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
     // Process mission results
     const result = executeSabotageOperation(
         tribe, targetTribe, sabotage_type, resource_target, amount || 0,
-        troops, movingChiefs, missionSuccess, detected, target_location
+        hasTroops ? troops : 0, movingChiefs, missionSuccess, detected, target_location
     );
 
     return result;

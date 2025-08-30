@@ -83,13 +83,35 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     });
   };
 
-  const handleRemoveChief = (location: string, chiefName: string) => {
+  const handleRemoveChief = (location: string, chiefIndex: number) => {
     if (!editingGarrisons || !editingGarrisons[location]) return;
 
-    console.log(`🗑️ Removing chief ${chiefName} from ${location}`);
-    console.log('Before removal:', editingGarrisons[location].chiefs?.map(c => c.name));
+    const currentChiefs = editingGarrisons[location].chiefs || [];
+    console.log(`🗑️ Removing chief at index ${chiefIndex} from ${location}`);
+    console.log('Before removal:', currentChiefs.map((c, i) => `${i}: ${c.name}`));
+
+    // Remove specific chief by index to handle duplicates properly
+    const filteredChiefs = currentChiefs.filter((_, index) => index !== chiefIndex);
+
+    console.log('After removal:', filteredChiefs.map((c, i) => `${i}: ${c.name}`));
+
+    setEditingGarrisons({
+      ...editingGarrisons,
+      [location]: {
+        ...editingGarrisons[location],
+        chiefs: filteredChiefs
+      }
+    });
+  };
+
+  const handleRemoveAllDuplicateChiefs = (location: string, chiefName: string) => {
+    if (!editingGarrisons || !editingGarrisons[location]) return;
 
     const currentChiefs = editingGarrisons[location].chiefs || [];
+    console.log(`🗑️ Removing ALL ${chiefName} duplicates from ${location}`);
+    console.log('Before removal:', currentChiefs.map(c => c.name));
+
+    // Remove all instances of this chief name
     const filteredChiefs = currentChiefs.filter(c => c.name !== chiefName);
 
     console.log('After removal:', filteredChiefs.map(c => c.name));
@@ -99,6 +121,21 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       [location]: {
         ...editingGarrisons[location],
         chiefs: filteredChiefs
+      }
+    });
+  };
+
+  const handleClearAllChiefs = (location: string) => {
+    if (!editingGarrisons || !editingGarrisons[location]) return;
+
+    console.log(`🗑️ Clearing ALL chiefs from ${location}`);
+    console.log('Before clearing:', editingGarrisons[location].chiefs?.map(c => c.name));
+
+    setEditingGarrisons({
+      ...editingGarrisons,
+      [location]: {
+        ...editingGarrisons[location],
+        chiefs: []
       }
     });
   };
@@ -613,19 +650,64 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-400 mb-1 block">Chiefs</label>
-                    {garrison.chiefs?.sort((a, b) => a.name.localeCompare(b.name)).map(chief => (
-                      <div key={chief.name} className="flex items-center justify-between p-1 bg-slate-800 rounded mb-1">
-                        <span className="text-xs text-slate-200">{chief.name}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs text-slate-400">Chiefs ({garrison.chiefs?.length || 0})</label>
+                      {garrison.chiefs && garrison.chiefs.length > 0 && (
                         <Button
-                          onClick={() => handleRemoveChief(location, chief.name)}
+                          onClick={() => handleClearAllChiefs(location)}
                           variant="secondary"
-                          className="text-xs px-1 py-0 bg-red-600 hover:bg-red-700 text-white"
+                          className="text-xs px-2 py-1 bg-red-700 hover:bg-red-800 text-white"
+                          title="Remove all chiefs from this garrison"
                         >
-                          ×
+                          Clear All
                         </Button>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+
+                    {garrison.chiefs && garrison.chiefs.length > 0 ? (
+                      <>
+                        {/* Show individual chiefs with index-based removal */}
+                        {garrison.chiefs.map((chief, index) => {
+                          const duplicateCount = garrison.chiefs!.filter(c => c.name === chief.name).length;
+                          const isDuplicate = duplicateCount > 1;
+
+                          return (
+                            <div key={`${chief.name}-${index}`} className={`flex items-center justify-between p-1 rounded mb-1 ${isDuplicate ? 'bg-red-900/30 border border-red-600' : 'bg-slate-800'}`}>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-slate-200">{chief.name}</span>
+                                {isDuplicate && (
+                                  <span className="text-xs text-red-400 font-bold" title={`${duplicateCount} duplicates found`}>
+                                    ⚠️ x{duplicateCount}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex space-x-1">
+                                <Button
+                                  onClick={() => handleRemoveChief(location, index)}
+                                  variant="secondary"
+                                  className="text-xs px-1 py-0 bg-red-600 hover:bg-red-700 text-white"
+                                  title="Remove this specific chief"
+                                >
+                                  ×
+                                </Button>
+                                {isDuplicate && (
+                                  <Button
+                                    onClick={() => handleRemoveAllDuplicateChiefs(location, chief.name)}
+                                    variant="secondary"
+                                    className="text-xs px-1 py-0 bg-red-800 hover:bg-red-900 text-white"
+                                    title={`Remove all ${duplicateCount} copies of ${chief.name}`}
+                                  >
+                                    All
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <div className="text-xs text-slate-500 italic">No chiefs assigned</div>
+                    )}
                     {availableChiefs.length > 0 && (
                       <select
                         onChange={(e) => {

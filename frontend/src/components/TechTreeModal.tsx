@@ -73,20 +73,58 @@ const TechNode: React.FC<{
 const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, availableGarrisons, onStartResearch, isDesktopWindow = false }) => {
   if (!isOpen) return null;
 
+  // Debug logging for black screen issue
+  console.log('🔬 TECH TREE DEBUG: Modal rendering with props:', {
+    isOpen,
+    tribeId: tribe?.id,
+    tribeName: tribe?.tribeName,
+    availableGarrisonsCount: Object.keys(availableGarrisons || {}).length,
+    completedTechsCount: tribe?.completedTechs?.length || 0,
+    currentResearchCount: tribe?.currentResearch?.length || 0,
+    isDesktopWindow
+  });
+
   const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
   const [assignedTroops, setAssignedTroops] = useState(0);
   const [location, setLocation] = useState(Object.keys(availableGarrisons)[0] || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const completedSet = useMemo(() => new Set(tribe.completedTechs), [tribe.completedTechs]);
-  const researchingSet = useMemo(() => new Set(tribe.currentResearch?.map(p => p.techId) || []), [tribe.currentResearch]);
+  const completedSet = useMemo(() => {
+    try {
+      console.log('🔬 TECH TREE DEBUG: Creating completedSet from:', tribe?.completedTechs);
+      return new Set(tribe?.completedTechs || []);
+    } catch (error) {
+      console.error('❌ TECH TREE ERROR: Failed to create completedSet:', error);
+      return new Set();
+    }
+  }, [tribe?.completedTechs]);
+
+  const researchingSet = useMemo(() => {
+    try {
+      console.log('🔬 TECH TREE DEBUG: Creating researchingSet from:', tribe?.currentResearch);
+      return new Set(tribe?.currentResearch?.map(p => p.techId) || []);
+    } catch (error) {
+      console.error('❌ TECH TREE ERROR: Failed to create researchingSet:', error);
+      return new Set();
+    }
+  }, [tribe?.currentResearch]);
 
   const getStatus = (tech: Technology): 'completed' | 'available' | 'locked' | 'researching' => {
-    if (completedSet.has(tech.id)) return 'completed';
-    if (researchingSet.has(tech.id)) return 'researching';
-    if (tech.prerequisites.every(p => completedSet.has(p))) return 'available';
-    return 'locked';
+    try {
+      if (!tech || !tech.id) {
+        console.error('❌ TECH TREE ERROR: Invalid tech object:', tech);
+        return 'locked';
+      }
+
+      if (completedSet.has(tech.id)) return 'completed';
+      if (researchingSet.has(tech.id)) return 'researching';
+      if (tech.prerequisites?.every(p => completedSet.has(p)) ?? false) return 'available';
+      return 'locked';
+    } catch (error) {
+      console.error('❌ TECH TREE ERROR: Failed to get tech status for:', tech?.id, error);
+      return 'locked';
+    }
   };
 
   const selectedTech = selectedTechId ? getTechnology(selectedTechId) : null;
@@ -126,7 +164,19 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
     return filtered;
   }, [selectedCategory, searchTerm]);
 
-  const categories = Object.keys(TECHNOLOGY_TREE);
+  const categories = useMemo(() => {
+    try {
+      console.log('🔬 TECH TREE DEBUG: Accessing TECHNOLOGY_TREE:', typeof TECHNOLOGY_TREE);
+      if (!TECHNOLOGY_TREE || typeof TECHNOLOGY_TREE !== 'object') {
+        console.error('❌ TECH TREE ERROR: TECHNOLOGY_TREE is invalid:', TECHNOLOGY_TREE);
+        return [];
+      }
+      return Object.keys(TECHNOLOGY_TREE);
+    } catch (error) {
+      console.error('❌ TECH TREE ERROR: Failed to get categories:', error);
+      return [];
+    }
+  }, []);
 
   const handleStart = () => {
     if (!selectedTechId || !location || !garrison || !selectedTech || assignedTroops < selectedTech.requiredTroops || tribe.globalResources.scrap < selectedTech.cost.scrap) return;
@@ -205,6 +255,9 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
 
   // Check if mobile device
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
+
+  // Error boundary for rendering
+  try {
 
   // Desktop window mode - render content only without modal wrapper
   if (isDesktopWindow) {
@@ -503,6 +556,45 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('❌ TECH TREE CRITICAL ERROR: Component crashed:', error);
+    console.error('❌ TECH TREE ERROR STACK:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('❌ TECH TREE ERROR PROPS:', {
+      tribeId: tribe?.id,
+      tribeName: tribe?.tribeName,
+      availableGarrisonsCount: Object.keys(availableGarrisons || {}).length,
+      isDesktopWindow
+    });
+
+    // Return error fallback UI instead of black screen
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="bg-slate-800 p-6 rounded-lg border border-red-500 max-w-md mx-4">
+          <div className="text-center">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold text-red-400 mb-2">Tech Tree Error</h3>
+            <p className="text-slate-300 mb-4">
+              The technology tree failed to load. This error has been logged for debugging.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
+              >
+                Reload Page
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded transition-colors"
+              >
+                Close Tech Tree
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default TechTreeModal;

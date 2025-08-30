@@ -625,7 +625,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             {!shouldUseMobileUI && (
               <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => setIsTechTreeOpen(true)}
+                  onClick={() => {
+                    console.log('🔬 TECH TREE DEBUG: Research button clicked');
+                    console.log('🔬 TECH TREE DEBUG: Player tribe:', playerTribe?.tribeName);
+                    console.log('🔬 TECH TREE DEBUG: Available garrisons:', Object.keys(playerTribe?.garrisons || {}));
+                    setIsTechTreeOpen(true);
+                  }}
                   className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm transition-colors"
                 >
                   🔬 Research
@@ -840,6 +845,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 </button>
                 <button
                   onClick={() => {
+                    console.log('🔬 TECH TREE DEBUG: Mobile research button clicked');
+                    console.log('🔬 TECH TREE DEBUG: Player tribe:', playerTribe?.tribeName);
+                    console.log('🔬 TECH TREE DEBUG: Available garrisons:', Object.keys(playerTribe?.garrisons || {}));
                     setIsHelpModalOpen(false);
                     setIsCodexOpen(false);
                     setIsTechTreeOpen(true);

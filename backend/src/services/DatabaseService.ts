@@ -1286,6 +1286,14 @@ export class DatabaseService {
                 continue;
               }
 
+              // Check if chief request already exists to prevent duplicates
+              const existingRequest = await tx.chiefRequest.findUnique({ where: { id: request.id } });
+              if (existingRequest) {
+                console.log(`⚠️ Chief request ${request.id} already exists, skipping`);
+                skippedRequests++;
+                continue;
+              }
+
               await tx.chiefRequest.create({
                 data: {
                   id: request.id,
@@ -1304,9 +1312,15 @@ export class DatabaseService {
                 code: (error as any)?.code,
                 constraint: (error as any)?.meta?.target
               });
+
+              // CRITICAL: If this is a transaction abort error, we need to stop immediately
+              if ((error as any)?.code === '25P02') {
+                console.error('🚨 TRANSACTION ABORTED during chief request creation - stopping transaction');
+                throw error; // Re-throw to abort the entire transaction
+              }
+
               skippedRequests++;
               // Continue processing other requests instead of failing the entire transaction
-              skippedRequests++;
             }
           }
           console.log(`✅ Created ${createdRequests} chief requests, skipped ${skippedRequests}`);
@@ -1328,6 +1342,14 @@ export class DatabaseService {
                 continue;
               }
 
+              // Check if asset request already exists to prevent duplicates
+              const existingRequest = await tx.assetRequest.findUnique({ where: { id: request.id } });
+              if (existingRequest) {
+                console.log(`⚠️ Asset request ${request.id} already exists, skipping`);
+                skippedRequests++;
+                continue;
+              }
+
               await tx.assetRequest.create({
                 data: {
                   id: request.id,
@@ -1340,7 +1362,19 @@ export class DatabaseService {
               });
               createdRequests++;
             } catch (error) {
-              console.log(`❌ Error creating asset request ${request.id}:`, error);
+              console.error(`❌ Error creating asset request ${request.id}:`, error);
+              console.error(`❌ Error details:`, {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                code: (error as any)?.code,
+                constraint: (error as any)?.meta?.target
+              });
+
+              // CRITICAL: If this is a transaction abort error, we need to stop immediately
+              if ((error as any)?.code === '25P02') {
+                console.error('🚨 TRANSACTION ABORTED during asset request creation - stopping transaction');
+                throw error; // Re-throw to abort the entire transaction
+              }
+
               skippedRequests++;
             }
           }

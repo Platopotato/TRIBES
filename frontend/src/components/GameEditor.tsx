@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GameState, User, Tribe, GlobalResources, Garrison, Chief, ALL_CHIEFS, getAsset, ALL_ASSETS, ResearchProject, ALL_TECHS } from '@radix-tribes/shared';
+import { GameState, User, Tribe, GlobalResources, Garrison, Chief, ALL_CHIEFS, getAsset, ALL_ASSETS, ResearchProject, ALL_TECHS, Journey, JourneyType } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
@@ -10,9 +10,10 @@ interface GameEditorProps {
   onBack: () => void;
   onUpdateTribe: (tribe: Tribe) => void;
   onRemovePlayer: (userId: string) => void;
+  onRemoveJourney?: (journeyId: string) => void;
 }
 
-const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpdateTribe, onRemovePlayer }) => {
+const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpdateTribe, onRemovePlayer, onRemoveJourney }) => {
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
   const [editingResources, setEditingResources] = useState<GlobalResources | null>(null);
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
@@ -20,6 +21,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [editingMaxActions, setEditingMaxActions] = useState<number | undefined>(undefined);
   const [playerToEject, setPlayerToEject] = useState<{ userId: string; username: string } | null>(null);
+  const [journeyToRemove, setJourneyToRemove] = useState<Journey | null>(null);
+  const [showJourneyManager, setShowJourneyManager] = useState(false);
 
   const playerTribes = useMemo(() => {
     return gameState.tribes.filter(tribe => !tribe.isAI);
@@ -182,6 +185,29 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     alert(`Player ${playerToEject.username} has been ejected from the game.`);
   };
 
+  const handleRemoveJourney = () => {
+    if (!journeyToRemove || !onRemoveJourney) return;
+    onRemoveJourney(journeyToRemove.id);
+    setJourneyToRemove(null);
+    alert(`Journey "${journeyToRemove.type}" has been removed from the game.`);
+  };
+
+  const getJourneysByTribe = useMemo(() => {
+    const journeyMap: Record<string, Journey[]> = {};
+    gameState.journeys.forEach(journey => {
+      if (!journeyMap[journey.ownerTribeId]) {
+        journeyMap[journey.ownerTribeId] = [];
+      }
+      journeyMap[journey.ownerTribeId].push(journey);
+    });
+    return journeyMap;
+  }, [gameState.journeys]);
+
+  const getTribeNameById = (tribeId: string): string => {
+    const tribe = gameState.tribes.find(t => t.id === tribeId);
+    return tribe ? tribe.tribeName : 'Unknown Tribe';
+  };
+
   const availableChiefs = useMemo(() => {
     if (!selectedTribe || !editingGarrisons) return ALL_CHIEFS.sort((a, b) => a.name.localeCompare(b.name));
     const assignedChiefs = Object.values(editingGarrisons)
@@ -202,7 +228,15 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">Game Editor</h1>
-        <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowJourneyManager(!showJourneyManager)}
+            variant={showJourneyManager ? "primary" : "secondary"}
+          >
+            🚶 Journey Manager
+          </Button>
+          <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
+        </div>
       </div>
 
       {/* Turn Submission Status */}
@@ -271,6 +305,100 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           ))}
         </div>
       </Card>
+
+      {/* Journey Manager */}
+      {showJourneyManager && (
+        <Card title="🚶 Journey Manager" className="mb-6">
+          <div className="mb-4 p-3 bg-slate-800 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-blue-400">Active Journeys</h3>
+              <div className="text-sm text-slate-300">
+                {gameState.journeys.length} total journeys
+              </div>
+            </div>
+            <div className="text-xs text-slate-400 mb-3">
+              View and manage all player journeys. Remove stuck or problematic journeys as needed.
+            </div>
+          </div>
+
+          {gameState.journeys.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <p className="text-lg">No active journeys</p>
+              <p className="text-sm">All tribes are currently at their home locations</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {Object.entries(getJourneysByTribe).map(([tribeId, journeys]) => (
+                <div key={tribeId} className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                  <h4 className="text-lg font-bold text-slate-200 mb-3">
+                    {getTribeNameById(tribeId)} ({journeys.length} journey{journeys.length !== 1 ? 's' : ''})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {journeys.map(journey => (
+                      <div key={journey.id} className="p-3 bg-slate-800 rounded border border-slate-600">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-semibold text-slate-200">{journey.type}</span>
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                journey.status === 'en_route' ? 'bg-blue-600 text-white' :
+                                journey.status === 'awaiting_response' ? 'bg-yellow-600 text-white' :
+                                'bg-green-600 text-white'
+                              }`}>
+                                {journey.status.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </div>
+
+                            <div className="text-sm text-slate-400 space-y-1">
+                              <div><strong>From:</strong> {journey.origin} → <strong>To:</strong> {journey.destination}</div>
+                              <div><strong>Current:</strong> {journey.currentLocation}</div>
+                              <div><strong>Arrival:</strong> {journey.arrivalTurn} turn{journey.arrivalTurn !== 1 ? 's' : ''} remaining</div>
+
+                              {journey.force && (
+                                <div>
+                                  <strong>Force:</strong> {journey.force.troops} troops, {journey.force.weapons} weapons
+                                  {journey.force.chiefs && journey.force.chiefs.length > 0 && (
+                                    <span>, {journey.force.chiefs.length} chief{journey.force.chiefs.length !== 1 ? 's' : ''}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {journey.payload && (journey.payload.food > 0 || journey.payload.scrap > 0 || journey.payload.weapons > 0) && (
+                                <div>
+                                  <strong>Payload:</strong> {journey.payload.food} food, {journey.payload.scrap} scrap, {journey.payload.weapons} weapons
+                                </div>
+                              )}
+
+                              {journey.scavengeType && (
+                                <div><strong>Scavenging:</strong> {journey.scavengeType}</div>
+                              )}
+
+                              {journey.tradeOffer && (
+                                <div>
+                                  <strong>Trade Offer:</strong> Requesting {journey.tradeOffer.request.food} food, {journey.tradeOffer.request.scrap} scrap, {journey.tradeOffer.request.weapons} weapons
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={() => setJourneyToRemove(journey)}
+                            variant="secondary"
+                            className="ml-3 text-xs px-3 py-1 bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tribe Selection */}
@@ -577,6 +705,16 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           message={`Are you sure you want to eject ${playerToEject.username} from the game? This will remove their tribe and user account permanently.`}
           onConfirm={handleEjectPlayer}
           onCancel={() => setPlayerToEject(null)}
+        />
+      )}
+
+      {/* Remove Journey Confirmation */}
+      {journeyToRemove && (
+        <ConfirmationModal
+          title="Remove Journey?"
+          message={`Are you sure you want to remove this ${journeyToRemove.type} journey from ${getTribeNameById(journeyToRemove.ownerTribeId)}? This will return the troops and resources to their origin location.`}
+          onConfirm={handleRemoveJourney}
+          onCancel={() => setJourneyToRemove(null)}
         />
       )}
     </div>

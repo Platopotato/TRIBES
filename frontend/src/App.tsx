@@ -481,6 +481,7 @@ const App: React.FC = () => {
           onBack={() => setView('admin')}
           onUpdateTribe={(tribe) => client.updateTribe(tribe)}
           onRemovePlayer={(userId) => client.removePlayer(userId)}
+          onRemoveJourney={(journeyId) => client.removeJourney(journeyId)}
         />
 
       case 'leaderboard':

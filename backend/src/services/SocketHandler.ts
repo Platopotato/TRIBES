@@ -441,6 +441,47 @@ export class SocketHandler {
       }
     });
 
+    socket.on('admin:removeJourney', async (journeyId: string) => {
+      console.log(`🚶 Admin removing journey: ${journeyId}`);
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        // Find the journey to remove
+        const journeyIndex = gameState.journeys.findIndex(j => j.id === journeyId);
+        if (journeyIndex === -1) {
+          console.log(`❌ Journey not found: ${journeyId}`);
+          return;
+        }
+
+        const journey = gameState.journeys[journeyIndex];
+        const tribe = gameState.tribes.find(t => t.id === journey.ownerTribeId);
+
+        if (tribe) {
+          // Return troops and resources to origin garrison
+          const originGarrison = tribe.garrisons[journey.origin];
+          if (originGarrison) {
+            // Return force
+            originGarrison.troops += journey.force.troops;
+            originGarrison.weapons += journey.force.weapons;
+            if (journey.force.chiefs) {
+              originGarrison.chiefs = [...(originGarrison.chiefs || []), ...journey.force.chiefs];
+            }
+
+            // Return payload to global resources
+            tribe.globalResources.food += journey.payload.food;
+            tribe.globalResources.scrap += journey.payload.scrap;
+            // Note: payload weapons go to garrison, not global resources
+            originGarrison.weapons += journey.payload.weapons;
+          }
+        }
+
+        // Remove the journey
+        gameState.journeys.splice(journeyIndex, 1);
+        await this.gameService.updateGameState(gameState);
+        await emitGameState();
+        console.log(`✅ Journey ${journeyId} removed successfully`);
+      }
+    });
+
     socket.on('admin:resetPassword', async ({ userId, newPassword }: { userId: string, newPassword: string }) => {
       console.log(`🔑 Admin resetting password for user: ${userId}`);
       try {

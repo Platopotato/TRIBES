@@ -23,6 +23,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [playerToEject, setPlayerToEject] = useState<{ userId: string; username: string } | null>(null);
   const [journeyToRemove, setJourneyToRemove] = useState<Journey | null>(null);
   const [showJourneyManager, setShowJourneyManager] = useState(false);
+  const [garrisonToDelete, setGarrisonToDelete] = useState<{ location: string; tribeName: string } | null>(null);
 
   const playerTribes = useMemo(() => {
     return gameState.tribes.filter(tribe => !tribe.isAI);
@@ -190,6 +191,22 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     onRemoveJourney(journeyToRemove.id);
     setJourneyToRemove(null);
     alert(`Journey "${journeyToRemove.type}" has been removed from the game.`);
+  };
+
+  const handleDeleteGarrison = () => {
+    if (!garrisonToDelete || !editingGarrisons) return;
+
+    const { location } = garrisonToDelete;
+    console.log(`🗑️ Deleting garrison at ${location}`);
+
+    // Create new garrisons object without the deleted location
+    const updatedGarrisons = { ...editingGarrisons };
+    delete updatedGarrisons[location];
+
+    setEditingGarrisons(updatedGarrisons);
+    setGarrisonToDelete(null);
+
+    console.log(`✅ Garrison at ${location} deleted successfully`);
   };
 
   const getJourneysByTribe = useMemo(() => {
@@ -559,8 +576,18 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           <Card title="Edit Garrisons" className="lg:col-span-1">
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {Object.entries(editingGarrisons).map(([location, garrison]) => (
-                <div key={location} className="p-3 bg-slate-900/50 rounded-md">
-                  <h4 className="text-slate-200 font-semibold mb-2">{location}</h4>
+                <div key={location} className="p-3 bg-slate-900/50 rounded-md border border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-slate-200 font-semibold">{location}</h4>
+                    <Button
+                      onClick={() => setGarrisonToDelete({ location, tribeName: selectedTribe?.tribeName || 'Unknown' })}
+                      variant="secondary"
+                      className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
+                      title="Delete this garrison"
+                    >
+                      🗑️ Delete
+                    </Button>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <div>
@@ -723,6 +750,16 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           message={`Are you sure you want to remove this ${journeyToRemove.type} journey from ${getTribeNameById(journeyToRemove.ownerTribeId)}? This will return the troops and resources to their origin location.`}
           onConfirm={handleRemoveJourney}
           onCancel={() => setJourneyToRemove(null)}
+        />
+      )}
+
+      {/* Delete Garrison Confirmation */}
+      {garrisonToDelete && (
+        <ConfirmationModal
+          title="Delete Garrison?"
+          message={`Are you sure you want to delete the garrison at ${garrisonToDelete.location} from ${garrisonToDelete.tribeName}? This will permanently remove all troops, weapons, and chiefs at this location. This action cannot be undone.`}
+          onConfirm={handleDeleteGarrison}
+          onCancel={() => setGarrisonToDelete(null)}
         />
       )}
     </div>

@@ -324,7 +324,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     }
 
     // CRITICAL VALIDATION: Check required location fields
-    const actionsRequiringTargetLocation = [ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost];
+    const actionsRequiringTargetLocation = [ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost, ActionType.Sabotage];
     const actionsRequiringFinishLocation = [ActionType.Move];
 
     if (actionsRequiringTargetLocation.includes(draftAction.actionType)) {
@@ -349,7 +349,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     const { troops, chiefsToMove } = finalActionData;
     const actionsRequiringCarriers = [
       ActionType.Move, ActionType.Attack, ActionType.Scout,
-      ActionType.Scavenge, ActionType.BuildOutpost, ActionType.Trade,
+      ActionType.Scavenge, ActionType.BuildOutpost, ActionType.Trade, ActionType.Sabotage,
     ];
 
     if (actionsRequiringCarriers.includes(draftAction.actionType)) {
@@ -377,6 +377,20 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       actionType: draftAction.actionType,
       actionData: finalActionData,
     };
+
+    // Debug logging for sabotage actions
+    if (draftAction.actionType === ActionType.Sabotage) {
+      console.log('🕵️ SABOTAGE ACTION DEBUG:', {
+        actionType: draftAction.actionType,
+        actionData: finalActionData,
+        requiredFields: ['start_location', 'target_location', 'sabotage_type'],
+        hasStartLocation: !!finalActionData.start_location,
+        hasTargetLocation: !!finalActionData.target_location,
+        hasSabotageType: !!finalActionData.sabotage_type,
+        sabotageTypeValue: finalActionData.sabotage_type
+      });
+    }
+
     onAddAction(newAction);
     onClose();
   };

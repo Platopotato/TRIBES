@@ -25,61 +25,81 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
     const { chartData, maxScore, turnDomain } = useMemo(() => {
         const dataByTribe: { [key: string]: { turn: number, score: number }[] } = {};
         let maxS = 0;
+        let minTurn = Infinity;
+        let maxTurn = -Infinity;
 
-        // Process historical data
+        // Process historical data from turn history
         history.forEach(turnRecord => {
             if (!turnRecord.tribeRecords) {
                 console.warn('📊 Missing tribeRecords in turn:', turnRecord);
                 return;
             }
 
+            minTurn = Math.min(minTurn, turnRecord.turn);
+            maxTurn = Math.max(maxTurn, turnRecord.turn);
+
             turnRecord.tribeRecords.forEach(tribeRecord => {
                 if (!dataByTribe[tribeRecord.tribeId]) {
                     dataByTribe[tribeRecord.tribeId] = [];
                 }
-                dataByTribe[tribeRecord.tribeId].push({ turn: turnRecord.turn, score: tribeRecord.score });
+                dataByTribe[tribeRecord.tribeId].push({
+                    turn: turnRecord.turn,
+                    score: tribeRecord.score
+                });
                 if (tribeRecord.score > maxS) {
                     maxS = tribeRecord.score;
                 }
             });
         });
 
-        // PROPER FIX: All tribes use SAME turn range for proper comparison
-        const commonTurns = [1, 5, 10]; // All tribes will have data at these turns
+        // Add current turn data for tribes that exist now
+        tribes.forEach(tribe => {
+            const currentScore = calculateTribeScore(tribe);
 
-        tribes.forEach((tribe, tribeIndex) => {
             if (!dataByTribe[tribe.id]) {
                 dataByTribe[tribe.id] = [];
             }
 
-            const currentScore = calculateTribeScore(tribe);
+            // Add current turn data if not already present
+            const hasCurrentTurn = dataByTribe[tribe.id].some(d => d.turn === maxTurn);
+            if (!hasCurrentTurn && maxTurn !== -Infinity) {
+                dataByTribe[tribe.id].push({
+                    turn: maxTurn,
+                    score: currentScore
+                });
+            }
 
-            // All tribes get the same turn progression for proper comparison
-            dataByTribe[tribe.id] = [
-                { turn: commonTurns[0], score: Math.max(0, currentScore * 0.4) },
-                { turn: commonTurns[1], score: Math.max(0, currentScore * 0.7) },
-                { turn: commonTurns[2], score: currentScore }
-            ];
-
-            console.log(`📊 PROPER FIX: Created trend for ${tribe.tribeName}: turns [${commonTurns.join(', ')}], final score ${currentScore}`);
+            // Sort data by turn for each tribe
+            dataByTribe[tribe.id].sort((a, b) => a.turn - b.turn);
 
             if (currentScore > maxS) {
                 maxS = currentScore;
             }
         });
 
-        // Simple turn domain since we know exactly what turns we're using
-        const adjustedFirstTurn = 1;
-        const adjustedLastTurn = 10;
+        // If no historical data, create minimal current data
+        if (history.length === 0) {
+            minTurn = 1;
+            maxTurn = 1;
+            tribes.forEach(tribe => {
+                const currentScore = calculateTribeScore(tribe);
+                dataByTribe[tribe.id] = [{ turn: 1, score: currentScore }];
+                if (currentScore > maxS) {
+                    maxS = currentScore;
+                }
+            });
+        }
 
-        console.log(`📊 Turn domain: [${adjustedFirstTurn}, ${adjustedLastTurn}], width: ${adjustedLastTurn - adjustedFirstTurn}`);
+        // Ensure reasonable turn domain
+        const turnStart = Math.max(1, minTurn);
+        const turnEnd = Math.max(turnStart, maxTurn);
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,
             dataPoints: Object.values(dataByTribe).reduce((sum, data) => sum + data.length, 0),
             maxScore: maxS,
-            turnRange: [adjustedFirstTurn, adjustedLastTurn],
-            turnDomainWidth: adjustedLastTurn - adjustedFirstTurn,
+            turnRange: [turnStart, turnEnd],
+            historyLength: history.length,
             tribeDataDetails: Object.entries(dataByTribe).map(([tribeId, data]) => ({
                 tribeId,
                 points: data.length,
@@ -90,10 +110,10 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
 
         return {
             chartData: Object.entries(dataByTribe),
-            maxScore: maxS > 0 ? maxS * 1.1 : 100, // Give some headroom, avoid dividing by zero
-            turnDomain: [adjustedFirstTurn, adjustedLastTurn]
+            maxScore: maxS > 0 ? maxS * 1.1 : 100,
+            turnDomain: [turnStart, turnEnd]
         };
-    }, [history]);
+    }, [history, tribes]);
     
     // Debug logging for chart data
     console.log('📊 TribeGrowthChart Debug:', {
@@ -182,13 +202,34 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
 
                         {/* X Axis */}
                         <g className="text-xs text-slate-400">
-                           {/* Show ticks for the specific turns we're using */}
-                           {[1, 5, 10].map(turn => (
-                                <g key={`x-tick-${turn}`} transform={`translate(${xScale(turn)}, 0)`}>
-                                     <line y1={margin.top} y2={height - margin.bottom} stroke="#475569" strokeWidth="0.5" strokeDasharray="2,3"/>
-                                     <text x="0" y={height - margin.bottom + 15} textAnchor="middle" fill="currentColor">{`T${turn}`}</text>
-                                </g>
-                           ))}
+                           {/* Show ticks for actual turns in the data */}
+                           {(() => {
+                               const [minTurn, maxTurn] = turnDomain;
+                               const turnRange = maxTurn - minTurn;
+                               const maxTicks = 8; // Maximum number of ticks to show
+
+                               let tickInterval = 1;
+                               if (turnRange > maxTicks) {
+                                   tickInterval = Math.ceil(turnRange / maxTicks);
+                               }
+
+                               const ticks = [];
+                               for (let turn = minTurn; turn <= maxTurn; turn += tickInterval) {
+                                   ticks.push(turn);
+                               }
+
+                               // Always include the last turn if it's not already included
+                               if (ticks[ticks.length - 1] !== maxTurn) {
+                                   ticks.push(maxTurn);
+                               }
+
+                               return ticks.map(turn => (
+                                   <g key={`x-tick-${turn}`} transform={`translate(${xScale(turn)}, 0)`}>
+                                       <line y1={margin.top} y2={height - margin.bottom} stroke="#475569" strokeWidth="0.5" strokeDasharray="2,3"/>
+                                       <text x="0" y={height - margin.bottom + 15} textAnchor="middle" fill="currentColor">{`T${turn}`}</text>
+                                   </g>
+                               ));
+                           })()}
                            <text x={width/2} y={height - 5} textAnchor="middle" fill="currentColor" className="font-semibold">Turn</text>
                         </g>
 

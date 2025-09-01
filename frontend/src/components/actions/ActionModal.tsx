@@ -393,6 +393,13 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
     const presets = [
       {
+        name: '👤 Chief Only',
+        description: 'Elite operative, high success bonus',
+        operatives: 0,
+        info: `+${calculateBonus(0, availableChiefs)}% success bonus (chiefs only)`,
+        requiresChief: true
+      },
+      {
         name: '🥷 Stealth Mission',
         description: 'Minimal force, lower detection risk',
         operatives: 1,
@@ -424,25 +431,35 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         <div className="space-y-2">
           <h4 className="text-sm font-semibold text-slate-300">Quick Select</h4>
           <div className="grid grid-cols-2 gap-2">
-            {presets.map((preset, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => handleFieldChange(field.name, preset.operatives)}
-                disabled={preset.operatives > maxAvailable}
-                className={`p-2 rounded-lg border text-left transition-all text-xs ${
-                  currentValue === preset.operatives
-                    ? 'border-blue-400 bg-blue-400/10 text-blue-300'
-                    : preset.operatives <= maxAvailable
-                    ? 'border-slate-600 bg-slate-700 text-slate-200 hover:border-slate-500'
-                    : 'border-slate-700 bg-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                <div className="font-semibold">{preset.name}</div>
-                <div className="text-slate-400">{preset.operatives} operatives</div>
-                <div className="text-slate-400">{preset.info}</div>
-              </button>
-            ))}
+            {presets.map((preset, index) => {
+              const isChiefOnly = preset.requiresChief;
+              const isDisabled = isChiefOnly ? availableChiefs === 0 : preset.operatives > maxAvailable;
+
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleFieldChange(field.name, preset.operatives)}
+                  disabled={isDisabled}
+                  className={`p-2 rounded-lg border text-left transition-all text-xs ${
+                    currentValue === preset.operatives
+                      ? 'border-blue-400 bg-blue-400/10 text-blue-300'
+                      : !isDisabled
+                      ? 'border-slate-600 bg-slate-700 text-slate-200 hover:border-slate-500'
+                      : 'border-slate-700 bg-slate-800 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="font-semibold">{preset.name}</div>
+                  <div className="text-slate-400">
+                    {isChiefOnly ? `${availableChiefs} chief${availableChiefs !== 1 ? 's' : ''} available` : `${preset.operatives} operatives`}
+                  </div>
+                  <div className="text-slate-400">{preset.info}</div>
+                  {isChiefOnly && availableChiefs === 0 && (
+                    <div className="text-red-400 text-xs mt-1">No chiefs available</div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -485,9 +502,10 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           <h5 className="text-xs font-semibold text-slate-300 mb-2">Success Bonus Guide</h5>
           <div className="text-xs text-slate-400 space-y-1">
             <div>• Operatives: +5% each (max +30% at 6 operatives)</div>
-            <div>• Chiefs: +15% each (no limit)</div>
+            <div>• Chiefs: +15% each (no limit) - can operate alone!</div>
             <div>• Distance: -5% per hex (max -40%)</div>
             <div>• Base success rate: 60%</div>
+            <div className="text-green-400 mt-2">💡 Chief-only missions are possible and highly effective!</div>
           </div>
         </div>
       </div>

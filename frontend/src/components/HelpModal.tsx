@@ -591,6 +591,7 @@ const SabotageGuideContent: React.FC = () => (
     <Section title="Sabotage System Overview">
       <p>Sabotage operations allow you to conduct covert missions against enemy territories using operatives (troops and/or chiefs).</p>
       <p><strong className="text-white">Requirements:</strong> At least 1 operative (troop or chief), target must be at war with you</p>
+      <p><strong className="text-white">Chief-Only Missions:</strong> Chiefs can operate alone without troops for elite operations</p>
       <p><strong className="text-white">Detection:</strong> Failed missions have 70% detection rate, successful missions 20%</p>
       <p><strong className="text-white">Consequences:</strong> Detected operatives may be captured, chiefs can be imprisoned</p>
     </Section>
@@ -685,7 +686,8 @@ const SabotageGuideContent: React.FC = () => (
 
       <p><strong className="text-white">Risk Management:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Chiefs provide better success rates but risk imprisonment</li>
+        <li>Chiefs provide better success rates (+15% each) but risk imprisonment</li>
+        <li>Chief-only missions are highly effective for elite operations</li>
         <li>Closer targets have higher success rates</li>
         <li>Failed missions often result in operative capture</li>
         <li>Counter-Intelligence technology significantly reduces success</li>

@@ -48,6 +48,7 @@ interface DashboardProps {
   allAssetRequests: AssetRequest[];
   journeys: Journey[];
   diplomaticProposals: DiplomaticProposal[];
+  history?: any[]; // Add history prop
   onFinalizeTurn: (actions: GameAction[], journeyResponses: any) => void;
   onRequestChief: (chiefId: string, location: string) => void;
   onRequestAsset: (assetId: string, location: string) => void;
@@ -70,7 +71,7 @@ interface DashboardProps {
 type DashboardView = 'planning' | 'results' | 'waiting';
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, history, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
 
   // Smart UI detection - mobile gets floating modals, desktop gets integrated windows
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
@@ -1402,7 +1403,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-4">🏆 Leaderboard</h2>
               <Leaderboard
-                gameState={gameState}
+                gameState={{ tribes: allTribes, turn, mapData, startingLocations, chiefRequests: allChiefRequests, assetRequests: allAssetRequests, journeys, diplomaticProposals, history: history || [] }}
                 playerTribe={playerTribe}
                 onBack={() => setActiveTab('home')}
               />
@@ -1998,7 +1999,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto">
                   <Leaderboard
-                    gameState={gameState}
+                    gameState={{ tribes: allTribes, turn, mapData, startingLocations, chiefRequests: allChiefRequests, assetRequests: allAssetRequests, journeys, diplomaticProposals, history: history || [] }}
                     playerTribe={playerTribe}
                     onBack={() => setIsStandingsModalOpen(false)}
                   />

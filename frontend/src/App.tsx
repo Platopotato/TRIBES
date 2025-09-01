@@ -531,6 +531,7 @@ const App: React.FC = () => {
             allAssetRequests={gameState.assetRequests || []}
             journeys={gameState.journeys || []}
             diplomaticProposals={gameState.diplomaticProposals || []}
+            history={gameState.history || []}
             onFinalizeTurn={(actions, journeyResponses) => playerTribe && handleFinalizePlayerTurn(playerTribe.id, actions, journeyResponses)}
             onRequestChief={(chiefName, address) => playerTribe && handleRequestChief(playerTribe.id, chiefName, address)}
             onRequestAsset={(assetName, address) => playerTribe && handleRequestAsset(playerTribe.id, assetName, address)}

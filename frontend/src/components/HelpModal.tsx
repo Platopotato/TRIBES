@@ -9,7 +9,7 @@ interface HelpModalProps {
   isDesktopWindow?: boolean;
 }
 
-type HelpTab = 'rules' | 'ui';
+type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'tips';
 
 const TabButton: React.FC<{
   label: string;
@@ -138,6 +138,296 @@ const UIGuideContent: React.FC = () => (
 );
 
 
+const ActionsGuideContent: React.FC = () => (
+  <>
+    <Section title="Movement & Exploration">
+      <p><strong className="text-white">Journey:</strong> Move troops and chiefs to explore new territories. Success depends on distance, terrain, and troop count.</p>
+      <p><strong className="text-white">Scavenge:</strong> Search locations for resources. Different terrains yield different materials:</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Cities:</strong> High scrap and weapons, some food</li>
+        <li><strong>Forests:</strong> Abundant food, limited scrap</li>
+        <li><strong>Mountains:</strong> Rich in scrap and weapons</li>
+        <li><strong>Wasteland:</strong> Minimal resources, high risk</li>
+      </ul>
+    </Section>
+
+    <Section title="Military Actions">
+      <p><strong className="text-white">Attack:</strong> Assault enemy garrisons. Success depends on troop numbers, weapons, terrain, and technology bonuses.</p>
+      <p><strong className="text-white">Sabotage:</strong> Covert operations with multiple mission types:</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🔍 Intelligence Gathering:</strong> Learn about enemy forces and resources</li>
+        <li><strong>💥 Sabotage Outpost:</strong> Disable enemy defenses for 2 turns</li>
+        <li><strong>☠️ Poison Supplies:</strong> Weaken enemy troops for 3 turns</li>
+        <li><strong>💰 Steal Resources:</strong> Take enemy resources</li>
+        <li><strong>🔥 Destroy Resources:</strong> Permanently destroy enemy stockpiles</li>
+        <li><strong>📚 Steal/Destroy Research:</strong> Target enemy technology progress</li>
+      </ul>
+    </Section>
+
+    <Section title="Economic Actions">
+      <p><strong className="text-white">Recruit:</strong> Train new troops using food. Cost varies by technology and garrison size.</p>
+      <p><strong className="text-white">Produce Weapons:</strong> Convert scrap into weapons for combat effectiveness.</p>
+      <p><strong className="text-white">Trade:</strong> Exchange resources with other tribes (requires diplomatic agreements).</p>
+    </Section>
+
+    <Section title="Sabotage Success Rates">
+      <p><strong className="text-white">Base Success:</strong> 60%</p>
+      <p><strong className="text-white">Bonuses:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Operatives: +5% each (max +30% at 6+ operatives)</li>
+        <li>Chiefs: +15% each (no limit)</li>
+        <li>Spy Networks tech: +25%</li>
+        <li>Siege Warfare tech: +20%</li>
+      </ul>
+      <p><strong className="text-white">Penalties:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Distance: -5% per hex (max -40%)</li>
+        <li>Enemy Counter-Intelligence: -30%</li>
+      </ul>
+    </Section>
+  </>
+);
+
+const ResearchGuideContent: React.FC = () => (
+  <>
+    <Section title="Technology System">
+      <p>Research unlocks powerful bonuses and new capabilities. Each technology requires specific resources and research points.</p>
+      <p><strong className="text-white">Research Process:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Assign troops to research at a garrison</li>
+        <li>Pay the required scrap cost upfront</li>
+        <li>Research progresses each turn based on assigned troops</li>
+        <li>Bonus: +25% speed with Scientific Method, +35% with Advanced Labs, +50% with Quantum Computing</li>
+      </ul>
+    </Section>
+
+    <Section title="Technology Categories">
+      <p><strong className="text-white">🌱 Farming:</strong> Passive food generation (+10/+15/+25 per turn)</p>
+      <p><strong className="text-white">⚡ Energy:</strong> Passive scrap generation (+8/+12/+25 per turn)</p>
+      <p><strong className="text-white">⚔️ Combat:</strong> Attack and defense bonuses (+5% to +40%)</p>
+      <p><strong className="text-white">🔍 Scavenging:</strong> Improved resource yields (+10% to +40%)</p>
+      <p><strong className="text-white">🏥 Medicine:</strong> Reduced recruitment costs, morale bonuses</p>
+      <p><strong className="text-white">⚙️ Engineering:</strong> Weapon production bonuses (+20% to +30%)</p>
+      <p><strong className="text-white">🕵️ Intelligence:</strong> Sabotage effectiveness and resistance</p>
+      <p><strong className="text-white">🚗 Transportation:</strong> Movement speed bonuses (+15% to +50%)</p>
+      <p><strong className="text-white">🔬 Research:</strong> Faster technology development</p>
+      <p><strong className="text-white">💰 Economics:</strong> Trade bonuses and resource capacity</p>
+      <p><strong className="text-white">🏺 Archaeology:</strong> Advanced scavenging and ancient knowledge</p>
+    </Section>
+
+    <Section title="Technology Effects">
+      <p><strong className="text-white">Passive Generation:</strong> Food and scrap technologies provide resources every turn automatically.</p>
+      <p><strong className="text-white">Combat Bonuses:</strong> Apply to all attacks and defenses, stack with multiple technologies.</p>
+      <p><strong className="text-white">Efficiency Bonuses:</strong> Reduce costs or increase yields for various actions.</p>
+      <p><strong className="text-white">Special Abilities:</strong> Unlock new action types or improve existing ones.</p>
+    </Section>
+  </>
+);
+
+const CombatGuideContent: React.FC = () => (
+  <>
+    <Section title="Combat Mechanics">
+      <p>Combat success depends on multiple factors that determine the outcome of battles.</p>
+      <p><strong className="text-white">Attack Strength Calculation:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Base: Troops × (1 + Weapons/Troops ratio)</li>
+        <li>Technology bonuses (e.g., +15% from Composite Bows)</li>
+        <li>Terrain bonuses (e.g., +15% Forest attack from Guerrilla Tactics)</li>
+        <li>Chief bonuses and special abilities</li>
+      </ul>
+    </Section>
+
+    <Section title="Defense Mechanics">
+      <p><strong className="text-white">Defense Strength:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Base: Defending troops × weapons ratio</li>
+        <li>Outpost bonus: +50% defense if outpost present</li>
+        <li>Technology bonuses (e.g., +15% from Reinforced Concrete)</li>
+        <li>Terrain bonuses (e.g., +10% Mountain defense from Guerrilla Tactics)</li>
+        <li>Sabotage effects: Disabled outposts provide no bonus</li>
+      </ul>
+    </Section>
+
+    <Section title="Combat Resolution">
+      <p><strong className="text-white">Victory Conditions:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Attacker wins if Attack Strength > Defense Strength</li>
+        <li>Casualties are calculated based on strength difference</li>
+        <li>Winner takes control of the location</li>
+        <li>Loser's surviving forces retreat to nearest friendly garrison</li>
+      </ul>
+    </Section>
+
+    <Section title="Special Combat Effects">
+      <p><strong className="text-white">Poisoned Troops:</strong> Reduced combat effectiveness for 3 turns</p>
+      <p><strong className="text-white">Sabotaged Outposts:</strong> No defensive bonus for 2 turns</p>
+      <p><strong className="text-white">Chief Abilities:</strong> Some chiefs provide combat bonuses or special effects</p>
+    </Section>
+  </>
+);
+
+const DiplomacyGuideContent: React.FC = () => (
+  <>
+    <Section title="Diplomatic Relations">
+      <p>Manage relationships with other tribes through the diplomacy system.</p>
+      <p><strong className="text-white">Diplomatic Statuses:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🤝 Allied:</strong> Can trade resources, share information, coordinate attacks</li>
+        <li><strong>⚖️ Neutral:</strong> No special benefits or restrictions</li>
+        <li><strong>⚔️ War:</strong> Can attack each other's territories</li>
+      </ul>
+    </Section>
+
+    <Section title="Diplomatic Actions">
+      <p><strong className="text-white">Propose Alliance:</strong> Offer to ally with another tribe</p>
+      <p><strong className="text-white">Declare War:</strong> Formally declare hostilities</p>
+      <p><strong className="text-white">Trade Agreements:</strong> Establish resource exchange deals</p>
+      <p><strong className="text-white">Information Sharing:</strong> Share intelligence about other tribes</p>
+    </Section>
+
+    <Section title="Alliance Benefits">
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Resource trading without penalties</li>
+        <li>Shared vision of explored territories</li>
+        <li>Coordinated military operations</li>
+        <li>Protection from mutual enemies</li>
+        <li>Technology sharing (some techs)</li>
+      </ul>
+    </Section>
+
+    <Section title="War Consequences">
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Can attack enemy garrisons and territories</li>
+        <li>Sabotage operations are more effective</li>
+        <li>No trade or cooperation possible</li>
+        <li>Increased morale penalties from conflict</li>
+      </ul>
+    </Section>
+  </>
+);
+
+const ResourcesGuideContent: React.FC = () => (
+  <>
+    <Section title="Resource Types">
+      <p><strong className="text-white">🍖 Food:</strong> Essential for troop upkeep and recruitment</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Consumed each turn: 1 food per troop + 3 per chief</li>
+        <li>Ration levels affect morale and consumption</li>
+        <li>Generated by farming technologies and scavenging</li>
+      </ul>
+
+      <p><strong className="text-white">🔧 Scrap:</strong> Used for technology research and weapon production</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Required for all technology research</li>
+        <li>Converted to weapons at 1:1 ratio</li>
+        <li>Generated by energy technologies and scavenging</li>
+      </ul>
+
+      <p><strong className="text-white">⚔️ Weapons:</strong> Improve combat effectiveness</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Increase attack and defense strength</li>
+        <li>Produced from scrap using Produce Weapons action</li>
+        <li>Found through scavenging in cities and mountains</li>
+      </ul>
+
+      <p><strong className="text-white">😊 Morale:</strong> Affects tribe efficiency and stability</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Affected by food availability and ration levels</li>
+        <li>Low morale reduces action effectiveness</li>
+        <li>Improved by medical technologies and good management</li>
+      </ul>
+    </Section>
+
+    <Section title="Resource Management">
+      <p><strong className="text-white">Ration Levels:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Feast:</strong> +2 morale, 150% food consumption</li>
+        <li><strong>Normal:</strong> No morale change, 100% food consumption</li>
+        <li><strong>Reduced:</strong> -1 morale, 75% food consumption</li>
+        <li><strong>Starvation:</strong> -3 morale, 50% food consumption</li>
+      </ul>
+    </Section>
+
+    <Section title="Resource Generation">
+      <p><strong className="text-white">Passive Generation:</strong> Technologies provide automatic resources each turn</p>
+      <p><strong className="text-white">Active Generation:</strong> Scavenging and trading provide immediate resources</p>
+      <p><strong className="text-white">POI Income:</strong> Controlled Points of Interest provide regular resource income</p>
+    </Section>
+  </>
+);
+
+const TipsGuideContent: React.FC = () => (
+  <>
+    <Section title="Early Game Strategy">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Explore First:</strong> Send small expeditions to map nearby territories and find resources</li>
+        <li><strong className="text-white">Secure Food:</strong> Research Basic Farming early for passive food generation</li>
+        <li><strong className="text-white">Build Outposts:</strong> Establish defensive positions at strategic locations</li>
+        <li><strong className="text-white">Recruit Steadily:</strong> Maintain a growing army but don't overextend your food supply</li>
+      </ul>
+    </Section>
+
+    <Section title="Technology Priorities">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Farming Technologies:</strong> Essential for sustainable growth</li>
+        <li><strong className="text-white">Basic Engineering:</strong> Weapon production bonuses pay for themselves quickly</li>
+        <li><strong className="text-white">Scientific Method:</strong> 25% research speed bonus accelerates all future research</li>
+        <li><strong className="text-white">Combat Technologies:</strong> Small bonuses compound over many battles</li>
+      </ul>
+    </Section>
+
+    <Section title="Combat Tips">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Weapons Matter:</strong> Always produce weapons before major battles</li>
+        <li><strong className="text-white">Terrain Advantage:</strong> Attack from favorable terrain when possible</li>
+        <li><strong className="text-white">Sabotage First:</strong> Disable enemy outposts before direct assault</li>
+        <li><strong className="text-white">Overwhelming Force:</strong> Bring more troops than you think you need</li>
+      </ul>
+    </Section>
+
+    <Section title="Resource Management">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Plan Ahead:</strong> Always maintain 2-3 turns of food reserves</li>
+        <li><strong className="text-white">Invest in Passive Income:</strong> Technologies that generate resources pay for themselves</li>
+        <li><strong className="text-white">Diversify Sources:</strong> Don't rely on a single resource generation method</li>
+        <li><strong className="text-white">Monitor Morale:</strong> Low morale reduces effectiveness of all actions</li>
+      </ul>
+    </Section>
+
+    <Section title="Diplomatic Strategy">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Early Alliances:</strong> Secure at least one ally for mutual protection</li>
+        <li><strong className="text-white">Information Trading:</strong> Share intelligence to build trust</li>
+        <li><strong className="text-white">Resource Sharing:</strong> Help allies in crisis to maintain relationships</li>
+        <li><strong className="text-white">Strategic Wars:</strong> Only declare war when you have clear advantages</li>
+      </ul>
+    </Section>
+
+    <Section title="Advanced Tactics">
+      <ul className="list-disc list-inside space-y-2 pl-4">
+        <li><strong className="text-white">Sabotage Chains:</strong> Coordinate multiple sabotage missions for maximum impact</li>
+        <li><strong className="text-white">Technology Synergy:</strong> Combine related technologies for multiplicative benefits</li>
+        <li><strong className="text-white">Chief Specialization:</strong> Use chiefs with complementary abilities</li>
+        <li><strong className="text-white">Economic Warfare:</strong> Target enemy resource generation to cripple their economy</li>
+      </ul>
+    </Section>
+  </>
+);
+
+const renderTabContent = (tab: HelpTab) => {
+  switch (tab) {
+    case 'rules': return <GameRulesContent />;
+    case 'ui': return <UIGuideContent />;
+    case 'actions': return <ActionsGuideContent />;
+    case 'research': return <ResearchGuideContent />;
+    case 'combat': return <CombatGuideContent />;
+    case 'diplomacy': return <DiplomacyGuideContent />;
+    case 'resources': return <ResourcesGuideContent />;
+    case 'tips': return <TipsGuideContent />;
+    default: return <GameRulesContent />;
+  }
+};
+
 const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktopWindow = false }) => {
   const [activeTab, setActiveTab] = useState<HelpTab>('rules');
 
@@ -151,14 +441,20 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
     return (
       <div className="h-full flex flex-col">
         {/* Tab buttons */}
-        <div className="flex space-x-1 p-3 border-b border-slate-600">
+        <div className="flex flex-wrap gap-1 p-3 border-b border-slate-600">
           <TabButton label="Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
           <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+          <TabButton label="Actions" isActive={activeTab === 'actions'} onClick={() => setActiveTab('actions')} />
+          <TabButton label="Research" isActive={activeTab === 'research'} onClick={() => setActiveTab('research')} />
+          <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
+          <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
+          <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+          <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
         </div>
 
         {/* Content */}
         <div className="flex-1 p-3 overflow-y-auto text-sm">
-          {activeTab === 'rules' ? <GameRulesContent /> : <UIGuideContent />}
+          {renderTabContent(activeTab)}
         </div>
       </div>
     );
@@ -182,9 +478,15 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
         <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Mobile Header */}
             <header className="flex-shrink-0 flex justify-between items-center border-b border-neutral-700 p-3 md:hidden">
-              <div className="flex space-x-1">
+              <div className="flex space-x-1 overflow-x-auto">
                 <TabButton label="Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
-                <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+                <TabButton label="UI" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+                <TabButton label="Actions" isActive={activeTab === 'actions'} onClick={() => setActiveTab('actions')} />
+                <TabButton label="Research" isActive={activeTab === 'research'} onClick={() => setActiveTab('research')} />
+                <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
+                <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
+                <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+                <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -195,9 +497,15 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
 
             {/* Desktop Header */}
             <header className="flex-shrink-0 justify-between items-center border-b border-neutral-700 px-6 pt-4 hidden md:flex">
-                 <div className="flex space-x-1">
-                    <TabButton label="Game Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
+                 <div className="flex flex-wrap gap-1">
+                    <TabButton label="Rules" isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
                     <TabButton label="UI Guide" isActive={activeTab === 'ui'} onClick={() => setActiveTab('ui')} />
+                    <TabButton label="Actions" isActive={activeTab === 'actions'} onClick={() => setActiveTab('actions')} />
+                    <TabButton label="Research" isActive={activeTab === 'research'} onClick={() => setActiveTab('research')} />
+                    <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
+                    <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
+                    <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+                    <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
                 </div>
                  <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -206,7 +514,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                  </Button>
             </header>
             <main className="flex-grow p-6 overflow-y-auto bg-neutral-800">
-                {activeTab === 'rules' ? <GameRulesContent /> : <UIGuideContent />}
+                {renderTabContent(activeTab)}
             </main>
         </div>
       </div>

@@ -24,6 +24,13 @@ const getStatusPill = (relation?: DiplomaticRelation) => {
   };
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBack }) => {
+    console.log('🏆 LEADERBOARD DEBUG: Received gameState with keys:', Object.keys(gameState));
+    console.log('🏆 LEADERBOARD DEBUG: History in gameState:', gameState.history?.length || 0);
+    if (gameState.history && gameState.history.length > 0) {
+        console.log('🏆 LEADERBOARD DEBUG: History turns:', gameState.history.map(h => h.turn));
+    } else {
+        console.log('🏆 LEADERBOARD DEBUG: No history data in gameState');
+    }
 
     const rankedTribes = useMemo(() => {
         return gameState.tribes.map(tribe => {

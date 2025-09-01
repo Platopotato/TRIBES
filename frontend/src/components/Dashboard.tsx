@@ -18,6 +18,7 @@ import TechTreeModal from './TechTreeModal';
 import HelpModal from './HelpModal';
 import ChiefStatusPanel from './ChiefStatusPanel';
 import CodexModal from './CodexModal';
+import QuickReference from './QuickReference';
 import PendingTradesPanel from './PendingTradesPanel';
 
 import JourneysPanel from './JourneysPanel';
@@ -172,6 +173,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isCodexOpen, setIsCodexOpen] = useState(false);
+  const [isQuickRefOpen, setIsQuickRefOpen] = useState(false);
   const [isDiplomacyModalOpen, setIsDiplomacyModalOpen] = useState(false);
   const [isChiefsModalOpen, setIsChiefsModalOpen] = useState(false);
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
@@ -688,6 +690,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   className="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded text-sm transition-colors"
                 >
                   🏆 Standings
+                </button>
+                <button
+                  onClick={() => setIsQuickRefOpen(true)}
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm transition-colors"
+                >
+                  📋 Quick Ref
                 </button>
                 <button
                   onClick={() => setIsHelpModalOpen(true)}
@@ -1617,6 +1625,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
       {isHelpModalOpen && <HelpModal onClose={() => setIsHelpModalOpen(false)} />}
       {isCodexOpen && <CodexModal onClose={() => setIsCodexOpen(false)} allTribes={allTribes} allChiefRequests={allChiefRequests} allAssetRequests={allAssetRequests} />}
+      {isQuickRefOpen && <QuickReference onClose={() => setIsQuickRefOpen(false)} />}
 
       {/* Mobile Map Selection Overlay */}
       {showMapInModal && (
@@ -1945,6 +1954,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             />
           )}
 
+          {/* Quick Reference Modal */}
+          {isQuickRefOpen && (
+            <QuickReference
+              isOpen={isQuickRefOpen}
+              onClose={() => setIsQuickRefOpen(false)}
+            />
+          )}
+
           {/* Codex Modal */}
           {isCodexOpen && (
             <CodexModal
@@ -1988,6 +2005,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               allTribes={allTribes}
               allChiefRequests={allChiefRequests}
               allAssetRequests={allAssetRequests}
+            />
+          )}
+
+          {/* Quick Reference Modal */}
+          {isQuickRefOpen && (
+            <QuickReference
+              isOpen={isQuickRefOpen}
+              onClose={() => setIsQuickRefOpen(false)}
             />
           )}
         </>

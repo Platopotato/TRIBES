@@ -251,7 +251,7 @@ const CombatGuideContent: React.FC = () => (
     <Section title="Combat Resolution">
       <p><strong className="text-white">Victory Conditions:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Attacker wins if Attack Strength > Defense Strength</li>
+        <li>Attacker wins if Attack Strength &gt; Defense Strength</li>
         <li>Casualties are calculated based on strength difference</li>
         <li>Winner takes control of the location</li>
         <li>Loser's surviving forces retreat to nearest friendly garrison</li>

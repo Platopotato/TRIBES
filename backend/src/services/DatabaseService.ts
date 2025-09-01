@@ -378,6 +378,30 @@ export class DatabaseService {
         }
       }
 
+      // Create/update turn history records
+      if (gameState.history && gameState.history.length > 0) {
+        console.log(`📚 Creating/updating ${gameState.history.length} turn history records...`);
+        for (const historyRecord of gameState.history) {
+          await this.prisma.turnHistory.upsert({
+            where: {
+              gameStateId_turn: {
+                gameStateId: existingGameState.id,
+                turn: historyRecord.turn
+              }
+            },
+            create: {
+              turn: historyRecord.turn,
+              tribeRecords: (historyRecord.tribeRecords || historyRecord) as any,
+              gameStateId: existingGameState.id
+            },
+            update: {
+              tribeRecords: (historyRecord.tribeRecords || historyRecord) as any
+            }
+          });
+        }
+        console.log(`✅ Turn history records created/updated successfully`);
+      }
+
       console.log('✅ Lightweight game state update completed');
     } catch (error) {
       console.error('❌ Error in lightweight game state update:', error);
@@ -907,7 +931,7 @@ export class DatabaseService {
         await tx.assetRequest.deleteMany({ where: { gameStateId: currentGameState.id } });
         await tx.journey.deleteMany({ where: { gameStateId: currentGameState.id } });
         await tx.diplomaticProposal.deleteMany({ where: { gameStateId: currentGameState.id } });
-        await tx.turnHistory.deleteMany({ where: { gameStateId: currentGameState.id } });
+        // Don't delete turn history during regular updates - only during backup restoration
 
         // Update the main game state (minimal fields only to avoid schema issues)
         console.log(' Updating main game state...');
@@ -1427,21 +1451,55 @@ export class DatabaseService {
           }
         }
 
-        // Restore turn history
+        // Create/update turn history records
         if (gameState.history && gameState.history.length > 0) {
-          console.log(`📚 Creating ${gameState.history.length} turn history records...`);
+          console.log(`📚 Creating/updating ${gameState.history.length} turn history records...`);
           for (const historyRecord of gameState.history) {
-            await tx.turnHistory.create({
-              data: {
+            await tx.turnHistory.upsert({
+              where: {
+                gameStateId_turn: {
+                  gameStateId: currentGameState.id,
+                  turn: historyRecord.turn
+                }
+              },
+              create: {
                 turn: historyRecord.turn,
                 tribeRecords: (historyRecord.tribeRecords || historyRecord) as any,
                 gameStateId: currentGameState.id
+              },
+              update: {
+                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any
               }
             });
           }
+          console.log(`✅ Turn history records created/updated successfully`);
         }
 
-        console.log('🎯 Complete game state restoration completed successfully');
+        // Create/update turn history records (for both regular updates and backup restoration)
+        if (gameState.history && gameState.history.length > 0) {
+          console.log(`📚 Creating/updating ${gameState.history.length} turn history records...`);
+          for (const historyRecord of gameState.history) {
+            await tx.turnHistory.upsert({
+              where: {
+                gameStateId_turn: {
+                  gameStateId: currentGameState.id,
+                  turn: historyRecord.turn
+                }
+              },
+              create: {
+                turn: historyRecord.turn,
+                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any,
+                gameStateId: currentGameState.id
+              },
+              update: {
+                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any
+              }
+            });
+          }
+          console.log(`✅ Turn history records created/updated successfully`);
+        }
+
+        console.log('🎯 Game state update completed successfully');
       }, {
         timeout: 120000, // Increased to 120 second timeout for backup loading
         maxWait: 150000, // Maximum wait time

@@ -381,6 +381,119 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     onClose();
   };
 
+  const renderSabotageOperatives = (field: ActionField, currentValue: number, maxAvailable: number) => {
+    const availableChiefs = currentGarrison?.chiefs?.length || 0;
+
+    // Calculate success bonuses for different force sizes
+    const calculateBonus = (operatives: number, chiefs: number) => {
+      const troopBonus = Math.min(operatives * 5, 30); // Cap at 30%
+      const chiefBonus = chiefs * 15; // No cap
+      return troopBonus + chiefBonus;
+    };
+
+    const presets = [
+      {
+        name: '🥷 Stealth Mission',
+        description: 'Minimal force, lower detection risk',
+        operatives: 1,
+        info: `+${calculateBonus(1, 0)}% success bonus`
+      },
+      {
+        name: '🎯 Standard Mission',
+        description: 'Balanced force composition',
+        operatives: 3,
+        info: `+${calculateBonus(3, 0)}% success bonus`
+      },
+      {
+        name: '⚡ Elite Operation',
+        description: 'Maximum effectiveness (6+ operatives)',
+        operatives: Math.min(6, maxAvailable),
+        info: `+${calculateBonus(6, 0)}% success bonus (max troop bonus)`
+      },
+      {
+        name: '🚀 Full Assault',
+        description: 'Send everything available',
+        operatives: maxAvailable,
+        info: `+${calculateBonus(maxAvailable, 0)}% success bonus`
+      }
+    ];
+
+    return (
+      <div className="space-y-4">
+        {/* Quick Presets */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-slate-300">Quick Select</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {presets.map((preset, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleFieldChange(field.name, preset.operatives)}
+                disabled={preset.operatives > maxAvailable}
+                className={`p-2 rounded-lg border text-left transition-all text-xs ${
+                  currentValue === preset.operatives
+                    ? 'border-blue-400 bg-blue-400/10 text-blue-300'
+                    : preset.operatives <= maxAvailable
+                    ? 'border-slate-600 bg-slate-700 text-slate-200 hover:border-slate-500'
+                    : 'border-slate-700 bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <div className="font-semibold">{preset.name}</div>
+                <div className="text-slate-400">{preset.operatives} operatives</div>
+                <div className="text-slate-400">{preset.info}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Manual Selection */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-sm font-medium text-slate-300">Custom Amount</div>
+              <div className="text-xs text-slate-400">Available: {maxAvailable}</div>
+              <div className="text-xs text-green-400">Current bonus: +{calculateBonus(currentValue, availableChiefs)}%</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleFieldChange(field.name, Math.max(0, currentValue - 1))}
+                disabled={currentValue <= 0}
+                className="w-10 h-10 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
+                style={{ touchAction: 'manipulation' }}
+              >
+                −
+              </button>
+              <div className="w-16 text-center">
+                <div className="text-2xl font-bold text-white">{currentValue}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleFieldChange(field.name, Math.min(maxAvailable, currentValue + 1))}
+                disabled={currentValue >= maxAvailable}
+                className="w-10 h-10 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
+                style={{ touchAction: 'manipulation' }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bonus Explanation */}
+        <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600">
+          <h5 className="text-xs font-semibold text-slate-300 mb-2">Success Bonus Guide</h5>
+          <div className="text-xs text-slate-400 space-y-1">
+            <div>• Operatives: +5% each (max +30% at 6 operatives)</div>
+            <div>• Chiefs: +15% each (no limit)</div>
+            <div>• Distance: -5% per hex (max -40%)</div>
+            <div>• Base success rate: 60%</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSabotageSelect = (field: ActionField, value: string) => {
     const sabotageTypes = [
       {
@@ -564,6 +677,14 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 maxVal = currentGarrison[maxKey];
             } else if (field.max && tribe.globalResources[field.max as keyof typeof tribe.globalResources] !== undefined) {
                  maxVal = tribe.globalResources[field.max as keyof typeof tribe.globalResources];
+            }
+
+            const currentValue = parseInt(value) || 0;
+            const maxAvailable = maxVal || 999;
+
+            // Special handling for sabotage operatives
+            if (field.name === 'troops' && selectedActionType === ActionType.Sabotage) {
+                return renderSabotageOperatives(field, currentValue, maxAvailable);
             }
 
             return <input type="number" value={value} min="0" max={maxVal} onChange={e => handleFieldChange(field.name, parseInt(e.target.value) || 0)} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />

@@ -324,9 +324,11 @@ const MapView: React.FC<MapViewProps> = (props) => {
         });
       });
 
-      // Also add ally's own explored hexes to show their discovered terrain
+      // Also add ally's own explored hexes to show their discovered terrain (if they allow sharing)
       allies.forEach(ally => {
-        ally.exploredHexes?.forEach(hex => explored.add(hex));
+        if (ally.shareMapWithAllies !== false) { // Default to true if not set
+          ally.exploredHexes?.forEach(hex => explored.add(hex));
+        }
       });
     }
 

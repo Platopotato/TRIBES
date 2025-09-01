@@ -62,6 +62,7 @@ interface DashboardProps {
   onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onToggleMapSharing: (enable: boolean) => void;
   turnDeadline?: TurnDeadlineType;
   uiMode?: 'mobile' | 'desktop'; // New prop to control UI mode
 }
@@ -69,7 +70,7 @@ interface DashboardProps {
 type DashboardView = 'planning' | 'results' | 'waiting';
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, turnDeadline, uiMode = 'mobile' } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
 
   // Smart UI detection - mobile gets floating modals, desktop gets integrated windows
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
@@ -1643,6 +1644,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           onDeclareWar={onDeclareWar}
           onAcceptProposal={onAcceptProposal}
           onRejectProposal={onRejectProposal}
+          onShareIntelligence={(tribeId, action) => {
+            if (action === 'enable') {
+              onToggleMapSharing(true);
+            } else if (action === 'disable') {
+              onToggleMapSharing(false);
+            }
+          }}
         />
       )}
 

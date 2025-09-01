@@ -593,31 +593,96 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
     return renderActionForm();
   };
 
-  const renderIntelligenceTab = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-amber-400">Intelligence Sharing</h3>
+  const renderIntelligenceTab = () => {
+    const currentMapSharingStatus = playerTribe.shareMapWithAllies !== false; // Default to true
 
-      <div className="bg-slate-800 p-4 rounded-lg">
-        <p className="text-slate-300 mb-3">
-          Share intelligence with allied tribes to strengthen your relationships and coordinate strategies.
-        </p>
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-amber-400">🗺️ Map Intelligence Sharing</h3>
 
-        <div className="space-y-2">
-          <h4 className="font-semibold text-white">Available Intelligence:</h4>
-          <ul className="text-sm text-slate-400 space-y-1">
-            <li>• Enemy troop movements and positions</li>
-            <li>• Resource stockpile estimates</li>
-            <li>• Technology research progress</li>
-            <li>• Strategic recommendations</li>
-          </ul>
+        <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-semibold text-white">Share Explored Map with Allies</h4>
+              <p className="text-sm text-slate-400">Allow allied tribes to see your explored territories</p>
+            </div>
+            <button
+              onClick={() => {
+                if (onShareIntelligence) {
+                  onShareIntelligence(playerTribe.id, currentMapSharingStatus ? 'disable' : 'enable');
+                }
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                currentMapSharingStatus
+                  ? 'bg-green-700 hover:bg-green-600 text-white'
+                  : 'bg-red-700 hover:bg-red-600 text-white'
+              }`}
+            >
+              {currentMapSharingStatus ? '✅ Sharing Enabled' : '❌ Sharing Disabled'}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-3 bg-slate-700 rounded">
+              <h5 className="font-semibold text-green-400 mb-2">When Map Sharing is Enabled:</h5>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• Allied tribes can see all terrain you've explored</li>
+                <li>• Allies can see POIs you've discovered</li>
+                <li>• Shared vision helps coordinate strategies</li>
+                <li>• Strengthens alliance cooperation</li>
+              </ul>
+            </div>
+
+            <div className="p-3 bg-slate-700 rounded">
+              <h5 className="font-semibold text-red-400 mb-2">When Map Sharing is Disabled:</h5>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• Allies cannot see your explored territories</li>
+                <li>• Your discoveries remain private</li>
+                <li>• Useful for keeping strategic locations secret</li>
+                <li>• You can still see allies' shared maps if they enable sharing</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
-        <p className="text-xs text-yellow-400 mt-3">
-          🚧 Intelligence sharing system coming soon! This will allow you to share reconnaissance data with allies.
-        </p>
+        <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+          <h4 className="font-semibold text-white mb-3">Allied Map Sharing Status</h4>
+
+          {otherTribes
+            .filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance)
+            .map(ally => (
+              <div key={ally.id} className="flex items-center justify-between p-2 bg-slate-700 rounded mb-2">
+                <div className="flex items-center space-x-3">
+                  <span className="text-xl">{TRIBE_ICONS[ally.icon] || '🏛️'}</span>
+                  <span className="text-white font-semibold">{ally.tribeName}</span>
+                </div>
+                <span className={`px-3 py-1 rounded text-sm font-semibold ${
+                  ally.shareMapWithAllies !== false
+                    ? 'bg-green-900/30 text-green-400'
+                    : 'bg-red-900/30 text-red-400'
+                }`}>
+                  {ally.shareMapWithAllies !== false ? '🗺️ Sharing Map' : '🔒 Map Private'}
+                </span>
+              </div>
+            ))}
+
+          {otherTribes.filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance).length === 0 && (
+            <p className="text-slate-500 text-center py-4">No allied tribes to share maps with</p>
+          )}
+        </div>
+
+        <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-700">
+          <h5 className="font-semibold text-blue-400 mb-2">💡 Strategic Tips</h5>
+          <ul className="text-sm text-slate-300 space-y-1">
+            <li>• Map sharing is most valuable in the early game for exploration</li>
+            <li>• Consider disabling sharing before attacking secret targets</li>
+            <li>• Shared vision helps allies avoid your territories during movement</li>
+            <li>• You can toggle sharing on/off at any time</li>
+          </ul>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

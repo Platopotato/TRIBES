@@ -515,6 +515,7 @@ export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: strin
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
+export const toggleMapSharing = createEmitter<{ tribeId: string, enable: boolean }>('toggle_map_sharing');
 
 // Mobile offline action queuing
 const queueOfflineActions = () => {

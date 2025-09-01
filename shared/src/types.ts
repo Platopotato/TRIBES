@@ -238,6 +238,7 @@ export interface Tribe {
   journeyResponses: { journeyId: string; response: 'accept' | 'reject' }[];
   diplomacy: Record<string, DiplomaticRelation>; // Key is other tribe's ID
   injuredChiefs?: InjuredChief[]; // Chiefs out of action; return handled via upkeep
+  shareMapWithAllies?: boolean; // Whether to share explored map with allies (default: true)
   prisoners?: PrisonerChief[]; // Captured enemy chiefs
   lastStateUpdate?: number; // Timestamp for frontend state synchronization
   forceUIReset?: boolean; // Flag to force frontend UI reset after turn processing

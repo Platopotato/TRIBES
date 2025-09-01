@@ -392,6 +392,18 @@ export class SocketHandler {
       }
     });
 
+    socket.on('toggle_map_sharing', async ({ tribeId, enable }) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        const tribe = gameState.tribes.find(t => t.id === tribeId);
+        if (tribe) {
+          tribe.shareMapWithAllies = enable;
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+        }
+      }
+    });
+
     // Admin-specific handlers
     socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
       console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);

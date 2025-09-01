@@ -270,47 +270,118 @@ const CombatGuideContent: React.FC = () => (
 
 const DiplomacyGuideContent: React.FC = () => (
   <>
-    <Section title="Diplomatic Relations">
-      <p>Manage relationships with other tribes through the diplomacy system.</p>
+    <Section title="Diplomatic Relations Overview">
+      <p>Diplomacy is a comprehensive system for managing relationships, forming alliances, conducting wars, and sharing intelligence.</p>
       <p><strong className="text-white">Diplomatic Statuses:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>🤝 Allied:</strong> Can trade resources, share information, coordinate attacks</li>
-        <li><strong>⚖️ Neutral:</strong> No special benefits or restrictions</li>
-        <li><strong>⚔️ War:</strong> Can attack each other's territories</li>
+        <li><strong>🤝 Alliance:</strong> Mutual cooperation with shared benefits and advanced options</li>
+        <li><strong>⚖️ Neutral:</strong> Default state with full range of diplomatic options</li>
+        <li><strong>⚔️ War:</strong> Open hostilities with combat and peace negotiation options</li>
+      </ul>
+      <p><strong className="text-white">Access:</strong> Use the 🤝 Diplomacy button to open the comprehensive diplomatic interface with Relations, Proposals, Actions, Trade, and Intelligence tabs.</p>
+    </Section>
+
+    <Section title="Neutral Relations Actions">
+      <p><strong className="text-white">Available diplomatic actions when neutral:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🤝 Propose Alliance:</strong> Offer formal alliance (expires in 3 turns)</li>
+        <li><strong>🕊️ Non-Aggression Pact:</strong> Temporary peace agreement without full alliance</li>
+        <li><strong>🆘 Request Aid:</strong> Ask for resources or assistance</li>
+        <li><strong>📜 Send Demands:</strong> Demand resources, territory, or concessions</li>
+        <li><strong>⚔️ Declare War:</strong> Immediately enable attacks and sabotage</li>
       </ul>
     </Section>
 
-    <Section title="Diplomatic Actions">
-      <p><strong className="text-white">Propose Alliance:</strong> Offer to ally with another tribe (expires in 3 turns if not responded to)</p>
-      <p><strong className="text-white">Declare War:</strong> Immediately change status to War, enabling attacks and sabotage</p>
-      <p><strong className="text-white">Sue for Peace:</strong> Offer reparations to end a war and establish a truce period</p>
-      <p><strong className="text-white">Break Alliance:</strong> End an existing alliance and return to neutral status</p>
-    </Section>
-
-    <Section title="Alliance Benefits">
+    <Section title="Alliance Benefits & Actions">
+      <p><strong className="text-white">Alliance Benefits:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
         <li>Cannot attack each other's territories</li>
-        <li>Mutual protection agreements</li>
-        <li>Coordinated military planning</li>
-        <li>Diplomatic immunity from certain actions</li>
-        <li>Foundation for future trade systems</li>
+        <li>Shared vision of allied garrisons and influence zones</li>
+        <li>Optional map sharing (toggle in Intelligence tab)</li>
+        <li>Advanced diplomatic options and coordination</li>
+        <li>Mutual protection and strategic cooperation</li>
+      </ul>
+
+      <p><strong className="text-white">Alliance Actions:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>💰 Trade Agreements:</strong> Framework for resource exchange (coming soon)</li>
+        <li><strong>🗺️ Map Sharing:</strong> Toggle sharing of explored territories</li>
+        <li><strong>🆘 Request Aid:</strong> Ask allied support in resources or strategy</li>
+        <li><strong>🚶 Request Passage:</strong> Safe travel through allied territory</li>
+        <li><strong>💔 Break Alliance:</strong> End alliance and return to neutral</li>
       </ul>
     </Section>
 
-    <Section title="War Consequences">
+    <Section title="War Actions & Peace Options">
+      <p><strong className="text-white">War Consequences:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
         <li>Can attack enemy garrisons and territories</li>
         <li>All sabotage operations become available</li>
-        <li>No diplomatic cooperation possible</li>
-        <li>Potential for escalating conflicts</li>
-        <li>Can be ended through peace negotiations with reparations</li>
+        <li>No diplomatic cooperation possible during active war</li>
+        <li>Potential for escalating conflicts and resource drain</li>
+      </ul>
+
+      <p><strong className="text-white">Peace Negotiation Options:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🕊️ Send Peace Envoy:</strong> Open negotiations without offering reparations</li>
+        <li><strong>💰 Sue for Peace:</strong> Offer reparations to end war immediately</li>
+        <li><strong>🎁 Offer Tribute:</strong> Ongoing payments to appease enemies</li>
+        <li><strong>⚔️ Send Ultimatum:</strong> Final demands before escalation</li>
       </ul>
     </Section>
 
-    <Section title="Peace Negotiations">
-      <p><strong className="text-white">Reparations:</strong> The aggressor can offer resources to compensate for war damages</p>
-      <p><strong className="text-white">Truce Period:</strong> Successful peace creates a truce where war cannot be declared again for several turns</p>
-      <p><strong className="text-white">Neutral Status:</strong> Peace returns diplomatic status to Neutral, allowing future alliance proposals</p>
+    <Section title="Map Intelligence Sharing">
+      <p><strong className="text-white">🗺️ Map Sharing System:</strong> Control what allies can see of your explored territories through the Intelligence tab.</p>
+
+      <p><strong className="text-white">Sharing Enabled (Default):</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Allies see all terrain you've explored</li>
+        <li>Allies can see POIs you've discovered</li>
+        <li>Strengthens alliance cooperation and coordination</li>
+        <li>Helps avoid territorial conflicts during expansion</li>
+      </ul>
+
+      <p><strong className="text-white">Sharing Disabled:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Your discoveries remain private</li>
+        <li>Useful for keeping strategic locations secret</li>
+        <li>You can still see allies' maps if they share</li>
+        <li>Toggle anytime with immediate effect</li>
+      </ul>
+    </Section>
+
+    <Section title="Diplomatic Proposals System">
+      <p><strong className="text-white">Proposal Mechanics:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Most diplomatic actions create proposals requiring acceptance</li>
+        <li>Proposals expire in 3 turns if not responded to</li>
+        <li>View incoming and outgoing proposals in Proposals tab</li>
+        <li>Accept or reject proposals with immediate effect</li>
+      </ul>
+
+      <p><strong className="text-white">Truce System:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Successful peace negotiations create truce periods</li>
+        <li>During truce, war cannot be declared again</li>
+        <li>Truce duration varies based on negotiation type</li>
+        <li>Allows time for relationship rebuilding</li>
+      </ul>
+    </Section>
+
+    <Section title="Strategic Diplomacy Tips">
+      <p><strong className="text-white">Early Game:</strong> Form alliances for exploration and mutual protection</p>
+      <p><strong className="text-white">Mid Game:</strong> Use demands and aid requests to gain advantages</p>
+      <p><strong className="text-white">Late Game:</strong> Strategic alliance breaking and peace envoys for positioning</p>
+
+      <p><strong className="text-white">Advanced Strategies:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Disable map sharing before secret operations (vault attacks)</li>
+        <li>Use peace envoys to test enemy willingness to negotiate</li>
+        <li>Send demands to weaker enemies for resource extraction</li>
+        <li>Request aid from strong allies during difficult periods</li>
+        <li>Time alliance breaks for maximum strategic advantage</li>
+        <li>Coordinate with allies using shared vision and intelligence</li>
+      </ul>
     </Section>
   </>
 );

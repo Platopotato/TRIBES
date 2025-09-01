@@ -7,11 +7,12 @@ import { TRIBE_ICONS } from '@radix-tribes/shared';
 interface TribeGrowthChartProps {
     history: TurnHistoryRecord[];
     tribes: Tribe[];
+    currentTurn: number;
 }
 
 const TERRITORY_COLORS = ['#4299E1', '#F56565', '#48BB78', '#ED8936', '#9F7AEA', '#ECC94B', '#38B2AC', '#ED64A6', '#A0AEC0', '#667EEA', '#F687B3', '#D69E2E', '#319795', '#6B46C1', '#C53030', '#059669'];
 
-const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) => {
+const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, currentTurn }) => {
     const [hoveredTribeId, setHoveredTribeId] = useState<string | null>(null);
 
     const tribeColorMap = useMemo(() => {
@@ -61,12 +62,13 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             }
 
             // Add current turn data if not already present
-            const hasCurrentTurn = dataByTribe[tribe.id].some(d => d.turn === maxTurn);
-            if (!hasCurrentTurn && maxTurn !== -Infinity) {
+            const hasCurrentTurn = dataByTribe[tribe.id].some(d => d.turn === currentTurn);
+            if (!hasCurrentTurn) {
                 dataByTribe[tribe.id].push({
-                    turn: maxTurn,
+                    turn: currentTurn,
                     score: currentScore
                 });
+                maxTurn = Math.max(maxTurn, currentTurn);
             }
 
             // Sort data by turn for each tribe
@@ -77,15 +79,36 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             }
         });
 
-        // If no historical data, create minimal current data
+        // If no historical data, create minimal data with current turn
         if (history.length === 0) {
-            minTurn = 1;
-            maxTurn = 1;
+            console.log('📊 No historical data found, using current turn data only');
+            minTurn = Math.max(1, currentTurn);
+            maxTurn = currentTurn;
             tribes.forEach(tribe => {
                 const currentScore = calculateTribeScore(tribe);
-                dataByTribe[tribe.id] = [{ turn: 1, score: currentScore }];
+                dataByTribe[tribe.id] = [{ turn: currentTurn, score: currentScore }];
                 if (currentScore > maxS) {
                     maxS = currentScore;
+                }
+            });
+        }
+
+        // If we have very little data, create some interpolated points for better visualization
+        if (maxTurn - minTurn < 2 && currentTurn > 1) {
+            console.log('📊 Limited historical data, creating interpolated points');
+            tribes.forEach(tribe => {
+                const currentScore = calculateTribeScore(tribe);
+                if (!dataByTribe[tribe.id] || dataByTribe[tribe.id].length < 2) {
+                    // Create a simple progression from turn 1 to current turn
+                    const startScore = Math.max(10, currentScore * 0.3); // Reasonable starting score
+                    dataByTribe[tribe.id] = [
+                        { turn: 1, score: startScore },
+                        { turn: currentTurn, score: currentScore }
+                    ];
+                    maxTurn = Math.max(maxTurn, currentTurn);
+                    if (currentScore > maxS) {
+                        maxS = currentScore;
+                    }
                 }
             });
         }
@@ -100,6 +123,7 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             maxScore: maxS,
             turnRange: [turnStart, turnEnd],
             historyLength: history.length,
+            rawHistory: history.map(h => ({ turn: h.turn, tribeCount: h.tribeRecords?.length || 0 })),
             tribeDataDetails: Object.entries(dataByTribe).map(([tribeId, data]) => ({
                 tribeId,
                 points: data.length,
@@ -113,7 +137,7 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes }) 
             maxScore: maxS > 0 ? maxS * 1.1 : 100,
             turnDomain: [turnStart, turnEnd]
         };
-    }, [history, tribes]);
+    }, [history, tribes, currentTurn]);
     
     // Debug logging for chart data
     console.log('📊 TribeGrowthChart Debug:', {

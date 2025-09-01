@@ -188,6 +188,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                 <TribeGrowthChart
                     history={gameState.history || []}
                     tribes={rankedTribes}
+                    currentTurn={gameState.turn}
                 />
             </Card>
         </div>

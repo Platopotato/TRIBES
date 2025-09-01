@@ -3,7 +3,7 @@
 
 
 import React, { useState, useMemo } from 'react';
-import { Tribe, ChiefRequest, Chief } from '@radix-tribes/shared';
+import { Tribe, ChiefRequest, Chief, Journey } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { ALL_CHIEFS } from '@radix-tribes/shared';
@@ -12,16 +12,61 @@ interface ChiefsPanelProps {
     tribe: Tribe;
     allChiefRequests: ChiefRequest[];
     allTribes: Tribe[];
+    journeys: Journey[];
     onRequestChief: (chiefName: string, radixAddressSnippet: string) => void;
 }
 
-const ChiefsPanel: React.FC<ChiefsPanelProps> = ({ tribe, allChiefRequests = [], allTribes, onRequestChief }) => {
+const ChiefsPanel: React.FC<ChiefsPanelProps> = ({ tribe, allChiefRequests = [], allTribes, journeys, onRequestChief }) => {
     const [selectedChief, setSelectedChief] = useState('');
     const [radixAddress, setRadixAddress] = useState('');
 
     const playerChiefs = useMemo(() => {
-        return Object.values(tribe.garrisons).flatMap(g => g.chiefs || []);
-    }, [tribe.garrisons]);
+        const allChiefs: Array<Chief & { status: string; location?: string; returnTurn?: number }> = [];
+
+        // Chiefs in garrisons (active)
+        Object.entries(tribe.garrisons).forEach(([location, garrison]) => {
+            (garrison.chiefs || []).forEach(chief => {
+                allChiefs.push({
+                    ...chief,
+                    status: 'Active',
+                    location: location
+                });
+            });
+        });
+
+        // Chiefs on journeys
+        const tribeJourneys = journeys.filter(j => j.ownerTribeId === tribe.id);
+        tribeJourneys.forEach(journey => {
+            (journey.force.chiefs || []).forEach(chief => {
+                allChiefs.push({
+                    ...chief,
+                    status: `On Journey (${journey.type})`,
+                    location: `${journey.currentLocation} → ${journey.destination}`
+                });
+            });
+        });
+
+        // Injured chiefs
+        (tribe.injuredChiefs || []).forEach(injuredEntry => {
+            allChiefs.push({
+                ...injuredEntry.chief,
+                status: 'Injured',
+                location: injuredEntry.fromHex || tribe.location,
+                returnTurn: injuredEntry.returnTurn
+            });
+        });
+
+        // Prisoner chiefs (if they exist)
+        (tribe.prisoners || []).forEach((prisoner: any) => {
+            allChiefs.push({
+                ...prisoner.chief,
+                status: 'Prisoner',
+                location: prisoner.location || 'Unknown'
+            });
+        });
+
+        return allChiefs;
+    }, [tribe.garrisons, tribe.injuredChiefs, tribe.prisoners, journeys, tribe.id]);
 
     const playerChiefRequests = useMemo(() => {
         return allChiefRequests.filter(req => req.tribeId === tribe.id);
@@ -71,22 +116,53 @@ const ChiefsPanel: React.FC<ChiefsPanelProps> = ({ tribe, allChiefRequests = [],
     return (
         <Card title="Chiefs">
             <div className="space-y-4">
-                {/* Active Chiefs */}
+                {/* All Chiefs */}
                 <div>
-                    <h4 className="font-semibold text-slate-300 mb-2">Active Chiefs ({playerChiefs.length})</h4>
+                    <h4 className="font-semibold text-slate-300 mb-2">Your Chiefs ({playerChiefs.length})</h4>
                     {playerChiefs.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-2">
-                            {playerChiefs.map((chief: Chief) => (
-                                <div key={chief.name} className="bg-slate-900/50 rounded-lg p-2 flex items-start space-x-3">
-                                    <img src={chief.key_image_url} alt={chief.name} className="w-16 h-16 rounded-md object-cover flex-shrink-0 mt-1" />
-                                    <div>
-                                        <p className="font-bold text-amber-400">{chief.name}</p>
-                                        <p className="text-xs text-slate-400 italic">"{chief.description}"</p>
+                        <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto pr-2">
+                            {playerChiefs.map((chief: any) => {
+                                const getStatusColor = (status: string) => {
+                                    if (status === 'Active') return 'text-green-400';
+                                    if (status === 'Injured') return 'text-red-400';
+                                    if (status.includes('Journey')) return 'text-blue-400';
+                                    if (status === 'Prisoner') return 'text-orange-400';
+                                    return 'text-slate-400';
+                                };
+
+                                return (
+                                    <div key={`${chief.name}-${chief.status}`} className="bg-slate-900/50 rounded-lg p-3 flex items-start space-x-3">
+                                        <img src={chief.key_image_url} alt={chief.name} className="w-16 h-16 rounded-md object-cover flex-shrink-0 mt-1" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-bold text-amber-400">{chief.name}</p>
+                                                <span className={`text-xs font-semibold px-2 py-1 rounded ${getStatusColor(chief.status)} bg-slate-800`}>
+                                                    {chief.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 italic mb-1">"{chief.description}"</p>
+                                            {chief.location && (
+                                                <p className="text-xs text-slate-300">
+                                                    📍 {chief.location}
+                                                </p>
+                                            )}
+                                            {chief.returnTurn && (
+                                                <p className="text-xs text-yellow-400">
+                                                    🕒 Returns on turn {chief.returnTurn}
+                                                </p>
+                                            )}
+                                            <div className="flex space-x-3 mt-1 text-xs text-slate-400">
+                                                <span>💪 {chief.stats.strength}</span>
+                                                <span>🧠 {chief.stats.intelligence}</span>
+                                                <span>👑 {chief.stats.leadership}</span>
+                                                <span>✨ {chief.stats.charisma}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-                    ) : <p className="text-sm text-slate-400 italic">No active chiefs.</p>}
+                    ) : <p className="text-sm text-slate-400 italic">No chiefs owned.</p>}
                 </div>
 
                 {/* Pending Requests */}

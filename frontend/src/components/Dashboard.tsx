@@ -1339,6 +1339,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   tribe={playerTribe}
                   allChiefRequests={allChiefRequests}
                   allTribes={allTribes}
+                  journeys={journeys}
                   onRequestChief={onRequestChief}
                 />
               )}
@@ -1897,6 +1898,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     tribe={playerTribe}
                     allChiefRequests={allChiefRequests}
                     allTribes={allTribes}
+                    journeys={journeys}
                     onRequestChief={onRequestChief}
                   />
                 </div>

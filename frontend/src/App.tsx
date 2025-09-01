@@ -108,6 +108,11 @@ const App: React.FC = () => {
     client.initClient(
       (newState) => {
         console.log('📊 Game state updated:', newState);
+        console.log('📚 FRONTEND RECEIVED: History length:', newState?.history?.length || 0);
+        if (newState?.history && newState.history.length > 0) {
+          console.log('📚 FRONTEND RECEIVED: History turns:', newState.history.map(h => h.turn));
+          console.log('📚 FRONTEND RECEIVED: Sample history:', newState.history[0]);
+        }
         setGameState(newState);
         setIsLoading(false);
       },

@@ -42,6 +42,11 @@ export class SocketHandler {
         console.log('🏘️ Tribe names:', gameState.tribes.map(t => t.tribeName));
         console.log('🤖 AI tribes:', gameState.tribes.filter(t => t.isAI).map(t => `${t.tribeName} (${t.aiType})`));
         console.log('👥 Human tribes:', gameState.tribes.filter(t => !t.isAI).map(t => t.tribeName));
+        console.log('📚 SOCKET EMIT: Game state history length:', gameState.history?.length || 0);
+        if (gameState.history && gameState.history.length > 0) {
+          console.log('📚 SOCKET EMIT: History turns:', gameState.history.map(h => h.turn));
+          console.log('📚 SOCKET EMIT: Sample history record:', gameState.history[0]);
+        }
         this.io.emit('gamestate_updated', gameState);
       } else {
         console.log('❌ No game state to emit');
@@ -91,6 +96,10 @@ export class SocketHandler {
     socket.on('get_initial_state', async () => {
       const gameState = await this.gameService.getGameState();
       const users = await this.gameService.getUsers();
+      console.log('📚 INITIAL STATE: Game state history length:', gameState?.history?.length || 0);
+      if (gameState?.history && gameState.history.length > 0) {
+        console.log('📚 INITIAL STATE: History turns:', gameState.history.map(h => h.turn));
+      }
       socket.emit('initial_state', { gameState, users });
     });
 

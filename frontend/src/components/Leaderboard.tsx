@@ -186,6 +186,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                         Tribes: {rankedTribes.length},
                         Tribes with trends: {rankedTribes.filter(t => t.rankChange !== null).length},
                         Turn: {gameState.turn}
+                        {/* Enhanced debugging */}
+                        <br />
+                        GameState keys: {Object.keys(gameState).join(', ')}
+                        <br />
+                        History type: {typeof gameState.history}, Is array: {Array.isArray(gameState.history)}
+                        {gameState.history && gameState.history.length > 0 && (
+                            <>
+                                <br />
+                                Sample history: {JSON.stringify(gameState.history[0], null, 2).substring(0, 200)}...
+                            </>
+                        )}
                     </div>
                 )}
                 <TribeGrowthChart

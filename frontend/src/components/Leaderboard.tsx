@@ -159,7 +159,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-slate-500 text-xs">New</span>
+                                                <div className="flex items-center justify-center" title="Trends will appear after multiple turns">
+                                                    <span className="text-slate-500 text-xs">📊</span>
+                                                </div>
                                             )}
                                         </td>
                                         {playerTribe && (
@@ -182,6 +184,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                     <div className="mb-4 p-2 bg-slate-800 rounded text-xs text-slate-400">
                         Debug: History length: {gameState.history?.length || 0},
                         Tribes: {rankedTribes.length},
+                        Tribes with trends: {rankedTribes.filter(t => t.rankChange !== null).length},
                         Turn: {gameState.turn}
                     </div>
                 )}

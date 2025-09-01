@@ -6,6 +6,8 @@ import { TRIBE_ICONS } from '@radix-tribes/shared';
 import MapView from './MapView';
 import { calculateTribeScore } from '../lib/statsUtils';
 import TribeGrowthChart from './TribeGrowthChart';
+import TerritoryControlChart from './TerritoryControlChart';
+import MilitaryPowerChart from './MilitaryPowerChart';
 
 interface LeaderboardProps {
   gameState: GameState;
@@ -207,6 +209,24 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                     </div>
                 )}
                 <TribeGrowthChart
+                    history={gameState.history || []}
+                    tribes={rankedTribes}
+                    currentTurn={gameState.turn}
+                />
+            </Card>
+
+            {/* Territory Control Chart */}
+            <Card title="🏛️ Territory Control Over Time">
+                <TerritoryControlChart
+                    history={gameState.history || []}
+                    tribes={rankedTribes}
+                    currentTurn={gameState.turn}
+                />
+            </Card>
+
+            {/* Military Power Chart */}
+            <Card title="⚔️ Military Power Evolution">
+                <MilitaryPowerChart
                     history={gameState.history || []}
                     tribes={rankedTribes}
                     currentTurn={gameState.turn}

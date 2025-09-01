@@ -114,14 +114,18 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
         }
 
         // Ensure reasonable turn domain
-        const turnStart = Math.max(1, minTurn);
-        const turnEnd = Math.max(turnStart, maxTurn);
+        const turnStart = Math.max(1, minTurn === Infinity ? 1 : minTurn);
+        const turnEnd = Math.max(turnStart + 1, maxTurn); // Ensure at least 1 turn difference
 
         console.log('📊 Chart data processed:', {
             tribesWithData: Object.keys(dataByTribe).length,
             dataPoints: Object.values(dataByTribe).reduce((sum, data) => sum + data.length, 0),
             maxScore: maxS,
             turnRange: [turnStart, turnEnd],
+            domainWidth: turnEnd - turnStart,
+            currentTurn: currentTurn,
+            minTurn: minTurn,
+            maxTurn: maxTurn,
             historyLength: history.length,
             rawHistory: history.map(h => ({ turn: h.turn, tribeCount: h.tribeRecords?.length || 0 })),
             tribeDataDetails: Object.entries(dataByTribe).map(([tribeId, data]) => ({
@@ -171,13 +175,18 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
         const domainWidth = turnDomain[1] - turnDomain[0];
         const chartWidth = width - margin.left - margin.right;
 
+        console.log(`📊 X-scale debug: turn=${turn}, domain=[${turnDomain[0]}, ${turnDomain[1]}], domainWidth=${domainWidth}, chartWidth=${chartWidth}`);
+
         if (domainWidth === 0) {
-            console.warn('🚨 X-axis domain width is 0!', { turnDomain, turn });
-            return margin.left;
+            console.warn('🚨 X-axis domain width is 0! Forcing minimum width', { turnDomain, turn });
+            // Force a minimum domain width to prevent division by zero
+            const forcedWidth = 1;
+            const scaledX = margin.left + (turn - turnDomain[0]) / forcedWidth * chartWidth;
+            return scaledX;
         }
 
         const scaledX = margin.left + (turn - turnDomain[0]) / domainWidth * chartWidth;
-        console.log(`📊 X-scale: turn ${turn} → x ${scaledX} (domain: ${turnDomain[0]}-${turnDomain[1]}, width: ${domainWidth})`);
+        console.log(`📊 X-scale result: turn ${turn} → x ${scaledX}`);
         return scaledX;
     };
 

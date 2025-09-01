@@ -8,6 +8,7 @@ import {
   Tribe,
   GameAction,
   DiplomaticStatus,
+  DiplomaticActionType,
   ALL_CHIEFS,
   getAsset,
   TickerMessage,
@@ -318,6 +319,7 @@ export class SocketHandler {
             id: `proposal-${Date.now()}`,
             fromTribeId,
             toTribeId,
+            actionType: DiplomaticActionType.ProposeAlliance,
             statusChangeTo: DiplomaticStatus.Alliance,
             expiresOnTurn: gameState.turn + 3,
             fromTribeName: fromTribe.tribeName
@@ -337,6 +339,7 @@ export class SocketHandler {
             id: `proposal-${Date.now()}`,
             fromTribeId,
             toTribeId,
+            actionType: DiplomaticActionType.SueForPeace,
             statusChangeTo: DiplomaticStatus.Neutral,
             expiresOnTurn: gameState.turn + 3,
             fromTribeName: fromTribe.tribeName,
@@ -369,7 +372,7 @@ export class SocketHandler {
         if (proposal) {
           const fromTribe = gameState.tribes.find(t => t.id === proposal.fromTribeId);
           const toTribe = gameState.tribes.find(t => t.id === proposal.toTribeId);
-          if (fromTribe && toTribe) {
+          if (fromTribe && toTribe && proposal.statusChangeTo) {
             fromTribe.diplomacy[toTribe.id] = { status: proposal.statusChangeTo };
             toTribe.diplomacy[fromTribe.id] = { status: proposal.statusChangeTo };
             gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p => p.id !== proposalId);

@@ -9,7 +9,8 @@ import {
   generateMapData,
   SECURITY_QUESTIONS,
   NewsletterState,
-  TurnDeadline
+  TurnDeadline,
+  DiplomaticStatus
 } from '../../../shared/dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1416,7 +1417,7 @@ export class DatabaseService {
                 id: proposal.id,
                 fromTribeId: proposal.fromTribeId,
                 toTribeId: proposal.toTribeId,
-                statusChangeTo: proposal.statusChangeTo,
+                statusChangeTo: proposal.statusChangeTo || DiplomaticStatus.Neutral,
                 expiresOnTurn: proposal.expiresOnTurn || gameState.turn + 1,
                 fromTribeName: proposal.fromTribeName || 'Unknown',
                 reparations: proposal.reparations as any,

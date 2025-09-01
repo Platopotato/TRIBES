@@ -104,16 +104,15 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     }
   }, [draftAction, mapData]);
 
-  const otherTribesWithGarrisons = useMemo(() => {
+  const otherTribesWithHomeBases = useMemo(() => {
     return allTribes
         .filter(t => t.id !== tribe.id)
-        .flatMap(t =>
-            Object.keys(t.garrisons).map(loc => ({
-                tribeId: t.id,
-                tribeName: t.tribeName,
-                location: loc,
-            }))
-        );
+        .filter(t => t.garrisons[t.location]) // Only include tribes that still have their home base
+        .map(t => ({
+            tribeId: t.id,
+            tribeName: t.tribeName,
+            location: t.location, // Home base location only
+        }));
   }, [allTribes, tribe.id]);
 
 
@@ -181,9 +180,9 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             initialData['request_weapons'] = 0;
             initialData['troops'] = 1;
             initialData['weapons'] = 0;
-            if (otherTribesWithGarrisons.length > 0) {
-              initialData['target_location'] = otherTribesWithGarrisons[0].location;
-              initialData['target_tribe_id'] = otherTribesWithGarrisons[0].tribeId;
+            if (otherTribesWithHomeBases.length > 0) {
+              initialData['target_location'] = otherTribesWithHomeBases[0].location;
+              initialData['target_tribe_id'] = otherTribesWithHomeBases[0].tribeId;
             }
         }
         // Ensure Build Outpost always pre-fills 5 builders in the draft
@@ -817,10 +816,10 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
         </div>
 
         <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Trade With (Target)</label>
-            {otherTribesWithGarrisons.length > 0 ? (
+            <label className="block text-sm font-medium text-slate-300 mb-2">Trade With (Home Base)</label>
+            {otherTribesWithHomeBases.length > 0 ? (
               <div className="space-y-2 max-h-40 overflow-y-auto">
-                {otherTribesWithGarrisons.map(g => {
+                {otherTribesWithHomeBases.map(g => {
                   const isSelected = `${data.target_location}|${data.target_tribe_id}` === `${g.location}|${g.tribeId}`;
                   return (
                     <button
@@ -834,14 +833,14 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                       }`}
                     >
                       <div className="font-semibold">{g.tribeName}</div>
-                      <div className="text-sm text-slate-400">Hex {g.location}</div>
+                      <div className="text-sm text-slate-400">🏠 Home Base: {g.location}</div>
                     </button>
                   );
                 })}
               </div>
             ) : (
               <div className="p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400 text-center">
-                No other tribes to trade with
+                No other tribes with home bases to trade with
               </div>
             )}
         </div>

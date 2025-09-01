@@ -79,38 +79,16 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
             }
         });
 
-        // If no historical data, create minimal data with current turn
+        // If no historical data, just show current standings without fake trends
         if (history.length === 0) {
-            console.log('📊 No historical data found, using current turn data only');
-            minTurn = Math.max(1, currentTurn);
+            console.log('📊 No historical data found - showing current standings only');
+            minTurn = currentTurn;
             maxTurn = currentTurn;
             tribes.forEach(tribe => {
                 const currentScore = calculateTribeScore(tribe);
                 dataByTribe[tribe.id] = [{ turn: currentTurn, score: currentScore }];
                 if (currentScore > maxS) {
                     maxS = currentScore;
-                }
-            });
-        }
-
-        // If we have very little data, create some interpolated points for better visualization
-        if (maxTurn - minTurn < 2 && currentTurn > 1) {
-            console.log('📊 Limited historical data, creating interpolated points');
-            tribes.forEach(tribe => {
-                const currentScore = calculateTribeScore(tribe);
-                if (!dataByTribe[tribe.id] || dataByTribe[tribe.id].length < 2) {
-                    // Create a simple progression from turn 1 to current turn
-                    const startScore = Math.max(10, currentScore * 0.3); // Reasonable starting score
-                    dataByTribe[tribe.id] = [
-                        { turn: 1, score: startScore },
-                        { turn: currentTurn, score: currentScore }
-                    ];
-                    // Update the turn domain to include turn 1
-                    minTurn = Math.min(minTurn, 1);
-                    maxTurn = Math.max(maxTurn, currentTurn);
-                    if (currentScore > maxS) {
-                        maxS = currentScore;
-                    }
                 }
             });
         }
@@ -205,25 +183,54 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
         return ticks;
     }, [maxScore]);
 
-    // Additional validation for chart rendering
-    if (chartData.length === 0) {
+    // Check if we have meaningful trend data
+    const hasMultipleTurns = turnDomain[1] - turnDomain[0] > 0;
+    const hasHistoricalData = history.length > 0;
+
+    // Show message for insufficient data
+    if (chartData.length === 0 || (!hasMultipleTurns && !hasHistoricalData)) {
         return (
-            <Card title="📈 Tribal Growth Trends">
-                <div className="h-96 flex items-center justify-center">
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-amber-400">📈 Tribal Growth Trends</h3>
+                <div className="bg-slate-800 rounded-lg p-6">
                     <div className="text-center">
-                        <p className="text-slate-400 italic mb-2">No tribe data available for charting.</p>
-                        <p className="text-slate-500 text-sm">History: {history.length} turns recorded</p>
+                        <div className="text-6xl mb-4">📊</div>
+                        <h4 className="text-xl font-semibold text-white mb-2">Insufficient Historical Data</h4>
+                        <p className="text-slate-400 mb-4">
+                            Tribal growth trends will appear here once the game has progressed through multiple turns.
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-4 text-left">
+                            <p className="text-sm text-slate-300 mb-2"><strong>Current Status:</strong></p>
+                            <ul className="text-sm text-slate-400 space-y-1">
+                                <li>• Current Turn: {currentTurn}</li>
+                                <li>• Historical Records: {history.length} turns</li>
+                                <li>• Active Tribes: {tribes.length}</li>
+                            </ul>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-4">
+                            Charts will show meaningful trends after several turns of gameplay.
+                        </p>
                     </div>
                 </div>
-            </Card>
+            </div>
         );
     }
 
     return (
-        <Card title="📈 Tribal Growth Trends">
-            <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex-grow relative h-96">
-                    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`}>
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-amber-400">📈 Tribal Growth Trends</h3>
+            <div className="bg-slate-800 rounded-lg p-4">
+                {!hasMultipleTurns && (
+                    <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                        <p className="text-blue-400 text-sm">
+                            <strong>📊 Current Standings:</strong> Showing current tribal scores.
+                            Growth trends will appear as the game progresses through multiple turns.
+                        </p>
+                    </div>
+                )}
+                <div className="flex flex-col lg:flex-row gap-6">
+                    <div className="flex-grow relative h-96">
+                        <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`}>
                         {/* Y Axis */}
                         <g className="text-xs text-slate-400">
                             {yAxisTicks.map(tick => (
@@ -337,8 +344,9 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
                         ))}
                     </ul>
                 </aside>
+                </div>
             </div>
-        </Card>
+        </div>
     );
 };
 

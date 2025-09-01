@@ -1402,7 +1402,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <div className="bg-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-bold text-white mb-4">🏆 Leaderboard</h2>
               <Leaderboard
-                gameState={{ tribes: allTribes, turn, mapData, startingLocations, chiefRequests: allChiefRequests, assetRequests: allAssetRequests, journeys, diplomaticProposals }}
+                gameState={gameState}
                 playerTribe={playerTribe}
                 onBack={() => setActiveTab('home')}
               />
@@ -1998,17 +1998,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto">
                   <Leaderboard
-                    gameState={{
-                      tribes: allTribes,
-                      turn,
-                      mapData,
-                      startingLocations,
-                      chiefRequests: allChiefRequests,
-                      assetRequests: allAssetRequests,
-                      journeys,
-                      diplomaticProposals,
-                      history: []
-                    }}
+                    gameState={gameState}
                     playerTribe={playerTribe}
                     onBack={() => setIsStandingsModalOpen(false)}
                   />

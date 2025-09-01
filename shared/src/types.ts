@@ -168,17 +168,48 @@ export interface DiplomaticRelation {
     truceUntilTurn?: number; // Turn number until which war cannot be declared
 }
 
+export enum DiplomaticActionType {
+    ProposeAlliance = 'ProposeAlliance',
+    SueForPeace = 'SueForPeace',
+    SendPeaceEnvoy = 'SendPeaceEnvoy',
+    SendDemands = 'SendDemands',
+    RequestAid = 'RequestAid',
+    OfferTribute = 'OfferTribute',
+    ProposeNonAggressionPact = 'ProposeNonAggressionPact',
+    RequestPassage = 'RequestPassage'
+}
+
 export interface DiplomaticProposal {
-    id:string;
+    id: string;
     fromTribeId: string;
     toTribeId: string;
-    statusChangeTo: DiplomaticStatus.Alliance | DiplomaticStatus.Neutral; // Alliance or Peace
+    actionType: DiplomaticActionType;
+    statusChangeTo?: DiplomaticStatus.Alliance | DiplomaticStatus.Neutral; // For alliance/peace proposals
     expiresOnTurn: number;
     fromTribeName: string;
     reparations?: {
         food: number;
         scrap: number;
         weapons: number;
+    };
+    demands?: {
+        food?: number;
+        scrap?: number;
+        weapons?: number;
+        territory?: string; // Hex location
+        message?: string;
+    };
+    tribute?: {
+        food?: number;
+        scrap?: number;
+        weapons?: number;
+        duration?: number; // Number of turns
+    };
+    nonAggressionDuration?: number; // Turns for non-aggression pact
+    passageRequest?: {
+        startLocation: string;
+        endLocation: string;
+        duration: number; // Turns
     };
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tribe, DiplomaticStatus, DiplomaticProposal } from '@radix-tribes/shared';
+import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticActionType } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
@@ -18,9 +18,15 @@ interface EnhancedDiplomacyModalProps {
   onRejectProposal: (proposalId: string) => void;
   onProposeTradeAgreement?: (toTribeId: string, terms: any) => void;
   onShareIntelligence?: (toTribeId: string, info: string) => void;
+  onSendPeaceEnvoy?: (toTribeId: string, message: string) => void;
+  onSendDemands?: (toTribeId: string, demands: any) => void;
+  onRequestAid?: (toTribeId: string, request: any) => void;
+  onOfferTribute?: (toTribeId: string, tribute: any) => void;
+  onProposeNonAggression?: (toTribeId: string, duration: number) => void;
+  onRequestPassage?: (toTribeId: string, passage: any) => void;
 }
 
-type DiplomacyTab = 'overview' | 'proposals' | 'trade' | 'intelligence';
+type DiplomacyTab = 'overview' | 'proposals' | 'trade' | 'intelligence' | 'actions';
 
 const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
   isOpen,
@@ -35,11 +41,20 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
   onAcceptProposal,
   onRejectProposal,
   onProposeTradeAgreement,
-  onShareIntelligence
+  onShareIntelligence,
+  onSendPeaceEnvoy,
+  onSendDemands,
+  onRequestAid,
+  onOfferTribute,
+  onProposeNonAggression,
+  onRequestPassage
 }) => {
   const [activeTab, setActiveTab] = useState<DiplomacyTab>('overview');
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
   const [tradeTerms, setTradeTerms] = useState({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+  const [diplomaticAction, setDiplomaticAction] = useState<string | null>(null);
+  const [actionData, setActionData] = useState<any>({});
+  const [customMessage, setCustomMessage] = useState('');
 
   if (!isOpen) return null;
 
@@ -117,13 +132,43 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
             <div className="mt-3 flex flex-wrap gap-2">
               {status === DiplomaticStatus.Neutral && (
                 <>
-                  <Button 
+                  <Button
                     onClick={() => onProposeAlliance(tribe.id)}
                     className="text-xs px-3 py-1 bg-green-700 hover:bg-green-600"
                   >
                     🤝 Propose Alliance
                   </Button>
-                  <Button 
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('nonAggression');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-blue-700 hover:bg-blue-600"
+                  >
+                    🕊️ Non-Aggression Pact
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('requestAid');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-yellow-700 hover:bg-yellow-600"
+                  >
+                    🆘 Request Aid
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('sendDemands');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-orange-700 hover:bg-orange-600"
+                  >
+                    📜 Send Demands
+                  </Button>
+                  <Button
                     onClick={() => onDeclareWar(tribe.id)}
                     className="text-xs px-3 py-1 bg-red-700 hover:bg-red-600"
                   >
@@ -134,7 +179,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
               
               {status === DiplomaticStatus.Alliance && (
                 <>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setSelectedTribe(tribe);
                       setActiveTab('trade');
@@ -143,7 +188,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                   >
                     💰 Trade Agreement
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setSelectedTribe(tribe);
                       setActiveTab('intelligence');
@@ -152,7 +197,27 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                   >
                     🔍 Share Intel
                   </Button>
-                  <Button 
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('requestAid');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-green-700 hover:bg-green-600"
+                  >
+                    🆘 Request Aid
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('requestPassage');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-cyan-700 hover:bg-cyan-600"
+                  >
+                    🚶 Request Passage
+                  </Button>
+                  <Button
                     onClick={() => onDeclareWar(tribe.id)}
                     className="text-xs px-3 py-1 bg-red-700 hover:bg-red-600"
                   >
@@ -162,12 +227,44 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
               )}
               
               {status === DiplomaticStatus.War && !isTruceActive && (
-                <Button 
-                  onClick={() => onSueForPeace(tribe.id, { food: 0, scrap: 0, weapons: 0 })}
-                  className="text-xs px-3 py-1 bg-yellow-700 hover:bg-yellow-600"
-                >
-                  🕊️ Sue for Peace
-                </Button>
+                <>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('sendPeaceEnvoy');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-green-700 hover:bg-green-600"
+                  >
+                    🕊️ Send Peace Envoy
+                  </Button>
+                  <Button
+                    onClick={() => onSueForPeace(tribe.id, { food: 0, scrap: 0, weapons: 0 })}
+                    className="text-xs px-3 py-1 bg-yellow-700 hover:bg-yellow-600"
+                  >
+                    💰 Sue for Peace
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('offerTribute');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-purple-700 hover:bg-purple-600"
+                  >
+                    🎁 Offer Tribute
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedTribe(tribe);
+                      setDiplomaticAction('sendDemands');
+                      setActiveTab('actions');
+                    }}
+                    className="text-xs px-3 py-1 bg-red-700 hover:bg-red-600"
+                  >
+                    ⚔️ Send Ultimatum
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -336,15 +433,175 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
     </div>
   );
 
+  const renderActionsTab = () => {
+    if (!selectedTribe || !diplomaticAction) {
+      return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-amber-400">Diplomatic Actions</h3>
+          <p className="text-slate-400">Select a diplomatic action from the Relations tab to configure it here.</p>
+        </div>
+      );
+    }
+
+    const renderActionForm = () => {
+      switch (diplomaticAction) {
+        case 'sendPeaceEnvoy':
+          return (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-amber-400">🕊️ Send Peace Envoy to {selectedTribe.tribeName}</h3>
+              <p className="text-slate-300">Send a diplomatic envoy to open peace negotiations without offering reparations.</p>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-2">Diplomatic Message</label>
+                <textarea
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="Craft your diplomatic message..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded p-3 text-white h-24 resize-none"
+                />
+              </div>
+
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => {
+                    if (onSendPeaceEnvoy) {
+                      onSendPeaceEnvoy(selectedTribe.id, customMessage);
+                    }
+                    setSelectedTribe(null);
+                    setDiplomaticAction(null);
+                    setCustomMessage('');
+                    setActiveTab('overview');
+                  }}
+                  className="bg-green-700 hover:bg-green-600"
+                >
+                  🕊️ Send Envoy
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedTribe(null);
+                    setDiplomaticAction(null);
+                    setActiveTab('overview');
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+
+        case 'sendDemands':
+          return (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-amber-400">📜 Send Demands to {selectedTribe.tribeName}</h3>
+              <p className="text-slate-300">Make demands for resources, territory, or other concessions.</p>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Food Demanded</label>
+                  <input
+                    type="number"
+                    value={actionData.food || 0}
+                    onChange={(e) => setActionData({...actionData, food: parseInt(e.target.value) || 0})}
+                    className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Scrap Demanded</label>
+                  <input
+                    type="number"
+                    value={actionData.scrap || 0}
+                    onChange={(e) => setActionData({...actionData, scrap: parseInt(e.target.value) || 0})}
+                    className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Weapons Demanded</label>
+                  <input
+                    type="number"
+                    value={actionData.weapons || 0}
+                    onChange={(e) => setActionData({...actionData, weapons: parseInt(e.target.value) || 0})}
+                    className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-2">Ultimatum Message</label>
+                <textarea
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="State your demands and consequences..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded p-3 text-white h-24 resize-none"
+                />
+              </div>
+
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => {
+                    if (onSendDemands) {
+                      onSendDemands(selectedTribe.id, { ...actionData, message: customMessage });
+                    }
+                    setSelectedTribe(null);
+                    setDiplomaticAction(null);
+                    setActionData({});
+                    setCustomMessage('');
+                    setActiveTab('overview');
+                  }}
+                  className="bg-red-700 hover:bg-red-600"
+                >
+                  📜 Send Demands
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedTribe(null);
+                    setDiplomaticAction(null);
+                    setActionData({});
+                    setActiveTab('overview');
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+
+        default:
+          return (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-amber-400">🚧 Coming Soon</h3>
+              <p className="text-slate-400">This diplomatic action is being developed and will be available soon!</p>
+              <Button
+                onClick={() => {
+                  setSelectedTribe(null);
+                  setDiplomaticAction(null);
+                  setActiveTab('overview');
+                }}
+                className="bg-slate-700 hover:bg-slate-600"
+              >
+                Back to Relations
+              </Button>
+            </div>
+          );
+      }
+    };
+
+    return renderActionForm();
+  };
+
   const renderIntelligenceTab = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-bold text-amber-400">Intelligence Sharing</h3>
-      
+
       <div className="bg-slate-800 p-4 rounded-lg">
         <p className="text-slate-300 mb-3">
           Share intelligence with allied tribes to strengthen your relationships and coordinate strategies.
         </p>
-        
+
         <div className="space-y-2">
           <h4 className="font-semibold text-white">Available Intelligence:</h4>
           <ul className="text-sm text-slate-400 space-y-1">
@@ -354,7 +611,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
             <li>• Strategic recommendations</li>
           </ul>
         </div>
-        
+
         <p className="text-xs text-yellow-400 mt-3">
           🚧 Intelligence sharing system coming soon! This will allow you to share reconnaissance data with allies.
         </p>
@@ -380,6 +637,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           <div className="flex border-b border-slate-600">
             <TabButton label="Relations" tab="overview" isActive={activeTab === 'overview'} />
             <TabButton label="Proposals" tab="proposals" isActive={activeTab === 'proposals'} />
+            <TabButton label="Actions" tab="actions" isActive={activeTab === 'actions'} />
             <TabButton label="Trade" tab="trade" isActive={activeTab === 'trade'} />
             <TabButton label="Intelligence" tab="intelligence" isActive={activeTab === 'intelligence'} />
           </div>
@@ -388,6 +646,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           <div className="flex-1 p-4 overflow-y-auto">
             {activeTab === 'overview' && renderOverviewTab()}
             {activeTab === 'proposals' && renderProposalsTab()}
+            {activeTab === 'actions' && renderActionsTab()}
             {activeTab === 'trade' && renderTradeTab()}
             {activeTab === 'intelligence' && renderIntelligenceTab()}
           </div>

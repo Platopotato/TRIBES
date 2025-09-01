@@ -1366,7 +1366,15 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         {activeTab === 'diplomacy' && (
           <div className="space-y-4">
             <div className="bg-slate-800 rounded-lg p-4">
-              <h2 className="text-lg font-bold text-white mb-4">🤝 Diplomacy</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-white">🤝 Diplomacy</h2>
+                <button
+                  onClick={() => setIsEnhancedDiplomacyOpen(true)}
+                  className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
+                >
+                  📋 Advanced Diplomacy
+                </button>
+              </div>
               {playerTribe && (
                 <DiplomacyPanel
                   playerTribe={playerTribe}
@@ -1645,12 +1653,46 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           onDeclareWar={onDeclareWar}
           onAcceptProposal={onAcceptProposal}
           onRejectProposal={onRejectProposal}
-          onShareIntelligence={(tribeId, action) => {
-            if (action === 'enable') {
+          onProposeTradeAgreement={(toTribeId, terms) => {
+            // Create diplomatic action for trade agreement
+            const action: GameAction = {
+              id: `action-${Date.now()}`,
+              actionType: ActionType.Trade,
+              actionData: { target_tribe_id: toTribeId, ...terms }
+            } as any;
+            setPlannedActions(prev => [...prev, action]);
+          }}
+          onShareIntelligence={(tribeId, info) => {
+            // Toggle map sharing with allies
+            if (info === 'enable') {
               onToggleMapSharing(true);
-            } else if (action === 'disable') {
+            } else if (info === 'disable') {
               onToggleMapSharing(false);
             }
+          }}
+          onSendPeaceEnvoy={(toTribeId, message) => {
+            // Create diplomatic action for peace envoy
+            console.log(`Sending peace envoy to ${toTribeId}: ${message}`);
+          }}
+          onSendDemands={(toTribeId, demands) => {
+            // Create diplomatic action for demands
+            console.log(`Sending demands to ${toTribeId}:`, demands);
+          }}
+          onRequestAid={(toTribeId, request) => {
+            // Create diplomatic action for aid request
+            console.log(`Requesting aid from ${toTribeId}:`, request);
+          }}
+          onOfferTribute={(toTribeId, tribute) => {
+            // Create diplomatic action for tribute offer
+            console.log(`Offering tribute to ${toTribeId}:`, tribute);
+          }}
+          onProposeNonAggression={(toTribeId, duration) => {
+            // Create diplomatic action for non-aggression pact
+            console.log(`Proposing non-aggression pact with ${toTribeId} for ${duration} turns`);
+          }}
+          onRequestPassage={(toTribeId, passage) => {
+            // Create diplomatic action for passage request
+            console.log(`Requesting passage from ${toTribeId}:`, passage);
           }}
         />
       )}

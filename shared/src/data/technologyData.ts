@@ -132,7 +132,7 @@ export const TECHNOLOGY_TREE: { [key: string]: Technology[] } = {
         researchPoints: 60, // 10 troops * 6 turns
         requiredTroops: 10,
         prerequisites: ['basic-fortifications'],
-        effects: [], // Note: This effect is handled directly in visibility logic, not a simple value.
+        effects: [{ type: TechnologyEffectType.VisibilityRangeBonus, value: 1 }],
         icon: '🗼',
     },
     {
@@ -473,12 +473,16 @@ export const TECHNOLOGY_TREE: { [key: string]: Technology[] } = {
     {
       id: 'artifact-hunting',
       name: 'Artifact Hunting',
-      description: 'Learn to identify and recover pre-war artifacts. Increases scavenging yields by 40%.',
+      description: 'Learn to identify and recover pre-war artifacts. Increases all scavenging yields by 40%.',
       cost: { scrap: 50 },
       researchPoints: 40,
       requiredTroops: 8,
       prerequisites: [],
-      effects: [{ type: TechnologyEffectType.ScavengeBonus, value: 0.40 }],
+      effects: [
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.40, resource: 'Food' },
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.40, resource: 'Scrap' },
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.40, resource: 'Weapons' }
+      ],
       icon: '🏺',
     },
     {
@@ -490,7 +494,9 @@ export const TECHNOLOGY_TREE: { [key: string]: Technology[] } = {
       requiredTroops: 20,
       prerequisites: ['artifact-hunting', 'scientific-method'],
       effects: [
-        { type: TechnologyEffectType.ScavengeBonus, value: 0.30 },
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.30, resource: 'Food' },
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.30, resource: 'Scrap' },
+        { type: TechnologyEffectType.ScavengeYieldBonus, value: 0.30, resource: 'Weapons' },
         { type: TechnologyEffectType.ResearchSpeedBonus, value: 0.20 },
         { type: TechnologyEffectType.PassiveScrapGeneration, value: 8 }
       ],

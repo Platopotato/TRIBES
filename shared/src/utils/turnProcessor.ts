@@ -193,6 +193,9 @@ interface CombinedEffects {
     terrainMovementBonus: Partial<Record<TerrainType, number>>; // additive percentage by terrain
     resourceCapacityBonus: number; // additive percentage
     chiefRecruitmentBonus: number; // additive percentage
+    moraleBonus: number; // additive flat amount
+    visibilityRangeBonus: number; // additive flat amount
+    scavengeBonus: number; // additive percentage (general scavenging)
 }
 
 function getCombinedEffects(tribe: any): CombinedEffects {
@@ -222,6 +225,9 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         terrainMovementBonus: {},
         resourceCapacityBonus: 0,
         chiefRecruitmentBonus: 0,
+        moraleBonus: 0,
+        visibilityRangeBonus: 0,
+        scavengeBonus: 0,
     };
 
     // TECHNOLOGIES: Apply completed research effects
@@ -281,6 +287,15 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     break;
                 case TechnologyEffectType.ChiefRecruitmentBonus:
                     effects.chiefRecruitmentBonus += e.value;
+                    break;
+                case TechnologyEffectType.MoraleBonus:
+                    effects.moraleBonus += e.value;
+                    break;
+                case TechnologyEffectType.VisibilityRangeBonus:
+                    effects.visibilityRangeBonus += e.value;
+                    break;
+                case TechnologyEffectType.ScavengeBonus:
+                    effects.scavengeBonus += e.value;
                     break;
             }
         }
@@ -343,6 +358,15 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     break;
                 case TechnologyEffectType.ChiefRecruitmentBonus:
                     effects.chiefRecruitmentBonus += e.value;
+                    break;
+                case TechnologyEffectType.MoraleBonus:
+                    effects.moraleBonus += e.value;
+                    break;
+                case TechnologyEffectType.VisibilityRangeBonus:
+                    effects.visibilityRangeBonus += e.value;
+                    break;
+                case TechnologyEffectType.ScavengeBonus:
+                    effects.scavengeBonus += e.value;
                     break;
             }
         }
@@ -4161,6 +4185,17 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     }
     if (technologyIncomeMessage) {
         upkeepMessage += ` ${technologyIncomeMessage}`;
+    }
+
+    // TECHNOLOGY MORALE BONUS: Apply permanent morale bonus from technologies
+    if (effects.moraleBonus > 0) {
+        const oldMorale = tribe.globalResources.morale;
+        tribe.globalResources.morale = Math.min(100, tribe.globalResources.morale + effects.moraleBonus);
+        const actualBonus = tribe.globalResources.morale - oldMorale;
+        if (actualBonus > 0) {
+            technologyIncomeMessage += `+${actualBonus} morale from technology. `;
+            console.log(`🏥 PASSIVE MORALE: ${tribe.tribeName} gained +${actualBonus} morale from technologies`);
+        }
     }
 
     // ENHANCED MORALE SYSTEM: Handle ration and starvation effects (using food AFTER POI income)

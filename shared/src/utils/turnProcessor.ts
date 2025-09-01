@@ -182,6 +182,8 @@ interface CombinedEffects {
     globalCombatDefenseBonus: number; // additive percentage
     terrainDefenseBonus: Partial<Record<TerrainType, number>>; // additive percentage by terrain
     // NEW: Additional technology effect bonuses
+    passiveFoodGeneration: number; // additive flat amount per turn
+    passiveScrapGeneration: number; // additive flat amount per turn
     researchSpeedBonus: number; // additive percentage
     recruitmentCostReduction: number; // additive percentage
     weaponProductionBonus: number; // additive percentage
@@ -209,6 +211,8 @@ function getCombinedEffects(tribe: any): CombinedEffects {
             [TerrainType.Plains]: -0.05,      // -5% defense penalty - open ground
         },
         // NEW: Additional technology effect bonuses
+        passiveFoodGeneration: 0,
+        passiveScrapGeneration: 0,
         researchSpeedBonus: 0,
         recruitmentCostReduction: 0,
         weaponProductionBonus: 0,
@@ -226,6 +230,12 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         if (!tech) continue;
         for (const e of tech.effects) {
             switch (e.type) {
+                case TechnologyEffectType.PassiveFoodGeneration:
+                    effects.passiveFoodGeneration += e.value;
+                    break;
+                case TechnologyEffectType.PassiveScrapGeneration:
+                    effects.passiveScrapGeneration += e.value;
+                    break;
                 case TechnologyEffectType.MovementSpeedBonus:
                     effects.movementSpeedBonus *= (1 + e.value);
                     break;
@@ -282,6 +292,12 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         if (!asset) continue;
         for (const e of asset.effects) {
             switch (e.type) {
+                case TechnologyEffectType.PassiveFoodGeneration:
+                    effects.passiveFoodGeneration += e.value;
+                    break;
+                case TechnologyEffectType.PassiveScrapGeneration:
+                    effects.passiveScrapGeneration += e.value;
+                    break;
                 case TechnologyEffectType.MovementSpeedBonus:
                     effects.movementSpeedBonus *= (1 + e.value);
                     break;
@@ -4109,6 +4125,22 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     // POI PASSIVE INCOME SYSTEM
     const poiIncome = processPOIPassiveIncome(tribe, state);
 
+    // TECHNOLOGY PASSIVE EFFECTS: Apply passive food and scrap generation from completed technologies
+    const effects = getCombinedEffects(tribe);
+    let technologyIncomeMessage = '';
+
+    if (effects.passiveFoodGeneration > 0) {
+        tribe.globalResources.food += effects.passiveFoodGeneration;
+        technologyIncomeMessage += `+${effects.passiveFoodGeneration} food from technology. `;
+        console.log(`🌱 PASSIVE FOOD: ${tribe.tribeName} generated +${effects.passiveFoodGeneration} food from technologies`);
+    }
+
+    if (effects.passiveScrapGeneration > 0) {
+        tribe.globalResources.scrap += effects.passiveScrapGeneration;
+        technologyIncomeMessage += `+${effects.passiveScrapGeneration} scrap from technology. `;
+        console.log(`⚡ PASSIVE SCRAP: ${tribe.tribeName} generated +${effects.passiveScrapGeneration} scrap from technologies`);
+    }
+
     // NOW calculate food situation with POI income included
     const foodAfterIncome = tribe.globalResources.food; // Food after POI income
     const foodShortage = Math.max(0, totalFoodConsumption - foodAfterIncome);
@@ -4126,6 +4158,9 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     let upkeepMessage = `Upkeep: ${totalTroops} troops + ${totalChiefs} chiefs consumed ${totalFoodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
     if (poiIncome.message) {
         upkeepMessage += ` ${poiIncome.message}`;
+    }
+    if (technologyIncomeMessage) {
+        upkeepMessage += ` ${technologyIncomeMessage}`;
     }
 
     // ENHANCED MORALE SYSTEM: Handle ration and starvation effects (using food AFTER POI income)

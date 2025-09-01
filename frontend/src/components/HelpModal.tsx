@@ -9,7 +9,7 @@ interface HelpModalProps {
   isDesktopWindow?: boolean;
 }
 
-type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'poi' | 'outposts' | 'tips';
+type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'poi' | 'outposts' | 'sabotage' | 'tips';
 
 const TabButton: React.FC<{
   label: string;
@@ -437,40 +437,59 @@ const POIGuideContent: React.FC = () => (
     </Section>
 
     <Section title="POI Types and Income">
-      <p><strong className="text-white">🏭 Factory:</strong> +15 scrap per turn</p>
+      <p><strong className="text-white">🏭 Factory (C):</strong> Produces food at 5× troop count per turn</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>High-value industrial sites</li>
-        <li>Essential for technology research</li>
+        <li>High-value industrial sites (Rare)</li>
+        <li>Massive food production potential</li>
+        <li>Found in Ruins and Wasteland</li>
         <li>Often heavily contested</li>
       </ul>
 
-      <p><strong className="text-white">🌾 Farm:</strong> +20 food per turn</p>
+      <p><strong className="text-white">⛏️ Mine (M):</strong> Produces scrap at 5× troop count per turn</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Sustainable food production</li>
-        <li>Reduces dependence on scavenging</li>
-        <li>Critical for large armies</li>
+        <li>Steady scrap income (Rare)</li>
+        <li>Essential for technology research</li>
+        <li>Found in Mountains and Desert</li>
+        <li>Scales with garrison size</li>
       </ul>
 
-      <p><strong className="text-white">⛏️ Mine:</strong> +10 scrap per turn</p>
+      <p><strong className="text-white">🍎 Food Source (F):</strong> Abandoned food caches, supermarkets, orchards</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Steady scrap income</li>
-        <li>Lower yield than factories</li>
-        <li>Often easier to defend</li>
+        <li>Excellent scavenging for food (Common)</li>
+        <li>Found in Plains, Forest, and Swamp</li>
+        <li>No passive income - scavenging only</li>
+        <li>Critical for early game survival</li>
       </ul>
 
-      <p><strong className="text-white">🏛️ Vault:</strong> Special discovery bonuses</p>
+      <p><strong className="text-white">🏛️ Vault (V):</strong> Special discovery bonuses</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>One-time massive rewards when first attacked</li>
+        <li>One-time massive rewards when first attacked (Very Rare)</li>
         <li>+2 action turns for the attacker</li>
         <li>Random valuable assets or resources</li>
-        <li>High-risk, high-reward targets</li>
+        <li>Found in Mountains - high-risk, high-reward</li>
+      </ul>
+
+      <p><strong className="text-white">Other POI Types:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🔧 Scrapyard (S):</strong> Excellent scrap scavenging (Common)</li>
+        <li><strong>⚔️ Weapons Cache (W):</strong> Rare weapons source (Uncommon)</li>
+        <li><strong>🔬 Research Lab (R):</strong> Accelerates research (Rare)</li>
+        <li><strong>🏘️ Settlement (H):</strong> Improves recruitment (Rare)</li>
+        <li><strong>🏴‍☠️ Bandit Camp (B):</strong> Dangerous but rewarding (Uncommon)</li>
       </ul>
     </Section>
 
     <Section title="POI Strategy">
-      <p><strong className="text-white">Early Game:</strong> Prioritize farms for food security</p>
-      <p><strong className="text-white">Mid Game:</strong> Contest factories for technology advancement</p>
-      <p><strong className="text-white">Late Game:</strong> Control multiple POI types for economic dominance</p>
+      <p><strong className="text-white">Early Game:</strong> Scavenge Food Sources and Scrapyards for basic resources</p>
+      <p><strong className="text-white">Mid Game:</strong> Contest Factories and Mines for passive income</p>
+      <p><strong className="text-white">Late Game:</strong> Control multiple income POIs and assault Vaults</p>
+
+      <p><strong className="text-white">Income vs Scavenging:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Passive Income:</strong> Factories and Mines provide ongoing resources</li>
+        <li><strong>Scavenging:</strong> Food Sources, Scrapyards, Weapons Caches for immediate gains</li>
+        <li><strong>Special:</strong> Research Labs accelerate tech, Settlements boost recruitment</li>
+      </ul>
 
       <p><strong className="text-white">Defense Tips:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
@@ -567,6 +586,121 @@ const OutpostsGuideContent: React.FC = () => (
   </>
 );
 
+const SabotageGuideContent: React.FC = () => (
+  <>
+    <Section title="Sabotage System Overview">
+      <p>Sabotage operations allow you to conduct covert missions against enemy territories using operatives (troops and/or chiefs).</p>
+      <p><strong className="text-white">Requirements:</strong> At least 1 operative (troop or chief), target must be at war with you</p>
+      <p><strong className="text-white">Detection:</strong> Failed missions have 70% detection rate, successful missions 20%</p>
+      <p><strong className="text-white">Consequences:</strong> Detected operatives may be captured, chiefs can be imprisoned</p>
+    </Section>
+
+    <Section title="Success Rate Formula">
+      <p><strong className="text-white">Base Success Rate:</strong> 60%</p>
+      <p><strong className="text-white">Bonuses:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>+15% per chief operative (no limit)</li>
+        <li>+5% per troop operative (max +30% at 6+ troops)</li>
+        <li>+25% with Spy Networks technology</li>
+        <li>+20% with Siege Warfare technology</li>
+      </ul>
+      <p><strong className="text-white">Penalties:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>-5% per hex distance (max -40%)</li>
+        <li>-30% if target has Counter-Intelligence technology</li>
+      </ul>
+      <p><strong className="text-white">Final Range:</strong> 10% minimum, 95% maximum</p>
+    </Section>
+
+    <Section title="Sabotage Mission Types">
+      <p><strong className="text-white">🔍 Intelligence Gathering:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Reveals garrison details (troops, weapons, chiefs)</li>
+        <li>Shows global resources and research progress</li>
+        <li>Displays recent technologies and planned actions</li>
+        <li>No permanent damage - pure reconnaissance</li>
+      </ul>
+
+      <p><strong className="text-white">💥 Sabotage Outpost:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Disables outpost defenses for 2 turns</li>
+        <li>Removes +50% defensive bonus during attacks</li>
+        <li>Target must have an outpost to be effective</li>
+        <li>Critical for assault preparation</li>
+      </ul>
+
+      <p><strong className="text-white">☠️ Poison Supplies:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Affects 30% of enemy troops for 3 turns</li>
+        <li>Reduces combat effectiveness by 40% for affected troops</li>
+        <li>Weakens enemy defenses significantly</li>
+        <li>Stacks with other combat penalties</li>
+      </ul>
+    </Section>
+
+    <Section title="Resource Operations">
+      <p><strong className="text-white">💰 Steal Resources:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Transfers enemy resources to your tribe</li>
+        <li>Choose specific resource type or random</li>
+        <li>Specify amount or steal maximum available</li>
+        <li>Stolen resources added to your global stockpile</li>
+      </ul>
+
+      <p><strong className="text-white">💥 Destroy Resources:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Permanently destroys enemy resources</li>
+        <li>Choose specific resource type or random</li>
+        <li>Specify amount or destroy maximum available</li>
+        <li>Pure economic warfare - no benefit to you</li>
+      </ul>
+    </Section>
+
+    <Section title="Research Operations">
+      <p><strong className="text-white">🔬 Steal Research:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Steals 20-50% progress from random enemy research</li>
+        <li>Adds stolen progress to your matching project</li>
+        <li>Creates new research project if you don't have it</li>
+        <li>Accelerates your technological advancement</li>
+      </ul>
+
+      <p><strong className="text-white">💥 Destroy Research:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Destroys 30-70% progress from random enemy research</li>
+        <li>Permanently sets back enemy technological progress</li>
+        <li>No benefit to your research</li>
+        <li>Effective for maintaining technological superiority</li>
+      </ul>
+    </Section>
+
+    <Section title="Strategic Considerations">
+      <p><strong className="text-white">Mission Planning:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Use Intelligence Gathering first to assess targets</li>
+        <li>Sabotage Outpost before major attacks</li>
+        <li>Poison Supplies to weaken large garrisons</li>
+        <li>Steal Resources when enemy is resource-rich</li>
+      </ul>
+
+      <p><strong className="text-white">Risk Management:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Chiefs provide better success rates but risk imprisonment</li>
+        <li>Closer targets have higher success rates</li>
+        <li>Failed missions often result in operative capture</li>
+        <li>Counter-Intelligence technology significantly reduces success</li>
+      </ul>
+
+      <p><strong className="text-white">Technology Synergies:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Spy Networks:</strong> +25% success rate for all missions</li>
+        <li><strong>Siege Warfare:</strong> +20% success rate, improves assault coordination</li>
+        <li><strong>Counter-Intelligence:</strong> +30% resistance against enemy sabotage</li>
+      </ul>
+    </Section>
+  </>
+);
+
 const renderTabContent = (tab: HelpTab) => {
   switch (tab) {
     case 'rules': return <GameRulesContent />;
@@ -578,6 +712,7 @@ const renderTabContent = (tab: HelpTab) => {
     case 'resources': return <ResourcesGuideContent />;
     case 'poi': return <POIGuideContent />;
     case 'outposts': return <OutpostsGuideContent />;
+    case 'sabotage': return <SabotageGuideContent />;
     case 'tips': return <TipsGuideContent />;
     default: return <GameRulesContent />;
   }
@@ -606,6 +741,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
           <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
           <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
           <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
+          <TabButton label="Sabotage" isActive={activeTab === 'sabotage'} onClick={() => setActiveTab('sabotage')} />
           <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
         </div>
 
@@ -645,6 +781,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                 <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
                 <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
                 <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
+                <TabButton label="Sabotage" isActive={activeTab === 'sabotage'} onClick={() => setActiveTab('sabotage')} />
                 <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400">
@@ -666,6 +803,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                     <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
                     <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
                     <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
+                    <TabButton label="Sabotage" isActive={activeTab === 'sabotage'} onClick={() => setActiveTab('sabotage')} />
                     <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
                 </div>
                  <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">

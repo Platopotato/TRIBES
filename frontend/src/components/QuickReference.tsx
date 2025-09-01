@@ -170,10 +170,10 @@ const QuickReference: React.FC<QuickReferenceProps> = ({ onClose, isOpen = true 
             <div className="bg-slate-800 p-3 rounded">
               <h4 className="font-semibold text-white mb-2">POI Income per Turn</h4>
               <ul className="text-sm text-slate-300 space-y-1">
-                <li>• 🏭 Factory: +15 scrap</li>
-                <li>• 🌾 Farm: +20 food</li>
-                <li>• ⛏️ Mine: +10 scrap</li>
-                <li>• 🏛️ Vault: Special discovery bonuses</li>
+                <li>• 🏭 Factory (C): Food at 5× troop count</li>
+                <li>• ⛏️ Mine (M): Scrap at 5× troop count</li>
+                <li>• 🍎 Food Source (F): Scavenging only</li>
+                <li>• 🏛️ Vault (V): One-time discovery bonuses</li>
               </ul>
             </div>
 
@@ -190,9 +190,9 @@ const QuickReference: React.FC<QuickReferenceProps> = ({ onClose, isOpen = true 
             <div className="bg-slate-800 p-3 rounded">
               <h4 className="font-semibold text-white mb-2">Strategic Priority</h4>
               <ul className="text-sm text-slate-300 space-y-1">
-                <li>• Early: Secure farms for food</li>
-                <li>• Mid: Contest factories for tech</li>
-                <li>• Late: Control multiple POI types</li>
+                <li>• Early: Scavenge Food Sources for survival</li>
+                <li>• Mid: Contest Factories and Mines for income</li>
+                <li>• Late: Control multiple income POIs, assault Vaults</li>
                 <li>• Always: Build outposts at valuable POIs</li>
               </ul>
             </div>

@@ -161,17 +161,9 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
     fields: [
       { name: 'start_location', label: 'Launch From', type: 'garrison_select' },
       { name: 'target_location', label: 'Target Location', type: 'targetLocation' },
-      { name: 'sabotage_type', label: 'Mission Type', type: 'select',
-        options: ['Destroy Resources', 'Steal Resources', 'Intelligence Gathering', 'Steal Research', 'Destroy Research', 'Sabotage Outpost', 'Poison Supplies'] },
+      { name: 'sabotage_type', label: 'Mission Type', type: 'sabotage_select' }, // Special type for dynamic sabotage UI
       { name: 'troops', label: 'Operatives', type: 'number', defaultValue: 1, max: 'troops' },
       { name: 'chiefsToMove', label: 'Spy Chiefs', type: 'chief_select' },
-      { name: 'resource_target', label: 'Resource Target', type: 'select',
-        options: ['food', 'scrap', 'weapons', 'random'],
-        info: 'Only for resource-based missions' },
-      { name: 'amount', label: 'Target Amount', type: 'number', defaultValue: 10,
-        info: 'Amount to steal/destroy (0 = maximum possible)' },
-      { name: 'info', label: 'Mission Info', type: 'info',
-        info: 'Success depends on operatives sent, distance, and enemy defenses. Failed missions may result in captured operatives.' }
     ],
   },
 };

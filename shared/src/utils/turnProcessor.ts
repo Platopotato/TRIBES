@@ -5036,6 +5036,10 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
         return `❌ Sabotage failed: Missing required mission parameters.`;
     }
 
+    // Set defaults for optional fields based on mission type
+    const finalResourceTarget = resource_target || 'random';
+    const finalAmount = amount || 0;
+
     // Get source garrison
     const sourceGarrison = tribe.garrisons[start_location];
     if (!sourceGarrison) {
@@ -5118,7 +5122,7 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
 
     // Process mission results
     const result = executeSabotageOperation(
-        tribe, targetTribe, sabotage_type, resource_target, amount || 0,
+        tribe, targetTribe, sabotage_type, finalResourceTarget, finalAmount,
         hasTroops ? troops : 0, movingChiefs, missionSuccess, detected, target_location
     );
 
@@ -5440,7 +5444,7 @@ function executeOutpostSabotage(targetTribe: any, targetGarrison: any, targetLoc
         const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
             ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
             : detected ? ' Mission detected but operatives escaped.' : '';
-        return `⚡ **SABOTAGE COMPLETE** No outpost found at ${targetLocation}.${captureText}`;
+        return `💥 **OUTPOST SABOTAGE** No outpost found at ${targetLocation} to sabotage.${captureText}`;
     }
 
     // Temporarily disable outpost defenses
@@ -5455,7 +5459,7 @@ function executeOutpostSabotage(targetTribe: any, targetGarrison: any, targetLoc
         ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
         : detected ? ' Mission detected but operatives escaped.' : '';
 
-    return `⚡ **OUTPOST SABOTAGED** Defenses at ${targetLocation} disabled for 2 turns.${captureText}`;
+    return `💥 **OUTPOST SABOTAGED** Defenses at ${targetLocation} disabled for 2 turns! Enemy outpost provides no defensive bonus during attacks.${captureText}`;
 }
 
 function executePoisonSupplies(targetTribe: any, targetGarrison: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
@@ -5483,7 +5487,7 @@ function executePoisonSupplies(targetTribe: any, targetGarrison: any, targetLoca
         ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
         : detected ? ' Mission detected but operatives escaped.' : '';
 
-    return `☠️ **SUPPLIES POISONED** ${troopsAffected} troops at ${targetLocation} weakened for 3 turns.${captureText}`;
+    return `☠️ **SUPPLIES POISONED** ${troopsAffected} troops at ${targetLocation} poisoned for 3 turns! Their combat effectiveness is reduced.${captureText}`;
 }
 
 // Helper function to get hex by location (you may need to adjust this based on your hex system)

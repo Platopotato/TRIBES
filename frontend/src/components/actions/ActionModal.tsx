@@ -381,6 +381,123 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     onClose();
   };
 
+  const renderSabotageSelect = (field: ActionField, value: string) => {
+    const sabotageTypes = [
+      {
+        id: 'Intelligence Gathering',
+        name: '🔍 Intelligence Gathering',
+        description: 'Gather information about enemy forces, resources, and plans',
+        fields: []
+      },
+      {
+        id: 'Sabotage Outpost',
+        name: '💥 Sabotage Outpost',
+        description: 'Disable enemy outpost defenses for 2 turns',
+        fields: []
+      },
+      {
+        id: 'Poison Supplies',
+        name: '☠️ Poison Supplies',
+        description: 'Weaken enemy troops for 3 turns',
+        fields: []
+      },
+      {
+        id: 'Steal Resources',
+        name: '💰 Steal Resources',
+        description: 'Steal enemy resources and bring them back',
+        fields: ['resource_target', 'amount']
+      },
+      {
+        id: 'Destroy Resources',
+        name: '🔥 Destroy Resources',
+        description: 'Destroy enemy resources permanently',
+        fields: ['resource_target', 'amount']
+      },
+      {
+        id: 'Steal Research',
+        name: '📚 Steal Research',
+        description: 'Steal enemy research progress',
+        fields: []
+      },
+      {
+        id: 'Destroy Research',
+        name: '🗂️ Destroy Research',
+        description: 'Destroy enemy research progress',
+        fields: []
+      }
+    ];
+
+    const selectedType = sabotageTypes.find(t => t.id === value);
+
+    return (
+      <div className="space-y-4">
+        {/* Mission Type Selection */}
+        <div className="space-y-2">
+          {sabotageTypes.map(type => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => {
+                handleFieldChange(field.name, type.id);
+                // Clear resource-specific fields when changing mission type
+                if (!type.fields.includes('resource_target')) {
+                  handleFieldChange('resource_target', '');
+                  handleFieldChange('amount', 0);
+                }
+              }}
+              className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                value === type.id
+                  ? 'border-red-400 bg-red-400/10 text-red-300'
+                  : 'border-slate-600 bg-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-600'
+              }`}
+            >
+              <div className="font-semibold">{type.name}</div>
+              <div className="text-sm text-slate-400">{type.description}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Fields Based on Selected Mission */}
+        {selectedType && selectedType.fields.length > 0 && (
+          <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-600">
+            <h4 className="text-sm font-semibold text-slate-300">Mission Parameters</h4>
+
+            {selectedType.fields.includes('resource_target') && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Target Resource</label>
+                <select
+                  value={draftAction?.actionData?.resource_target || 'random'}
+                  onChange={e => handleFieldChange('resource_target', e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+                >
+                  <option value="random">🎲 Random (Let operatives choose)</option>
+                  <option value="food">🍖 Food</option>
+                  <option value="scrap">🔧 Scrap</option>
+                  <option value="weapons">⚔️ Weapons</option>
+                </select>
+              </div>
+            )}
+
+            {selectedType.fields.includes('amount') && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Target Amount</label>
+                <input
+                  type="number"
+                  value={draftAction?.actionData?.amount || 10}
+                  onChange={e => handleFieldChange('amount', parseInt(e.target.value) || 0)}
+                  min="0"
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+                  placeholder="0 = Maximum possible"
+                />
+                <p className="text-xs text-slate-400 mt-1">Set to 0 for maximum possible amount</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderField = (field: ActionField) => {
     const value = draftAction?.actionData?.[field.name] ?? '';
     const startLocation = draftAction?.actionData?.start_location;
@@ -537,6 +654,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                     })}
                 </div>
             )
+        case 'sabotage_select':
+            return renderSabotageSelect(field, value);
         case 'info':
             return <p className="text-xs text-slate-400 italic p-2 bg-slate-800/50 rounded-md">{field.info}</p>;
         default: return null;

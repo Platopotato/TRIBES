@@ -8,7 +8,7 @@ interface QuickReferenceProps {
 }
 
 const QuickReference: React.FC<QuickReferenceProps> = ({ onClose, isOpen = true }) => {
-  const [activeSection, setActiveSection] = useState<'combat' | 'sabotage' | 'resources' | 'tech'>('combat');
+  const [activeSection, setActiveSection] = useState<'combat' | 'sabotage' | 'resources' | 'tech' | 'poi'>('combat');
 
   if (!isOpen) return null;
 
@@ -162,6 +162,43 @@ const QuickReference: React.FC<QuickReferenceProps> = ({ onClose, isOpen = true 
           </div>
         );
 
+      case 'poi':
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-amber-400">🏛️ POI & Outpost Quick Reference</h3>
+
+            <div className="bg-slate-800 p-3 rounded">
+              <h4 className="font-semibold text-white mb-2">POI Income per Turn</h4>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• 🏭 Factory: +15 scrap</li>
+                <li>• 🌾 Farm: +20 food</li>
+                <li>• ⛏️ Mine: +10 scrap</li>
+                <li>• 🏛️ Vault: Special discovery bonuses</li>
+              </ul>
+            </div>
+
+            <div className="bg-slate-800 p-3 rounded">
+              <h4 className="font-semibold text-white mb-2">Outpost Benefits</h4>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• +50% defense strength</li>
+                <li>• Reveals adjacent hexes</li>
+                <li>• Cost: 20 scrap + 10 troops</li>
+                <li>• Disabled by sabotage for 2 turns</li>
+              </ul>
+            </div>
+
+            <div className="bg-slate-800 p-3 rounded">
+              <h4 className="font-semibold text-white mb-2">Strategic Priority</h4>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• Early: Secure farms for food</li>
+                <li>• Mid: Contest factories for tech</li>
+                <li>• Late: Control multiple POI types</li>
+                <li>• Always: Build outposts at valuable POIs</li>
+              </ul>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -187,6 +224,7 @@ const QuickReference: React.FC<QuickReferenceProps> = ({ onClose, isOpen = true 
             <SectionButton label="Sabotage" section="sabotage" isActive={activeSection === 'sabotage'} />
             <SectionButton label="Resources" section="resources" isActive={activeSection === 'resources'} />
             <SectionButton label="Tech" section="tech" isActive={activeSection === 'tech'} />
+            <SectionButton label="POIs" section="poi" isActive={activeSection === 'poi'} />
           </div>
 
           {/* Content */}

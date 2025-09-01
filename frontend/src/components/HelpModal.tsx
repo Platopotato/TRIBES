@@ -9,7 +9,7 @@ interface HelpModalProps {
   isDesktopWindow?: boolean;
 }
 
-type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'tips';
+type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'poi' | 'outposts' | 'tips';
 
 const TabButton: React.FC<{
   label: string;
@@ -142,13 +142,15 @@ const ActionsGuideContent: React.FC = () => (
   <>
     <Section title="Movement & Exploration">
       <p><strong className="text-white">Journey:</strong> Move troops and chiefs to explore new territories. Success depends on distance, terrain, and troop count.</p>
-      <p><strong className="text-white">Scavenge:</strong> Search locations for resources. Different terrains yield different materials:</p>
+      <p><strong className="text-white">Scavenge:</strong> Search locations for resources. Different terrains and POIs yield different materials:</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
         <li><strong>Cities:</strong> High scrap and weapons, some food</li>
         <li><strong>Forests:</strong> Abundant food, limited scrap</li>
         <li><strong>Mountains:</strong> Rich in scrap and weapons</li>
         <li><strong>Wasteland:</strong> Minimal resources, high risk</li>
+        <li><strong>POIs:</strong> Bonus resources related to POI type (farms give extra food, factories give extra scrap)</li>
       </ul>
+      <p><strong className="text-white">Note:</strong> Scavenging at POIs provides immediate resources plus the ongoing income from controlling them.</p>
     </Section>
 
     <Section title="Military Actions">
@@ -414,6 +416,150 @@ const TipsGuideContent: React.FC = () => (
   </>
 );
 
+const POIGuideContent: React.FC = () => (
+  <>
+    <Section title="Points of Interest (POIs)">
+      <p>POIs are special locations that provide ongoing resource income when controlled by your tribe.</p>
+      <p><strong className="text-white">How to Control POIs:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Move troops to a POI location</li>
+        <li>If uncontrolled, you automatically claim it</li>
+        <li>If enemy-controlled, you must defeat their garrison</li>
+        <li>Maintain at least 1 troop to keep control</li>
+      </ul>
+    </Section>
+
+    <Section title="POI Types and Income">
+      <p><strong className="text-white">🏭 Factory:</strong> +15 scrap per turn</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>High-value industrial sites</li>
+        <li>Essential for technology research</li>
+        <li>Often heavily contested</li>
+      </ul>
+
+      <p><strong className="text-white">🌾 Farm:</strong> +20 food per turn</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Sustainable food production</li>
+        <li>Reduces dependence on scavenging</li>
+        <li>Critical for large armies</li>
+      </ul>
+
+      <p><strong className="text-white">⛏️ Mine:</strong> +10 scrap per turn</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Steady scrap income</li>
+        <li>Lower yield than factories</li>
+        <li>Often easier to defend</li>
+      </ul>
+
+      <p><strong className="text-white">🏛️ Vault:</strong> Special discovery bonuses</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>One-time massive rewards when first attacked</li>
+        <li>+2 action turns for the attacker</li>
+        <li>Random valuable assets or resources</li>
+        <li>High-risk, high-reward targets</li>
+      </ul>
+    </Section>
+
+    <Section title="POI Strategy">
+      <p><strong className="text-white">Early Game:</strong> Prioritize farms for food security</p>
+      <p><strong className="text-white">Mid Game:</strong> Contest factories for technology advancement</p>
+      <p><strong className="text-white">Late Game:</strong> Control multiple POI types for economic dominance</p>
+
+      <p><strong className="text-white">Defense Tips:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Build outposts at valuable POIs for +50% defense</li>
+        <li>Station enough troops to deter small raids</li>
+        <li>Use chiefs with defensive abilities</li>
+        <li>Coordinate with allies to protect key locations</li>
+      </ul>
+    </Section>
+
+    <Section title="POI Income Timing">
+      <p><strong className="text-white">Income Processing:</strong> POI income is added during turn processing, after upkeep costs.</p>
+      <p><strong className="text-white">Control Requirements:</strong> You must control the POI at the start of the turn to receive income.</p>
+      <p><strong className="text-white">Stacking:</strong> POI income stacks with technology passive generation (e.g., farms + Crop Rotation).</p>
+    </Section>
+  </>
+);
+
+const OutpostsGuideContent: React.FC = () => (
+  <>
+    <Section title="Outpost System">
+      <p>Outposts are defensive structures that provide significant combat bonuses and strategic advantages.</p>
+      <p><strong className="text-white">Building Outposts:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Use the "Build Outpost" action at any location with your troops</li>
+        <li>Costs: 20 scrap + 10 troops (troops are consumed in construction)</li>
+        <li>Takes 1 turn to complete</li>
+        <li>Provides permanent defensive bonus until destroyed</li>
+      </ul>
+    </Section>
+
+    <Section title="Outpost Benefits">
+      <p><strong className="text-white">🛡️ Combat Defense:</strong> +50% defense strength for all troops at the location</p>
+      <p><strong className="text-white">👁️ Vision:</strong> Reveals adjacent hexes permanently</p>
+      <p><strong className="text-white">🏠 Garrison Point:</strong> Serves as a rally point for troop movements</p>
+      <p><strong className="text-white">📡 Communication:</strong> Extends command range for complex operations</p>
+
+      <p><strong className="text-white">Defense Calculation:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Normal Defense: Troops × Weapons × Tech Bonuses</li>
+        <li>With Outpost: (Troops × Weapons × Tech Bonuses) × 1.5</li>
+        <li>Stacks with technology bonuses (e.g., Reinforced Concrete)</li>
+      </ul>
+    </Section>
+
+    <Section title="Outpost Vulnerabilities">
+      <p><strong className="text-white">💥 Sabotage:</strong> "Sabotage Outpost" missions disable the defensive bonus for 2 turns</p>
+      <p><strong className="text-white">⚔️ Destruction:</strong> Outposts are destroyed if the location is successfully attacked</p>
+      <p><strong className="text-white">🔧 Repair:</strong> Destroyed outposts must be rebuilt from scratch</p>
+
+      <p><strong className="text-white">Counter-Sabotage:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Research Counter-Intelligence for +30% sabotage resistance</li>
+        <li>Station more troops to deter sabotage attempts</li>
+        <li>Use chiefs with defensive or intelligence abilities</li>
+      </ul>
+    </Section>
+
+    <Section title="Strategic Outpost Placement">
+      <p><strong className="text-white">🎯 Priority Locations:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>POIs:</strong> Protect valuable resource-generating locations</li>
+        <li><strong>Chokepoints:</strong> Control narrow passages and strategic routes</li>
+        <li><strong>Border Regions:</strong> Early warning against enemy advances</li>
+        <li><strong>Supply Lines:</strong> Protect routes between major garrisons</li>
+      </ul>
+
+      <p><strong className="text-white">🏗️ Construction Tips:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Build outposts during peaceful periods</li>
+        <li>Coordinate with allies to create defensive networks</li>
+        <li>Consider terrain advantages (mountains, forests)</li>
+        <li>Plan for multiple outposts to create overlapping coverage</li>
+      </ul>
+    </Section>
+
+    <Section title="Outpost Economics">
+      <p><strong className="text-white">Cost-Benefit Analysis:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Cost: 20 scrap + 10 troops = significant investment</li>
+        <li>Benefit: 50% defense bonus can save many more troops</li>
+        <li>ROI: Pays for itself if it prevents one successful attack</li>
+        <li>Long-term: Essential for holding valuable territory</li>
+      </ul>
+
+      <p><strong className="text-white">When to Build:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>After securing a valuable POI</li>
+        <li>When expecting enemy attacks</li>
+        <li>To establish forward operating bases</li>
+        <li>When you have surplus scrap and troops</li>
+      </ul>
+    </Section>
+  </>
+);
+
 const renderTabContent = (tab: HelpTab) => {
   switch (tab) {
     case 'rules': return <GameRulesContent />;
@@ -423,6 +569,8 @@ const renderTabContent = (tab: HelpTab) => {
     case 'combat': return <CombatGuideContent />;
     case 'diplomacy': return <DiplomacyGuideContent />;
     case 'resources': return <ResourcesGuideContent />;
+    case 'poi': return <POIGuideContent />;
+    case 'outposts': return <OutpostsGuideContent />;
     case 'tips': return <TipsGuideContent />;
     default: return <GameRulesContent />;
   }
@@ -449,6 +597,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
           <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
           <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
           <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+          <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
+          <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
           <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
         </div>
 
@@ -486,6 +636,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                 <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
                 <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
                 <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+                <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
+                <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
                 <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded text-slate-400">
@@ -505,6 +657,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                     <TabButton label="Combat" isActive={activeTab === 'combat'} onClick={() => setActiveTab('combat')} />
                     <TabButton label="Diplomacy" isActive={activeTab === 'diplomacy'} onClick={() => setActiveTab('diplomacy')} />
                     <TabButton label="Resources" isActive={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
+                    <TabButton label="POIs" isActive={activeTab === 'poi'} onClick={() => setActiveTab('poi')} />
+                    <TabButton label="Outposts" isActive={activeTab === 'outposts'} onClick={() => setActiveTab('outposts')} />
                     <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
                 </div>
                  <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">

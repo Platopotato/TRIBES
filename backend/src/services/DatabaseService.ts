@@ -219,6 +219,11 @@ export class DatabaseService {
 
       if (!gameState) return null;
 
+      console.log(`🔍 DB QUERY: Retrieved game state with ${gameState.turnHistory?.length || 0} turn history records`);
+      if (gameState.turnHistory && gameState.turnHistory.length > 0) {
+        console.log(`📚 Turn history turns:`, gameState.turnHistory.map(th => th.turn));
+      }
+
       // Convert database format back to GameState format
       const converted = this.convertDbGameStateToGameState(gameState);
       const news = this.getNewsletterState();
@@ -846,10 +851,19 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
-      history: dbGameState.turnHistory.map((th: any) => ({
-        turn: th.turn,
-        tribeRecords: th.tribeRecords
-      })),
+      history: (() => {
+        console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
+        if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {
+          console.log(`📚 Turn history sample:`, dbGameState.turnHistory[0]);
+          return dbGameState.turnHistory.map((th: any) => ({
+            turn: th.turn,
+            tribeRecords: th.tribeRecords
+          }));
+        } else {
+          console.log(`⚠️ No turn history found in database game state`);
+          return [];
+        }
+      })(),
       mapSeed: dbGameState.mapSeed ? Number(dbGameState.mapSeed) : undefined,
       mapSettings: dbGameState.mapSettings,
       suspended: dbGameState.suspended || false,

@@ -95,7 +95,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
   );
 
   const renderOverviewTab = () => (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full">
       <h3 className="text-lg font-bold text-amber-400">Diplomatic Relations</h3>
       
       {otherTribes.map(tribe => {
@@ -621,10 +621,10 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex flex-col h-full">
+      <Card className="w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col">
+        <div className="flex flex-col h-full min-h-0">
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b border-slate-600">
+          <div className="flex justify-between items-center p-4 border-b border-slate-600 flex-shrink-0">
             <h2 className="text-xl font-bold text-amber-400">🤝 Diplomacy Center</h2>
             <Button onClick={onClose} className="bg-transparent hover:bg-slate-700 text-slate-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -634,7 +634,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-slate-600">
+          <div className="flex border-b border-slate-600 flex-shrink-0">
             <TabButton label="Relations" tab="overview" isActive={activeTab === 'overview'} />
             <TabButton label="Proposals" tab="proposals" isActive={activeTab === 'proposals'} />
             <TabButton label="Actions" tab="actions" isActive={activeTab === 'actions'} />
@@ -643,7 +643,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-4 overflow-y-auto min-h-0">
             {activeTab === 'overview' && renderOverviewTab()}
             {activeTab === 'proposals' && renderProposalsTab()}
             {activeTab === 'actions' && renderActionsTab()}

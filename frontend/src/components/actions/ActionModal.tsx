@@ -733,7 +733,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             )
 
         case 'troops_weapons_select':
-            // Special up/down control for troops and weapons with garrison limits
+            // Smart number input for troops and weapons with garrison limits
             let maxAvailableForTroopsWeapons: number = 0;
             if (field.max && currentGarrison) {
                 const maxKey = field.max as keyof Omit<Garrison, 'chiefs'>;
@@ -744,37 +744,15 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             const resourceType = field.name === 'troops' ? 'Troops' : 'Weapons';
 
             return (
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
-                        <div className="text-slate-300">
-                            <div className="font-medium">{resourceType}</div>
-                            <div className="text-xs text-slate-400">Available: {maxAvailableForTroopsWeapons}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => handleFieldChange(field.name, Math.max(0, currentValueForTroopsWeapons - 1))}
-                                disabled={currentValueForTroopsWeapons <= 0}
-                                className="w-10 h-10 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-                                style={{ touchAction: 'manipulation' }}
-                            >
-                                −
-                            </button>
-                            <div className="w-16 text-center">
-                                <div className="text-2xl font-bold text-white">{currentValueForTroopsWeapons}</div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => handleFieldChange(field.name, Math.min(maxAvailableForTroopsWeapons, currentValueForTroopsWeapons + 1))}
-                                disabled={currentValueForTroopsWeapons >= maxAvailableForTroopsWeapons}
-                                className="w-10 h-10 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-                                style={{ touchAction: 'manipulation' }}
-                            >
-                                +
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <SmartNumberInput
+                    value={currentValueForTroopsWeapons}
+                    onChange={(newValue) => handleFieldChange(field.name, newValue)}
+                    min={0}
+                    max={maxAvailableForTroopsWeapons}
+                    label={`${resourceType} (Available: ${maxAvailableForTroopsWeapons})`}
+                    showQuickButtons={true}
+                    showMaxButton={true}
+                />
             )
         case 'select':
             return (

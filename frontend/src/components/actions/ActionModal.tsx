@@ -381,7 +381,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     onClose();
   };
 
-  const renderSabotageOperatives = (field: ActionField, currentValue: number, maxAvailable: number) => {
+  const renderSabotageOperatives = (field: ActionField, currentValue: number, maxAvailable: number, currentGarrison: Garrison | null) => {
     const availableChiefs = currentGarrison?.chiefs?.length || 0;
 
     // Calculate success bonuses for different force sizes
@@ -684,20 +684,20 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
             // Special handling for sabotage operatives
             if (field.name === 'troops' && selectedActionType === ActionType.Sabotage) {
-                return renderSabotageOperatives(field, currentValue, maxAvailable);
+                return renderSabotageOperatives(field, currentValue, maxAvailable, currentGarrison);
             }
 
             return <input type="number" value={value} min="0" max={maxVal} onChange={e => handleFieldChange(field.name, parseInt(e.target.value) || 0)} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
 
         case 'troops_weapons_select':
             // Special up/down control for troops and weapons with garrison limits
-            let maxAvailable: number = 0;
+            let maxAvailableForTroopsWeapons: number = 0;
             if (field.max && currentGarrison) {
                 const maxKey = field.max as keyof Omit<Garrison, 'chiefs'>;
-                maxAvailable = currentGarrison[maxKey] || 0;
+                maxAvailableForTroopsWeapons = currentGarrison[maxKey] || 0;
             }
 
-            const currentValue = (value as number) || 0;
+            const currentValueForTroopsWeapons = (value as number) || 0;
             const resourceType = field.name === 'troops' ? 'Troops' : 'Weapons';
 
             return (
@@ -705,25 +705,25 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                     <div className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
                         <div className="text-slate-300">
                             <div className="font-medium">{resourceType}</div>
-                            <div className="text-xs text-slate-400">Available: {maxAvailable}</div>
+                            <div className="text-xs text-slate-400">Available: {maxAvailableForTroopsWeapons}</div>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
-                                onClick={() => handleFieldChange(field.name, Math.max(0, currentValue - 1))}
-                                disabled={currentValue <= 0}
+                                onClick={() => handleFieldChange(field.name, Math.max(0, currentValueForTroopsWeapons - 1))}
+                                disabled={currentValueForTroopsWeapons <= 0}
                                 className="w-10 h-10 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
                                 style={{ touchAction: 'manipulation' }}
                             >
                                 −
                             </button>
                             <div className="w-16 text-center">
-                                <div className="text-2xl font-bold text-white">{currentValue}</div>
+                                <div className="text-2xl font-bold text-white">{currentValueForTroopsWeapons}</div>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => handleFieldChange(field.name, Math.min(maxAvailable, currentValue + 1))}
-                                disabled={currentValue >= maxAvailable}
+                                onClick={() => handleFieldChange(field.name, Math.min(maxAvailableForTroopsWeapons, currentValueForTroopsWeapons + 1))}
+                                disabled={currentValueForTroopsWeapons >= maxAvailableForTroopsWeapons}
                                 className="w-10 h-10 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
                                 style={{ touchAction: 'manipulation' }}
                             >

@@ -8,7 +8,7 @@ import { Tribe, Garrison, ActionType, Chief } from '../../types';
 export interface ActionField {
   name: string;
   label: string;
-  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select';
+  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select' | 'sabotage_select';
   options?: string[]; // for select type
   defaultValue?: string | number;
   placeholder?: string;

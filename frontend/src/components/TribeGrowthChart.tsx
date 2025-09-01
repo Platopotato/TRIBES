@@ -105,6 +105,8 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
                         { turn: 1, score: startScore },
                         { turn: currentTurn, score: currentScore }
                     ];
+                    // Update the turn domain to include turn 1
+                    minTurn = Math.min(minTurn, 1);
                     maxTurn = Math.max(maxTurn, currentTurn);
                     if (currentScore > maxS) {
                         maxS = currentScore;
@@ -114,7 +116,7 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
         }
 
         // Ensure reasonable turn domain
-        const turnStart = Math.max(1, minTurn === Infinity ? 1 : minTurn);
+        const turnStart = minTurn === Infinity ? 1 : Math.min(1, minTurn); // Always start from 1 if we have interpolated data
         const turnEnd = Math.max(turnStart + 1, maxTurn); // Ensure at least 1 turn difference
 
         console.log('📊 Chart data processed:', {

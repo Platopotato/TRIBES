@@ -24,6 +24,16 @@ const TribeGrowthChart: React.FC<TribeGrowthChartProps> = ({ history, tribes, cu
     }, [tribes]);
 
     const { chartData, maxScore, turnDomain } = useMemo(() => {
+        console.log('📊 CHART DEBUG: Processing chart data with:', {
+            historyLength: history.length,
+            tribesCount: tribes.length,
+            currentTurn: currentTurn,
+            firstHistoryRecord: history[0],
+            lastHistoryRecord: history[history.length - 1],
+            allTurns: history.map(h => h.turn),
+            sampleTribeRecord: history[0]?.tribeRecords?.[0]
+        });
+
         const dataByTribe: { [key: string]: { turn: number, score: number }[] } = {};
         let maxS = 0;
         let minTurn = Infinity;

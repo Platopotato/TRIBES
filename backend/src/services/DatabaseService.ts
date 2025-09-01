@@ -1451,30 +1451,6 @@ export class DatabaseService {
           }
         }
 
-        // Create/update turn history records
-        if (gameState.history && gameState.history.length > 0) {
-          console.log(`📚 Creating/updating ${gameState.history.length} turn history records...`);
-          for (const historyRecord of gameState.history) {
-            await tx.turnHistory.upsert({
-              where: {
-                gameStateId_turn: {
-                  gameStateId: currentGameState.id,
-                  turn: historyRecord.turn
-                }
-              },
-              create: {
-                turn: historyRecord.turn,
-                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any,
-                gameStateId: currentGameState.id
-              },
-              update: {
-                tribeRecords: (historyRecord.tribeRecords || historyRecord) as any
-              }
-            });
-          }
-          console.log(`✅ Turn history records created/updated successfully`);
-        }
-
         // Create/update turn history records (for both regular updates and backup restoration)
         if (gameState.history && gameState.history.length > 0) {
           console.log(`📚 Creating/updating ${gameState.history.length} turn history records...`);

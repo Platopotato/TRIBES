@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Tribe, Garrison, Technology } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
+import SmartNumberInput from './ui/SmartNumberInput';
 import { TECHNOLOGY_TREE, getTechnology } from '@radix-tribes/shared';
 
 interface TechTreeModalProps {
@@ -227,14 +228,21 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
                 </div>
 
                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-sm font-medium text-slate-300">Troops to Assign ({assignedTroops})</label>
+                    <div className="flex justify-between items-center mb-2">
                       <div className="text-sm">
                         <span className="text-amber-400 font-semibold">⏱️ {turnsToComplete} Turns</span>
                         <span className="text-slate-400 ml-2">({Math.round(selectedTech.researchPoints / Math.max(assignedTroops, 1))} pts/turn)</span>
                       </div>
                     </div>
-                    <input type="range" min="0" max={garrison?.troops || 0} value={assignedTroops} onChange={e => setAssignedTroops(parseInt(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                    <SmartNumberInput
+                      value={assignedTroops}
+                      onChange={setAssignedTroops}
+                      min={selectedTech.requiredTroops}
+                      max={garrison?.troops || 0}
+                      label={`Troops to Assign (Min: ${selectedTech.requiredTroops})`}
+                      showQuickButtons={true}
+                      showMaxButton={true}
+                    />
                  </div>
 
                 <Button

@@ -5,6 +5,7 @@ import { ActionType, GameAction, Tribe, Garrison, Chief, HexData } from '../../t
 import { ACTION_DEFINITIONS, ActionField } from './actionDefinitions';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
+import SmartNumberInput from '../ui/SmartNumberInput';
 import { findPath, parseHexCoords, formatHexCoords } from '../../lib/mapUtils';
 // Helper that tolerates both "051.044" and "q,r" style coords
 const parseAnyCoords = (coords: string): { q: number, r: number } => {
@@ -625,14 +626,14 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
             {selectedType.fields.includes('amount') && (
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Target Amount</label>
-                <input
-                  type="number"
+                <SmartNumberInput
                   value={draftAction?.actionData?.amount || 10}
-                  onChange={e => handleFieldChange('amount', parseInt(e.target.value) || 0)}
-                  min="0"
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+                  onChange={(newValue) => handleFieldChange('amount', newValue)}
+                  min={0}
+                  label="Target Amount"
                   placeholder="0 = Maximum possible"
+                  showQuickButtons={true}
+                  showMaxButton={false}
                 />
                 <p className="text-xs text-slate-400 mt-1">Set to 0 for maximum possible amount</p>
               </div>
@@ -719,7 +720,17 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 return renderSabotageOperatives(field, currentValue, maxAvailable, currentGarrison);
             }
 
-            return <input type="number" value={value} min="0" max={maxVal} onChange={e => handleFieldChange(field.name, parseInt(e.target.value) || 0)} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
+            return (
+                <SmartNumberInput
+                    value={parseInt(value) || 0}
+                    onChange={(newValue) => handleFieldChange(field.name, newValue)}
+                    min={0}
+                    max={maxVal}
+                    label={field.label}
+                    showQuickButtons={true}
+                    showMaxButton={true}
+                />
+            )
 
         case 'troops_weapons_select':
             // Special up/down control for troops and weapons with garrison limits

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Tribe } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
+import SmartNumberInput from './ui/SmartNumberInput';
 
 interface SueForPeaceModalProps {
   isOpen: boolean;
@@ -38,12 +39,26 @@ const SueForPeaceModal: React.FC<SueForPeaceModalProps> = ({ isOpen, onClose, on
             <p className="text-slate-400">Offer reparations to encourage them to accept peace. The resources will be transferred from your reserves if they accept.</p>
             
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Food (Your total: {playerTribe.globalResources.food})</label>
-              <input type="number" name="food" value={reparations.food} onChange={handleChange} min="0" max={playerTribe.globalResources.food} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2" />
+              <SmartNumberInput
+                value={reparations.food}
+                onChange={(value) => setReparations(prev => ({ ...prev, food: value }))}
+                min={0}
+                max={playerTribe.globalResources.food}
+                label={`Food (Your total: ${playerTribe.globalResources.food})`}
+                showQuickButtons={true}
+                showMaxButton={true}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Scrap (Your total: {playerTribe.globalResources.scrap})</label>
-              <input type="number" name="scrap" value={reparations.scrap} onChange={handleChange} min="0" max={playerTribe.globalResources.scrap} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2" />
+              <SmartNumberInput
+                value={reparations.scrap}
+                onChange={(value) => setReparations(prev => ({ ...prev, scrap: value }))}
+                min={0}
+                max={playerTribe.globalResources.scrap}
+                label={`Scrap (Your total: ${playerTribe.globalResources.scrap})`}
+                showQuickButtons={true}
+                showMaxButton={true}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Weapons (Your total: {totalWeapons})</label>

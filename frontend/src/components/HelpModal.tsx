@@ -281,29 +281,36 @@ const DiplomacyGuideContent: React.FC = () => (
     </Section>
 
     <Section title="Diplomatic Actions">
-      <p><strong className="text-white">Propose Alliance:</strong> Offer to ally with another tribe</p>
-      <p><strong className="text-white">Declare War:</strong> Formally declare hostilities</p>
-      <p><strong className="text-white">Trade Agreements:</strong> Establish resource exchange deals</p>
-      <p><strong className="text-white">Information Sharing:</strong> Share intelligence about other tribes</p>
+      <p><strong className="text-white">Propose Alliance:</strong> Offer to ally with another tribe (expires in 3 turns if not responded to)</p>
+      <p><strong className="text-white">Declare War:</strong> Immediately change status to War, enabling attacks and sabotage</p>
+      <p><strong className="text-white">Sue for Peace:</strong> Offer reparations to end a war and establish a truce period</p>
+      <p><strong className="text-white">Break Alliance:</strong> End an existing alliance and return to neutral status</p>
     </Section>
 
     <Section title="Alliance Benefits">
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Resource trading without penalties</li>
-        <li>Shared vision of explored territories</li>
-        <li>Coordinated military operations</li>
-        <li>Protection from mutual enemies</li>
-        <li>Technology sharing (some techs)</li>
+        <li>Cannot attack each other's territories</li>
+        <li>Mutual protection agreements</li>
+        <li>Coordinated military planning</li>
+        <li>Diplomatic immunity from certain actions</li>
+        <li>Foundation for future trade systems</li>
       </ul>
     </Section>
 
     <Section title="War Consequences">
       <ul className="list-disc list-inside space-y-1 pl-4">
         <li>Can attack enemy garrisons and territories</li>
-        <li>Sabotage operations are more effective</li>
-        <li>No trade or cooperation possible</li>
-        <li>Increased morale penalties from conflict</li>
+        <li>All sabotage operations become available</li>
+        <li>No diplomatic cooperation possible</li>
+        <li>Potential for escalating conflicts</li>
+        <li>Can be ended through peace negotiations with reparations</li>
       </ul>
+    </Section>
+
+    <Section title="Peace Negotiations">
+      <p><strong className="text-white">Reparations:</strong> The aggressor can offer resources to compensate for war damages</p>
+      <p><strong className="text-white">Truce Period:</strong> Successful peace creates a truce where war cannot be declared again for several turns</p>
+      <p><strong className="text-white">Neutral Status:</strong> Peace returns diplomatic status to Neutral, allowing future alliance proposals</p>
     </Section>
   </>
 );

@@ -19,6 +19,7 @@ import HelpModal from './HelpModal';
 import ChiefStatusPanel from './ChiefStatusPanel';
 import CodexModal from './CodexModal';
 import QuickReference from './QuickReference';
+import EnhancedDiplomacyModal from './EnhancedDiplomacyModal';
 import PendingTradesPanel from './PendingTradesPanel';
 
 import JourneysPanel from './JourneysPanel';
@@ -175,6 +176,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [isCodexOpen, setIsCodexOpen] = useState(false);
   const [isQuickRefOpen, setIsQuickRefOpen] = useState(false);
   const [isDiplomacyModalOpen, setIsDiplomacyModalOpen] = useState(false);
+  const [isEnhancedDiplomacyOpen, setIsEnhancedDiplomacyOpen] = useState(false);
   const [isChiefsModalOpen, setIsChiefsModalOpen] = useState(false);
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
   const [isStandingsModalOpen, setIsStandingsModalOpen] = useState(false);
@@ -668,7 +670,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   🔬 Research
                 </button>
                 <button
-                  onClick={() => setIsDiplomacyModalOpen(true)}
+                  onClick={() => setIsEnhancedDiplomacyOpen(true)}
                   className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
                 >
                   🤝 Diplomacy
@@ -1626,6 +1628,23 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       {isHelpModalOpen && <HelpModal onClose={() => setIsHelpModalOpen(false)} />}
       {isCodexOpen && <CodexModal onClose={() => setIsCodexOpen(false)} allTribes={allTribes} allChiefRequests={allChiefRequests} allAssetRequests={allAssetRequests} />}
       {isQuickRefOpen && <QuickReference onClose={() => setIsQuickRefOpen(false)} />}
+
+      {/* Enhanced Diplomacy Modal */}
+      {isEnhancedDiplomacyOpen && playerTribe && (
+        <EnhancedDiplomacyModal
+          isOpen={isEnhancedDiplomacyOpen}
+          onClose={() => setIsEnhancedDiplomacyOpen(false)}
+          playerTribe={playerTribe}
+          allTribes={allTribes}
+          diplomaticProposals={diplomaticProposals}
+          turn={turn}
+          onProposeAlliance={handleProposeAlliance}
+          onSueForPeace={handleSueForPeace}
+          onDeclareWar={handleDeclareWar}
+          onAcceptProposal={handleAcceptProposal}
+          onRejectProposal={handleRejectProposal}
+        />
+      )}
 
       {/* Mobile Map Selection Overlay */}
       {showMapInModal && (

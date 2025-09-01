@@ -195,7 +195,6 @@ interface CombinedEffects {
     chiefRecruitmentBonus: number; // additive percentage
     moraleBonus: number; // additive flat amount
     visibilityRangeBonus: number; // additive flat amount
-    scavengeBonus: number; // additive percentage (general scavenging)
 }
 
 function getCombinedEffects(tribe: any): CombinedEffects {
@@ -227,7 +226,6 @@ function getCombinedEffects(tribe: any): CombinedEffects {
         chiefRecruitmentBonus: 0,
         moraleBonus: 0,
         visibilityRangeBonus: 0,
-        scavengeBonus: 0,
     };
 
     // TECHNOLOGIES: Apply completed research effects
@@ -293,9 +291,6 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     break;
                 case TechnologyEffectType.VisibilityRangeBonus:
                     effects.visibilityRangeBonus += e.value;
-                    break;
-                case TechnologyEffectType.ScavengeBonus:
-                    effects.scavengeBonus += e.value;
                     break;
             }
         }
@@ -364,9 +359,6 @@ function getCombinedEffects(tribe: any): CombinedEffects {
                     break;
                 case TechnologyEffectType.VisibilityRangeBonus:
                     effects.visibilityRangeBonus += e.value;
-                    break;
-                case TechnologyEffectType.ScavengeBonus:
-                    effects.scavengeBonus += e.value;
                     break;
             }
         }

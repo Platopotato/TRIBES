@@ -144,11 +144,17 @@ export const initClient = (
     });
     
     socket.on('initial_state', (data: { gameState: GameState, users: User[] }) => {
+        console.log('🔌 SOCKET: Received initial_state event');
+        console.log('🔍 SOCKET: GameState keys:', Object.keys(data.gameState || {}));
+        console.log('📚 SOCKET: History in initial state:', data.gameState?.history?.length || 0);
         onStateUpdate(data.gameState);
         onUsersUpdate(data.users);
     });
 
     socket.on('gamestate_updated', (newState: GameState) => {
+        console.log('🔌 SOCKET: Received gamestate_updated event');
+        console.log('🔍 SOCKET: GameState keys:', Object.keys(newState || {}));
+        console.log('📚 SOCKET: History in update:', newState?.history?.length || 0);
         onStateUpdate(newState);
     });
 

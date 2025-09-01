@@ -108,10 +108,15 @@ const App: React.FC = () => {
     client.initClient(
       (newState) => {
         console.log('📊 Game state updated:', newState);
+        console.log('🔍 FRONTEND DEBUG: Game state keys:', Object.keys(newState || {}));
+        console.log('🔍 FRONTEND DEBUG: History field exists:', 'history' in (newState || {}));
+        console.log('🔍 FRONTEND DEBUG: History value:', newState?.history);
         console.log('📚 FRONTEND RECEIVED: History length:', newState?.history?.length || 0);
         if (newState?.history && newState.history.length > 0) {
           console.log('📚 FRONTEND RECEIVED: History turns:', newState.history.map(h => h.turn));
           console.log('📚 FRONTEND RECEIVED: Sample history:', newState.history[0]);
+        } else {
+          console.log('⚠️ FRONTEND: No history data received or history is empty');
         }
         setGameState(newState);
         setIsLoading(false);

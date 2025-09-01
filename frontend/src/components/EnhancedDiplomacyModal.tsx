@@ -93,10 +93,10 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           <div key={tribe.id} className="bg-slate-800 p-4 rounded-lg border border-slate-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">{TRIBE_ICONS[tribe.tribeIcon] || '🏛️'}</span>
+                <span className="text-2xl">{TRIBE_ICONS[tribe.icon] || '🏛️'}</span>
                 <div>
                   <h4 className="font-semibold text-white">{tribe.tribeName}</h4>
-                  <p className="text-sm text-slate-400">Leader: {tribe.leaderName}</p>
+                  <p className="text-sm text-slate-400">Leader: {tribe.playerName}</p>
                   {tribe.isAI && <p className="text-xs text-blue-400">AI Tribe</p>}
                 </div>
               </div>
@@ -323,7 +323,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                 onClick={() => setSelectedTribe(tribe)}
                 className="block w-full text-left bg-slate-800 hover:bg-slate-700 p-3 rounded mb-2 transition-colors"
               >
-                <span className="text-2xl mr-3">{TRIBE_ICONS[tribe.tribeIcon] || '🏛️'}</span>
+                <span className="text-2xl mr-3">{TRIBE_ICONS[tribe.icon] || '🏛️'}</span>
                 <span className="text-white font-semibold">{tribe.tribeName}</span>
               </button>
             ))}

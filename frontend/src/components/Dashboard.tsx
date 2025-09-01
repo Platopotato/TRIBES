@@ -1638,11 +1638,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           allTribes={allTribes}
           diplomaticProposals={diplomaticProposals}
           turn={turn}
-          onProposeAlliance={handleProposeAlliance}
-          onSueForPeace={handleSueForPeace}
-          onDeclareWar={handleDeclareWar}
-          onAcceptProposal={handleAcceptProposal}
-          onRejectProposal={handleRejectProposal}
+          onProposeAlliance={onProposeAlliance}
+          onSueForPeace={onSueForPeace}
+          onDeclareWar={onDeclareWar}
+          onAcceptProposal={onAcceptProposal}
+          onRejectProposal={onRejectProposal}
         />
       )}
 

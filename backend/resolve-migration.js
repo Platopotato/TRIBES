@@ -49,8 +49,37 @@ async function resolveMigration() {
       console.log('✅ Column already exists');
     }
     
+    // Now run pending migrations
+    console.log('🔄 Running pending migrations...');
+    const { spawn } = require('child_process');
+
+    const migrateProcess = spawn('npx', ['prisma', 'migrate', 'deploy'], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+
+    migrateProcess.on('close', (code) => {
+      if (code === 0) {
+        console.log('✅ All migrations applied successfully');
+      } else {
+        console.error('❌ Migration deployment failed');
+        process.exit(1);
+      }
+    });
+
+    // Wait for migration to complete
+    await new Promise((resolve, reject) => {
+      migrateProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Migration failed with code ${code}`));
+        }
+      });
+    });
+
     console.log('🎉 Migration resolution complete');
-    
+
   } catch (error) {
     console.error('❌ Error resolving migration:', error);
     process.exit(1);

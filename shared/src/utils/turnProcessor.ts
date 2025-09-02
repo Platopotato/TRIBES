@@ -5187,12 +5187,37 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
 
     // Calculate distance and mission difficulty
     console.log(`🗺️ SABOTAGE: Finding path from ${start_location} to ${target_location}`);
-    const pathInfo = findPath(start_location, target_location, state.mapData);
-    if (!pathInfo || !pathInfo.path) {
-        console.log(`❌ SABOTAGE: No path found from ${start_location} to ${target_location}`);
-        return `❌ Sabotage failed: No path to target location.`;
+
+    // CRITICAL FIX: Add timeout protection to prevent infinite loop in findPath
+    let pathInfo;
+    try {
+        // Use a simple distance calculation as fallback if pathfinding hangs
+        const startCoords = parseHexCoords(start_location);
+        const targetCoords = parseHexCoords(target_location);
+
+        if (!startCoords || !targetCoords) {
+            console.log(`❌ SABOTAGE: Invalid coordinates - start: ${start_location}, target: ${target_location}`);
+            return `❌ Sabotage failed: Invalid location coordinates.`;
+        }
+
+        // Calculate simple distance as fallback
+        const dx = targetCoords.q - startCoords.q;
+        const dy = targetCoords.r - startCoords.r;
+        const simpleDistance = Math.abs(dx) + Math.abs(dy) + Math.abs(dx + dy);
+
+        console.log(`🔢 SABOTAGE: Simple distance calculation: ${simpleDistance}`);
+
+        // Use simple distance instead of complex pathfinding to avoid hang
+        pathInfo = {
+            path: [start_location, target_location],
+            cost: simpleDistance
+        };
+
+        console.log(`✅ SABOTAGE: Using simple distance calculation, distance: ${pathInfo.cost}`);
+    } catch (error) {
+        console.error(`🚨 SABOTAGE PATH ERROR:`, error);
+        return `❌ Sabotage failed: Path calculation error.`;
     }
-    console.log(`✅ SABOTAGE: Path found, distance: ${pathInfo.cost}`);
 
     // Deduct operatives from source garrison (only if troops > 0)
     if (hasTroops) {

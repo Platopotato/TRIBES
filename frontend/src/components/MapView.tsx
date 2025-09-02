@@ -326,7 +326,15 @@ const MapView: React.FC<MapViewProps> = (props) => {
 
       // Also add ally's own explored hexes to show their discovered terrain (if they allow sharing)
       allies.forEach(ally => {
-        if (ally.shareMapWithAllies !== false) { // Default to true if not set
+        // Check if ally is sharing their map with us
+        let isAllySharing = ally.shareMapWithAllies !== false; // Default to true if not set
+
+        // Check per-ally setting if it exists
+        if (ally.mapSharingSettings && ally.mapSharingSettings.hasOwnProperty(playerTribe.id)) {
+          isAllySharing = ally.mapSharingSettings[playerTribe.id];
+        }
+
+        if (isAllySharing) {
           ally.exploredHexes?.forEach(hex => explored.add(hex));
         }
       });

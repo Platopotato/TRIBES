@@ -17,7 +17,7 @@ interface EnhancedDiplomacyModalProps {
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
   onProposeTradeAgreement?: (toTribeId: string, terms: any) => void;
-  onShareIntelligence?: (toTribeId: string, info: string) => void;
+  onShareIntelligence?: (toTribeId: string, info: string, targetTribeId?: string) => void;
   onSendPeaceEnvoy?: (toTribeId: string, message: string) => void;
   onSendDemands?: (toTribeId: string, demands: any) => void;
   onRequestAid?: (toTribeId: string, request: any) => void;
@@ -626,16 +626,27 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
 
   const renderIntelligenceTab = () => {
     const currentMapSharingStatus = playerTribe.shareMapWithAllies !== false; // Default to true
+    const allies = otherTribes.filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance);
+
+    // Helper function to check if map sharing is enabled for a specific ally
+    const isMapSharingEnabledForAlly = (allyId: string): boolean => {
+      // Check per-ally setting first, then fall back to global setting
+      if (playerTribe.mapSharingSettings && playerTribe.mapSharingSettings.hasOwnProperty(allyId)) {
+        return playerTribe.mapSharingSettings[allyId];
+      }
+      return currentMapSharingStatus; // Fall back to global setting
+    };
 
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-amber-400">🗺️ Map Intelligence Sharing</h3>
 
+        {/* Global Map Sharing Toggle */}
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-semibold text-white">Share Explored Map with Allies</h4>
-              <p className="text-sm text-slate-400">Allow allied tribes to see your explored territories</p>
+              <h4 className="font-semibold text-white">Default Map Sharing</h4>
+              <p className="text-sm text-slate-400">Default setting for sharing with all allies</p>
             </div>
             <button
               onClick={() => {
@@ -649,7 +660,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                   : 'bg-red-700 hover:bg-red-600 text-white'
               }`}
             >
-              {currentMapSharingStatus ? '✅ Sharing Enabled' : '❌ Sharing Disabled'}
+              {currentMapSharingStatus ? '✅ Enabled' : '❌ Disabled'}
             </button>
           </div>
 
@@ -676,29 +687,67 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           </div>
         </div>
 
+        {/* Per-Ally Map Sharing Controls */}
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
-          <h4 className="font-semibold text-white mb-3">Allied Map Sharing Status</h4>
+          <h4 className="font-semibold text-white mb-3">Per-Ally Map Sharing</h4>
+          <p className="text-sm text-slate-400 mb-4">Control map sharing individually for each ally</p>
 
-          {otherTribes
-            .filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance)
-            .map(ally => (
-              <div key={ally.id} className="flex items-center justify-between p-2 bg-slate-700 rounded mb-2">
+          {allies.map(ally => {
+            const isEnabled = isMapSharingEnabledForAlly(ally.id);
+            return (
+              <div key={ally.id} className="flex items-center justify-between p-3 bg-slate-700 rounded mb-2">
                 <div className="flex items-center space-x-3">
                   <span className="text-xl">{TRIBE_ICONS[ally.icon] || '🏛️'}</span>
-                  <span className="text-white font-semibold">{ally.tribeName}</span>
+                  <div>
+                    <span className="text-white font-semibold">{ally.tribeName}</span>
+                    <p className="text-xs text-slate-400">Leader: {ally.playerName}</p>
+                  </div>
                 </div>
-                <span className={`px-3 py-1 rounded text-sm font-semibold ${
-                  ally.shareMapWithAllies !== false
-                    ? 'bg-green-900/30 text-green-400'
-                    : 'bg-red-900/30 text-red-400'
-                }`}>
-                  {ally.shareMapWithAllies !== false ? '🗺️ Sharing Map' : '🔒 Map Private'}
-                </span>
+                <button
+                  onClick={() => {
+                    if (onShareIntelligence) {
+                      onShareIntelligence(playerTribe.id, isEnabled ? 'disable' : 'enable', ally.id);
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+                    isEnabled
+                      ? 'bg-green-700 hover:bg-green-600 text-white'
+                      : 'bg-red-700 hover:bg-red-600 text-white'
+                  }`}
+                >
+                  {isEnabled ? '🗺️ Sharing' : '🔒 Private'}
+                </button>
               </div>
-            ))}
+            );
+          })}
 
-          {otherTribes.filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance).length === 0 && (
+          {allies.length === 0 && (
             <p className="text-slate-500 text-center py-4">No allied tribes to share maps with</p>
+          )}
+        </div>
+
+        {/* Allied Map Sharing Status (What they're sharing with you) */}
+        <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+          <h4 className="font-semibold text-white mb-3">What Allies Share With You</h4>
+
+          {allies.map(ally => (
+            <div key={ally.id} className="flex items-center justify-between p-2 bg-slate-700 rounded mb-2">
+              <div className="flex items-center space-x-3">
+                <span className="text-xl">{TRIBE_ICONS[ally.icon] || '🏛️'}</span>
+                <span className="text-white font-semibold">{ally.tribeName}</span>
+              </div>
+              <span className={`px-3 py-1 rounded text-sm font-semibold ${
+                ally.shareMapWithAllies !== false
+                  ? 'bg-green-900/30 text-green-400'
+                  : 'bg-red-900/30 text-red-400'
+              }`}>
+                {ally.shareMapWithAllies !== false ? '🗺️ Sharing Map' : '🔒 Map Private'}
+              </span>
+            </div>
+          ))}
+
+          {allies.length === 0 && (
+            <p className="text-slate-500 text-center py-4">No allied tribes</p>
           )}
         </div>
 

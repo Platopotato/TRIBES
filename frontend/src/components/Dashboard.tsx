@@ -65,7 +65,7 @@ interface DashboardProps {
   onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
-  onToggleMapSharing: (enable: boolean) => void;
+  onToggleMapSharing: (enable: boolean, targetTribeId?: string) => void;
   turnDeadline?: TurnDeadlineType;
   uiMode?: 'mobile' | 'desktop'; // New prop to control UI mode
 }
@@ -1694,12 +1694,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               console.log(`🚛 Trade proposal sent to ${targetTribe?.tribeName}`);
             }
           }}
-          onShareIntelligence={(tribeId, info) => {
-            // Toggle map sharing with allies
+          onShareIntelligence={(tribeId, info, targetTribeId) => {
+            // Toggle map sharing with specific ally or globally
             if (info === 'enable') {
-              onToggleMapSharing(true);
+              onToggleMapSharing(true, targetTribeId);
             } else if (info === 'disable') {
-              onToggleMapSharing(false);
+              onToggleMapSharing(false, targetTribeId);
             }
           }}
           onSendPeaceEnvoy={(toTribeId, message) => {

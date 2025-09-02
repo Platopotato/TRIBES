@@ -338,7 +338,7 @@ const App: React.FC = () => {
   const handleAcceptProposal = (proposalId: string) => client.acceptProposal(proposalId);
   const handleRejectProposal = (proposalId: string) => client.rejectProposal(proposalId);
   const handleDeclareWar = (fromTribeId: string, toTribeId: string) => client.declareWar({ fromTribeId, toTribeId });
-  const handleToggleMapSharing = (tribeId: string, enable: boolean) => client.toggleMapSharing({ tribeId, enable });
+  const handleToggleMapSharing = (tribeId: string, enable: boolean, targetTribeId?: string) => client.toggleMapSharing({ tribeId, enable, targetTribeId });
 
   const renderView = () => {
     if (isLoading || !gameState) {
@@ -547,7 +547,7 @@ const App: React.FC = () => {
             onDeclareWar={(toTribeId) => playerTribe && handleDeclareWar(playerTribe.id, toTribeId)}
             onAcceptProposal={handleAcceptProposal}
             onRejectProposal={handleRejectProposal}
-            onToggleMapSharing={(enable) => playerTribe && handleToggleMapSharing(playerTribe.id, enable)}
+            onToggleMapSharing={(enable, targetTribeId) => playerTribe && handleToggleMapSharing(playerTribe.id, enable, targetTribeId)}
             turnDeadline={gameState.turnDeadline}
           />
         );

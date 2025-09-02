@@ -543,7 +543,7 @@ export const respondToMessage = createEmitter<{
 }>('respond_to_message');
 
 export const dismissMessage = createEmitter<string>('dismiss_message');
-export const toggleMapSharing = createEmitter<{ tribeId: string, enable: boolean }>('toggle_map_sharing');
+export const toggleMapSharing = createEmitter<{ tribeId: string, enable: boolean, targetTribeId?: string }>('toggle_map_sharing');
 
 // Mobile offline action queuing
 const queueOfflineActions = () => {

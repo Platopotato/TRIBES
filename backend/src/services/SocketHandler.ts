@@ -527,10 +527,19 @@ export class SocketHandler {
           };
 
           gameState.diplomaticMessages.push(newMessage);
-          await this.gameService.updateGameState(gameState);
-          await emitGameState();
 
-          console.log(`📨 Diplomatic message sent: ${messageData.type} from ${fromTribe.tribeName} to ${gameState.tribes.find(t => t.id === toTribeId)?.tribeName}`);
+          // CRITICAL: Save immediately to prevent message loss on server crash
+          try {
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+            console.log(`📨 Diplomatic message sent: ${messageData.type} from ${fromTribe.tribeName} to ${gameState.tribes.find(t => t.id === toTribeId)?.tribeName}`);
+            console.log(`💾 Message persisted to file storage successfully`);
+          } catch (error) {
+            console.error(`❌ CRITICAL: Failed to persist diplomatic message:`, error);
+            // Remove the message from memory since it wasn't saved
+            gameState.diplomaticMessages.pop();
+            throw error; // Re-throw to inform client of failure
+          }
         }
       }
     });
@@ -578,12 +587,23 @@ export class SocketHandler {
       }
     });
 
-    socket.on('toggle_map_sharing', async ({ tribeId, enable }) => {
+    socket.on('toggle_map_sharing', async ({ tribeId, enable, targetTribeId }) => {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const tribe = gameState.tribes.find(t => t.id === tribeId);
         if (tribe) {
-          tribe.shareMapWithAllies = enable;
+          if (targetTribeId) {
+            // Per-ally map sharing
+            if (!tribe.mapSharingSettings) {
+              tribe.mapSharingSettings = {};
+            }
+            tribe.mapSharingSettings[targetTribeId] = enable;
+            console.log(`🗺️ ${tribe.tribeName} ${enable ? 'enabled' : 'disabled'} map sharing with tribe ${targetTribeId}`);
+          } else {
+            // Global map sharing (legacy)
+            tribe.shareMapWithAllies = enable;
+            console.log(`🗺️ ${tribe.tribeName} ${enable ? 'enabled' : 'disabled'} global map sharing`);
+          }
           await this.gameService.updateGameState(gameState);
           await emitGameState();
         }

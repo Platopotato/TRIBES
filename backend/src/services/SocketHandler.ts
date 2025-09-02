@@ -323,7 +323,9 @@ export class SocketHandler {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
-        if (fromTribe) {
+        const toTribe = gameState.tribes.find(t => t.id === toTribeId);
+        if (fromTribe && toTribe) {
+          // Create old-style proposal for backward compatibility
           gameState.diplomaticProposals.push({
             id: `proposal-${Date.now()}`,
             fromTribeId,
@@ -333,8 +335,33 @@ export class SocketHandler {
             expiresOnTurn: gameState.turn + 3,
             fromTribeName: fromTribe.tribeName
           });
+
+          // ALSO create new-style message for unified inbox
+          if (!gameState.diplomaticMessages) {
+            gameState.diplomaticMessages = [];
+          }
+
+          const allianceMessage = {
+            id: `msg-alliance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'alliance' as any,
+            fromTribeId,
+            fromTribeName: fromTribe.tribeName,
+            toTribeId,
+            subject: `Alliance Proposal from ${fromTribe.tribeName}`,
+            message: `${fromTribe.tribeName} proposes forming an alliance. Together we can achieve more than we could alone. Do you accept this alliance?`,
+            data: {},
+            requiresResponse: true,
+            expiresOnTurn: gameState.turn + 3,
+            status: 'pending' as any,
+            createdTurn: gameState.turn,
+            createdAt: new Date()
+          };
+
+          gameState.diplomaticMessages.push(allianceMessage);
           await this.gameService.updateGameState(gameState);
           await emitGameState();
+
+          console.log(`🤝 Alliance proposal sent: ${fromTribe.tribeName} → ${toTribe.tribeName} (both old and new systems)`);
         }
       }
     });
@@ -343,7 +370,9 @@ export class SocketHandler {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
-        if (fromTribe) {
+        const toTribe = gameState.tribes.find(t => t.id === toTribeId);
+        if (fromTribe && toTribe) {
+          // Create old-style proposal for backward compatibility
           gameState.diplomaticProposals.push({
             id: `proposal-${Date.now()}`,
             fromTribeId,
@@ -354,8 +383,39 @@ export class SocketHandler {
             fromTribeName: fromTribe.tribeName,
             reparations
           });
+
+          // ALSO create new-style message for unified inbox
+          if (!gameState.diplomaticMessages) {
+            gameState.diplomaticMessages = [];
+          }
+
+          const reparationsText = reparations && (reparations.food || reparations.scrap || reparations.weapons)
+            ? `We offer the following reparations: ${reparations.food ? `${reparations.food} Food` : ''}${reparations.scrap ? ` ${reparations.scrap} Scrap` : ''}${reparations.weapons ? ` ${reparations.weapons} Weapons` : ''}.`
+            : 'We seek peace without reparations.';
+
+          const peaceMessage = {
+            id: `msg-peace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'peace' as any,
+            fromTribeId,
+            fromTribeName: fromTribe.tribeName,
+            toTribeId,
+            subject: `Peace Treaty from ${fromTribe.tribeName}`,
+            message: `${fromTribe.tribeName} seeks to end our conflict and establish peace. ${reparationsText} Will you accept this peace treaty?`,
+            data: {
+              reparations: reparations
+            },
+            requiresResponse: true,
+            expiresOnTurn: gameState.turn + 3,
+            status: 'pending' as any,
+            createdTurn: gameState.turn,
+            createdAt: new Date()
+          };
+
+          gameState.diplomaticMessages.push(peaceMessage);
           await this.gameService.updateGameState(gameState);
           await emitGameState();
+
+          console.log(`🕊️ Peace proposal sent: ${fromTribe.tribeName} → ${toTribe.tribeName} (both old and new systems)`);
         }
       }
     });
@@ -446,6 +506,17 @@ export class SocketHandler {
           // Handle specific response actions based on message type
           if (response === 'accepted') {
             await this.handleMessageAcceptance(message, gameState, responseData);
+          } else if (response === 'rejected') {
+            // Remove corresponding old-style proposals when rejected
+            if (message.type === 'alliance') {
+              gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p =>
+                !(p.fromTribeId === message.fromTribeId && p.toTribeId === message.toTribeId && p.actionType === 'ProposeAlliance')
+              );
+            } else if (message.type === 'peace') {
+              gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p =>
+                !(p.fromTribeId === message.fromTribeId && p.toTribeId === message.toTribeId && p.actionType === 'SueForPeace')
+              );
+            }
           }
 
           await this.gameService.updateGameState(gameState);
@@ -1279,12 +1350,22 @@ export class SocketHandler {
         // Set alliance status
         fromTribe.diplomacy[toTribe.id] = { status: 'Alliance' };
         toTribe.diplomacy[fromTribe.id] = { status: 'Alliance' };
+
+        // Also remove any corresponding old-style proposal
+        gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p =>
+          !(p.fromTribeId === message.fromTribeId && p.toTribeId === message.toTribeId && p.actionType === 'ProposeAlliance')
+        );
         break;
 
       case 'peace':
         // Set neutral status and handle reparations
         fromTribe.diplomacy[toTribe.id] = { status: 'Neutral' };
         toTribe.diplomacy[fromTribe.id] = { status: 'Neutral' };
+
+        // Also remove any corresponding old-style proposal
+        gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p =>
+          !(p.fromTribeId === message.fromTribeId && p.toTribeId === message.toTribeId && p.actionType === 'SueForPeace')
+        );
 
         if (message.data?.reparations) {
           const reparations = message.data.reparations;

@@ -401,6 +401,73 @@ export class SocketHandler {
       }
     });
 
+    // New unified diplomatic message handlers
+    socket.on('send_diplomatic_message', async ({ fromTribeId, toTribeId, messageData }) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
+        if (fromTribe) {
+          if (!gameState.diplomaticMessages) {
+            gameState.diplomaticMessages = [];
+          }
+
+          const newMessage = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: messageData.type,
+            fromTribeId,
+            fromTribeName: fromTribe.tribeName,
+            toTribeId,
+            subject: messageData.subject,
+            message: messageData.message,
+            data: messageData.data,
+            requiresResponse: messageData.requiresResponse || false,
+            expiresOnTurn: messageData.expiresOnTurn || (gameState.turn + 3),
+            status: 'pending' as any,
+            createdTurn: gameState.turn,
+            createdAt: new Date()
+          };
+
+          gameState.diplomaticMessages.push(newMessage);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+
+          console.log(`📨 Diplomatic message sent: ${messageData.type} from ${fromTribe.tribeName} to ${gameState.tribes.find(t => t.id === toTribeId)?.tribeName}`);
+        }
+      }
+    });
+
+    socket.on('respond_to_message', async ({ messageId, response, responseData }) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState && gameState.diplomaticMessages) {
+        const message = gameState.diplomaticMessages.find(m => m.id === messageId);
+        if (message) {
+          message.status = response; // 'accepted', 'rejected', 'dismissed'
+
+          // Handle specific response actions based on message type
+          if (response === 'accepted') {
+            await this.handleMessageAcceptance(message, gameState, responseData);
+          }
+
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+
+          console.log(`📨 Message response: ${message.type} ${response} by ${gameState.tribes.find(t => t.id === message.toTribeId)?.tribeName}`);
+        }
+      }
+    });
+
+    socket.on('dismiss_message', async (messageId) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState && gameState.diplomaticMessages) {
+        const message = gameState.diplomaticMessages.find(m => m.id === messageId);
+        if (message) {
+          message.status = 'dismissed' as any;
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+        }
+      }
+    });
+
     socket.on('toggle_map_sharing', async ({ tribeId, enable }) => {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
@@ -1199,5 +1266,127 @@ export class SocketHandler {
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
     });
+  }
+
+  private async handleMessageAcceptance(message: any, gameState: any, responseData?: any) {
+    const fromTribe = gameState.tribes.find((t: any) => t.id === message.fromTribeId);
+    const toTribe = gameState.tribes.find((t: any) => t.id === message.toTribeId);
+
+    if (!fromTribe || !toTribe) return;
+
+    switch (message.type) {
+      case 'alliance':
+        // Set alliance status
+        fromTribe.diplomacy[toTribe.id] = { status: 'Alliance' };
+        toTribe.diplomacy[fromTribe.id] = { status: 'Alliance' };
+        break;
+
+      case 'peace':
+        // Set neutral status and handle reparations
+        fromTribe.diplomacy[toTribe.id] = { status: 'Neutral' };
+        toTribe.diplomacy[fromTribe.id] = { status: 'Neutral' };
+
+        if (message.data?.reparations) {
+          const reparations = message.data.reparations;
+          // Transfer reparations from fromTribe to toTribe
+          if (reparations.food) {
+            fromTribe.globalResources.food = Math.max(0, (fromTribe.globalResources.food || 0) - reparations.food);
+            toTribe.globalResources.food = (toTribe.globalResources.food || 0) + reparations.food;
+          }
+          if (reparations.scrap) {
+            fromTribe.globalResources.scrap = Math.max(0, (fromTribe.globalResources.scrap || 0) - reparations.scrap);
+            toTribe.globalResources.scrap = (toTribe.globalResources.scrap || 0) + reparations.scrap;
+          }
+          if (reparations.weapons) {
+            // Handle weapons transfer (more complex as they're garrison-specific)
+            const fromGarrisons = Object.values(fromTribe.garrisons || {});
+            const toGarrisons = Object.values(toTribe.garrisons || {});
+            if (fromGarrisons.length > 0 && toGarrisons.length > 0) {
+              const fromGarrison = fromGarrisons[0] as any;
+              const toGarrison = toGarrisons[0] as any;
+              const weaponsToTransfer = Math.min(reparations.weapons, fromGarrison.weapons || 0);
+              fromGarrison.weapons = (fromGarrison.weapons || 0) - weaponsToTransfer;
+              toGarrison.weapons = (toGarrison.weapons || 0) + weaponsToTransfer;
+            }
+          }
+        }
+        break;
+
+      case 'non_aggression':
+        // Set non-aggression pact
+        const duration = message.data?.nonAggressionDuration || 5;
+        fromTribe.diplomacy[toTribe.id] = {
+          status: fromTribe.diplomacy[toTribe.id]?.status || 'Neutral',
+          truceUntilTurn: gameState.turn + duration
+        };
+        toTribe.diplomacy[fromTribe.id] = {
+          status: toTribe.diplomacy[fromTribe.id]?.status || 'Neutral',
+          truceUntilTurn: gameState.turn + duration
+        };
+        break;
+
+      case 'aid_request':
+        // Transfer requested resources
+        if (message.data?.resources) {
+          const aid = message.data.resources;
+          if (aid.food) {
+            toTribe.globalResources.food = Math.max(0, (toTribe.globalResources.food || 0) - aid.food);
+            fromTribe.globalResources.food = (fromTribe.globalResources.food || 0) + aid.food;
+          }
+          if (aid.scrap) {
+            toTribe.globalResources.scrap = Math.max(0, (toTribe.globalResources.scrap || 0) - aid.scrap);
+            fromTribe.globalResources.scrap = (fromTribe.globalResources.scrap || 0) + aid.scrap;
+          }
+          if (aid.weapons) {
+            // Handle weapons transfer
+            const toGarrisons = Object.values(toTribe.garrisons || {});
+            const fromGarrisons = Object.values(fromTribe.garrisons || {});
+            if (toGarrisons.length > 0 && fromGarrisons.length > 0) {
+              const toGarrison = toGarrisons[0] as any;
+              const fromGarrison = fromGarrisons[0] as any;
+              const weaponsToTransfer = Math.min(aid.weapons, toGarrison.weapons || 0);
+              toGarrison.weapons = (toGarrison.weapons || 0) - weaponsToTransfer;
+              fromGarrison.weapons = (fromGarrison.weapons || 0) + weaponsToTransfer;
+            }
+          }
+        }
+        break;
+
+      case 'ultimatum':
+        // Handle ultimatum acceptance - transfer demanded resources
+        if (message.data?.demands) {
+          const demands = message.data.demands;
+          if (demands.food) {
+            toTribe.globalResources.food = Math.max(0, (toTribe.globalResources.food || 0) - demands.food);
+            fromTribe.globalResources.food = (fromTribe.globalResources.food || 0) + demands.food;
+          }
+          if (demands.scrap) {
+            toTribe.globalResources.scrap = Math.max(0, (toTribe.globalResources.scrap || 0) - demands.scrap);
+            fromTribe.globalResources.scrap = (fromTribe.globalResources.scrap || 0) + demands.scrap;
+          }
+          if (demands.weapons) {
+            // Handle weapons transfer
+            const toGarrisons = Object.values(toTribe.garrisons || {});
+            const fromGarrisons = Object.values(fromTribe.garrisons || {});
+            if (toGarrisons.length > 0 && fromGarrisons.length > 0) {
+              const toGarrison = toGarrisons[0] as any;
+              const fromGarrison = fromGarrisons[0] as any;
+              const weaponsToTransfer = Math.min(demands.weapons, toGarrison.weapons || 0);
+              toGarrison.weapons = (toGarrison.weapons || 0) - weaponsToTransfer;
+              fromGarrison.weapons = (fromGarrison.weapons || 0) + weaponsToTransfer;
+            }
+          }
+        }
+        break;
+
+      case 'trade_proposal':
+        // Handle trade agreement acceptance
+        // This would set up ongoing trade routes (implementation depends on trade system)
+        console.log(`🚛 Trade agreement accepted between ${fromTribe.tribeName} and ${toTribe.tribeName}`);
+        break;
+
+      default:
+        console.log(`📨 Message type ${message.type} accepted but no specific handler implemented`);
+    }
   }
 }

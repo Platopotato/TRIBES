@@ -176,7 +176,88 @@ export enum DiplomaticActionType {
     RequestAid = 'RequestAid',
     OfferTribute = 'OfferTribute',
     ProposeNonAggressionPact = 'ProposeNonAggressionPact',
-    RequestPassage = 'RequestPassage'
+    RequestPassage = 'RequestPassage',
+    ProposeTradeAgreement = 'ProposeTradeAgreement',
+    ShareIntelligence = 'ShareIntelligence',
+    DiplomaticAnnouncement = 'DiplomaticAnnouncement'
+}
+
+export enum DiplomaticMessageType {
+    Ultimatum = 'ultimatum',
+    Alliance = 'alliance',
+    Peace = 'peace',
+    NonAggression = 'non_aggression',
+    AidRequest = 'aid_request',
+    TradeProposal = 'trade_proposal',
+    PeaceEnvoy = 'peace_envoy',
+    Tribute = 'tribute',
+    PassageRequest = 'passage_request',
+    Intelligence = 'intelligence',
+    Announcement = 'announcement'
+}
+
+export enum DiplomaticMessageStatus {
+    Pending = 'pending',
+    Accepted = 'accepted',
+    Rejected = 'rejected',
+    Expired = 'expired',
+    Dismissed = 'dismissed'
+}
+
+export interface DiplomaticMessage {
+    id: string;
+    type: DiplomaticMessageType;
+    fromTribeId: string;
+    fromTribeName: string;
+    toTribeId: string;
+    subject: string;
+    message: string;
+    data?: {
+        // For ultimatums/demands
+        demands?: {
+            food?: number;
+            scrap?: number;
+            weapons?: number;
+            territory?: string;
+        };
+        // For aid requests/tribute offers
+        resources?: {
+            food?: number;
+            scrap?: number;
+            weapons?: number;
+        };
+        // For trade proposals
+        trade?: {
+            offering: { food?: number; scrap?: number; weapons?: number };
+            requesting: { food?: number; scrap?: number; weapons?: number };
+            duration?: number;
+        };
+        // For non-aggression pacts
+        nonAggressionDuration?: number;
+        // For passage requests
+        passage?: {
+            startLocation: string;
+            endLocation: string;
+            duration: number;
+        };
+        // For intelligence sharing
+        intelligence?: {
+            targetTribeId?: string;
+            intelType?: 'troop_movements' | 'resource_status' | 'planned_actions' | 'technology';
+            details?: string;
+        };
+        // For peace treaties (reparations)
+        reparations?: {
+            food?: number;
+            scrap?: number;
+            weapons?: number;
+        };
+    };
+    requiresResponse: boolean;
+    expiresOnTurn?: number;
+    status: DiplomaticMessageStatus;
+    createdTurn: number;
+    createdAt: Date;
 }
 
 export interface DiplomaticProposal {
@@ -512,6 +593,7 @@ export interface GameState {
     assetRequests: AssetRequest[];
     journeys: Journey[];
     diplomaticProposals: DiplomaticProposal[];
+    diplomaticMessages?: DiplomaticMessage[]; // New unified message system
     prisonerExchangeProposals?: PrisonerExchangeProposal[];
     history?: TurnHistoryRecord[];
     detailedHistory?: DetailedTurnHistoryRecord[];

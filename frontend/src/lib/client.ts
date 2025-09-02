@@ -521,6 +521,28 @@ export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: strin
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
+
+// New unified diplomatic message system
+export const sendDiplomaticMessage = createEmitter<{
+    fromTribeId: string;
+    toTribeId: string;
+    messageData: {
+        type: string;
+        subject: string;
+        message: string;
+        data?: any;
+        requiresResponse?: boolean;
+        expiresOnTurn?: number;
+    };
+}>('send_diplomatic_message');
+
+export const respondToMessage = createEmitter<{
+    messageId: string;
+    response: 'accepted' | 'rejected' | 'dismissed';
+    responseData?: any;
+}>('respond_to_message');
+
+export const dismissMessage = createEmitter<string>('dismiss_message');
 export const toggleMapSharing = createEmitter<{ tribeId: string, enable: boolean }>('toggle_map_sharing');
 
 // Mobile offline action queuing

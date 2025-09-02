@@ -851,6 +851,7 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
+      diplomaticMessages: [], // Initialize empty for now - will be populated from file storage
       history: (() => {
         console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
         if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {

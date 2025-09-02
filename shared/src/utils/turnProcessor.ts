@@ -5194,8 +5194,21 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
     const distancePenalty = Math.min(pathInfo.cost * 0.05, 0.4); // -5% per distance unit, max 40%
 
     // NEW: Apply sabotage effectiveness and resistance bonuses
-    const attackerEffects = getCombinedEffects(tribe);
-    const defenderEffects = getCombinedEffects(targetTribe);
+    let attackerEffects, defenderEffects;
+    try {
+        console.log(`🔍 SABOTAGE: Getting attacker effects for ${tribe.tribeName}`);
+        attackerEffects = getCombinedEffects(tribe);
+        console.log(`✅ SABOTAGE: Got attacker effects for ${tribe.tribeName}`);
+
+        console.log(`🔍 SABOTAGE: Getting defender effects for ${targetTribe.tribeName}`);
+        defenderEffects = getCombinedEffects(targetTribe);
+        console.log(`✅ SABOTAGE: Got defender effects for ${targetTribe.tribeName}`);
+    } catch (error) {
+        console.error(`🚨 SABOTAGE ERROR: Failed to get combined effects:`, error);
+        attackerEffects = getDefaultEffects();
+        defenderEffects = getDefaultEffects();
+    }
+
     const effectivenessBonus = attackerEffects.sabotageEffectiveness; // Attacker's effectiveness bonus
     const resistanceBonus = defenderEffects.sabotageResistance; // Defender's resistance bonus
 

@@ -20,14 +20,17 @@ async function resolveMigration() {
     
     if (failedMigration.length > 0) {
       console.log('❌ Found failed migration, resolving...');
-      
-      // Mark the failed migration as resolved
+
+      // Mark the failed migration as successfully applied
       await prisma.$executeRaw`
-        DELETE FROM "_prisma_migrations" 
+        UPDATE "_prisma_migrations"
+        SET finished_at = NOW(),
+            applied_steps_count = 1,
+            logs = 'Migration resolved by migration resolver - column already exists'
         WHERE migration_name = '20250822_add_max_actions_override'
       `;
-      
-      console.log('✅ Failed migration removed from tracking table');
+
+      console.log('✅ Failed migration marked as successfully applied');
     } else {
       console.log('✅ No failed migration found');
     }
@@ -50,6 +53,27 @@ async function resolveMigration() {
       console.log('✅ Column already exists');
     }
     
+    // Use Prisma's official resolve command instead of manual migration
+    console.log('🔄 Resolving migration with Prisma...');
+
+    const resolveProcess = spawn('npx', ['prisma', 'migrate', 'resolve', '--applied', '20250822_add_max_actions_override'], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+
+    // Wait for resolve to complete
+    await new Promise((resolve, reject) => {
+      resolveProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('✅ Migration resolved successfully');
+          resolve();
+        } else {
+          console.error('❌ Migration resolve failed');
+          reject(new Error(`Migration resolve failed with code ${code}`));
+        }
+      });
+    });
+
     // Now run pending migrations
     console.log('🔄 Running pending migrations...');
 
@@ -58,21 +82,14 @@ async function resolveMigration() {
       cwd: process.cwd()
     });
 
-    migrateProcess.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ All migrations applied successfully');
-      } else {
-        console.error('❌ Migration deployment failed');
-        process.exit(1);
-      }
-    });
-
     // Wait for migration to complete
     await new Promise((resolve, reject) => {
       migrateProcess.on('close', (code) => {
         if (code === 0) {
+          console.log('✅ All migrations applied successfully');
           resolve();
         } else {
+          console.error('❌ Migration deployment failed');
           reject(new Error(`Migration failed with code ${code}`));
         }
       });

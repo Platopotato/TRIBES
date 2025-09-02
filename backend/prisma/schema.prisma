@@ -33,6 +33,7 @@ model GameState {
   mapSettings          Json?
   startingLocations    Json   // Array of hex coordinate strings
   newsletter           Json?  // Newsletter data (NewsletterState)
+  diplomaticMessages   Json?  // Diplomatic messages (DiplomaticMessage[])
   suspended            Boolean @default(false)  // Game suspension status
   suspensionMessage    String? // Custom maintenance message
   createdAt            DateTime @default(now())

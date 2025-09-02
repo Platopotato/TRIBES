@@ -291,26 +291,26 @@ export class DatabaseService {
       await this.updateGameStateInDb(gameState);
       // Persist turn deadline separately in file (since DB schema doesn’t include it)
       this.setTurnDeadlineState(gameState.turnDeadline);
-      // Persist diplomatic messages separately in file (since DB schema doesn't include it yet)
+      // Persist diplomatic messages using dual-write (database + file backup)
       if (gameState.diplomaticMessages) {
-        await this.saveDiplomaticMessages(gameState.diplomaticMessages);
+        await this.saveDiplomaticMessagesDualWrite(gameState.diplomaticMessages);
       }
     } else {
       // File-based fallback
       if (skipValidation) {
         // During backup loading, skip validation since users are loaded separately
         this.saveGameStateToFile(gameState);
-        // Also save diplomatic messages
+        // Also save diplomatic messages using dual-write
         if (gameState.diplomaticMessages) {
-          await this.saveDiplomaticMessages(gameState.diplomaticMessages);
+          await this.saveDiplomaticMessagesDualWrite(gameState.diplomaticMessages);
         }
       } else {
         // Normal operation - validate and clean game state first
         const cleanedGameState = await this.validateAndCleanGameState(gameState);
         this.saveGameStateToFile(cleanedGameState);
-        // Also save diplomatic messages
+        // Also save diplomatic messages using dual-write
         if (cleanedGameState.diplomaticMessages) {
-          await this.saveDiplomaticMessages(cleanedGameState.diplomaticMessages);
+          await this.saveDiplomaticMessagesDualWrite(cleanedGameState.diplomaticMessages);
         }
       }
     }
@@ -863,7 +863,7 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
-      diplomaticMessages: await this.loadDiplomaticMessages(), // Load from file storage
+      diplomaticMessages: await this.loadDiplomaticMessagesWithFallback(dbGameState), // Load from DB with file fallback
       history: (() => {
         console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
         if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {
@@ -1538,7 +1538,24 @@ export class DatabaseService {
     }
   }
 
-  // Diplomatic Messages File Storage
+  // Diplomatic Messages Dual Storage (Database + File Fallback)
+  private async loadDiplomaticMessagesWithFallback(dbGameState: any): Promise<any[]> {
+    try {
+      // Try database first (if field exists and has data)
+      if (dbGameState.diplomaticMessages && Array.isArray(dbGameState.diplomaticMessages)) {
+        console.log(`📨 Loaded ${dbGameState.diplomaticMessages.length} diplomatic messages from DATABASE`);
+        return dbGameState.diplomaticMessages;
+      }
+
+      // Fallback to file storage
+      console.log(`📨 Database diplomaticMessages field empty/null, falling back to file storage`);
+      return await this.loadDiplomaticMessages();
+    } catch (error) {
+      console.error('❌ Error in loadDiplomaticMessagesWithFallback:', error);
+      return await this.loadDiplomaticMessages(); // Final fallback to file
+    }
+  }
+
   private async loadDiplomaticMessages(): Promise<any[]> {
     try {
       const filePath = path.join(process.cwd(), 'data', 'diplomatic-messages.json');
@@ -1564,10 +1581,85 @@ export class DatabaseService {
       }
 
       const filePath = path.join(dataDir, 'diplomatic-messages.json');
-      await fs.promises.writeFile(filePath, JSON.stringify(messages, null, 2));
-      console.log(`📨 Saved ${messages.length} diplomatic messages to file storage`);
+      const tempFilePath = path.join(dataDir, 'diplomatic-messages.json.tmp');
+
+      // Atomic write: write to temp file first, then rename
+      await fs.promises.writeFile(tempFilePath, JSON.stringify(messages, null, 2));
+      await fs.promises.rename(tempFilePath, filePath);
+
+      console.log(`📨 Saved ${messages.length} diplomatic messages to file storage (atomic write)`);
     } catch (error) {
       console.error('❌ Error saving diplomatic messages:', error);
+      // Clean up temp file if it exists
+      try {
+        const tempFilePath = path.join(process.cwd(), 'data', 'diplomatic-messages.json.tmp');
+        if (fs.existsSync(tempFilePath)) {
+          await fs.promises.unlink(tempFilePath);
+        }
+      } catch (cleanupError) {
+        console.error('❌ Error cleaning up temp file:', cleanupError);
+      }
+      throw error; // Re-throw to ensure caller knows about the failure
+    }
+  }
+
+  private async saveDiplomaticMessagesDualWrite(messages: any[]): Promise<void> {
+    const errors: string[] = [];
+
+    try {
+      // Primary: Save to database (if using database mode)
+      if (this.useDatabase && this.prisma) {
+        await this.saveDiplomaticMessagesToDatabase(messages);
+        console.log(`📨 Saved ${messages.length} diplomatic messages to DATABASE (primary)`);
+      }
+    } catch (dbError) {
+      console.error('❌ Failed to save diplomatic messages to database:', dbError);
+      errors.push(`Database: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
+    }
+
+    try {
+      // Backup: Always save to file storage for redundancy
+      await this.saveDiplomaticMessages(messages);
+      console.log(`📨 Saved ${messages.length} diplomatic messages to FILE (backup)`);
+    } catch (fileError) {
+      console.error('❌ Failed to save diplomatic messages to file:', fileError);
+      errors.push(`File: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`);
+    }
+
+    // If both failed, throw error
+    if (errors.length === 2) {
+      throw new Error(`Failed to save diplomatic messages to both database and file: ${errors.join(', ')}`);
+    }
+
+    // If only one failed, log warning but continue (we have backup)
+    if (errors.length === 1) {
+      console.warn(`⚠️ Diplomatic messages saved with partial failure: ${errors[0]}`);
+    }
+  }
+
+  private async saveDiplomaticMessagesToDatabase(messages: any[]): Promise<void> {
+    if (!this.useDatabase || !this.prisma) {
+      throw new Error('Database not available for diplomatic messages storage');
+    }
+
+    try {
+      // Find the existing game state record
+      const existingGameState = await this.prisma.gameState.findFirst();
+
+      if (!existingGameState) {
+        throw new Error('No GameState record found in database');
+      }
+
+      // Update the diplomaticMessages field
+      await this.prisma.gameState.update({
+        where: { id: existingGameState.id },
+        data: { diplomaticMessages: messages as any }
+      });
+
+      console.log(`📨 Updated GameState.diplomaticMessages in database with ${messages.length} messages`);
+    } catch (error) {
+      console.error('❌ Database update failed for diplomatic messages:', error);
+      throw error;
     }
   }
 }

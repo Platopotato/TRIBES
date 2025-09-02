@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
-    "start": "echo 'Starting with embedded migration resolution...' && node dist/server.js",
+    "start": "echo 'Starting with database migration...' && npx prisma migrate deploy && echo 'Migration complete, starting server...' && node dist/server.js",
     "start:skip-migrations": "echo 'Skipping migrations, using embedded resolution...' && node dist/server.js",
     "db:generate": "prisma generate",
     "db:migrate": "node migrate-deploy.js",

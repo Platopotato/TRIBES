@@ -518,6 +518,12 @@ function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, sta
 }
 
 export function processGlobalTurn(gameState: GameState): GameState {
+    // CRITICAL FIX: Normalize all tribe coordinates BEFORE any processing
+    console.log(`🔧 NORMALIZING COORDINATES: Ensuring all garrison keys are in standard format`);
+    gameState.tribes.forEach((tribe: any) => {
+        normalizeTribeCoordinates(tribe);
+    });
+
     // CHIEF INTEGRITY CHECK: Log chief status before turn processing
     console.log(`👑 PRE-TURN CHIEF STATUS (Turn ${gameState.turn}):`);
     gameState.tribes.forEach((tribe: any) => {
@@ -572,9 +578,6 @@ export function processGlobalTurn(gameState: GameState): GameState {
 	// Create asset badges for UI from combined effects and present assets
 	function buildAssetBadges(tribe: any, context: { phase: 'move'|'scavenge'|'combat', resource?: string, terrain?: TerrainType }): { name?: string; label: string; emoji?: string }[] {
 	  const badges: { name?: string; label: string; emoji?: string }[] = [];
-
-	    // Ensure tribe coordinates and keys are normalized before any processing
-	    state.tribes.forEach(tr => normalizeTribeCoordinates(tr));
 
 	  const assets = tribe.assets || [];
 	  if (context.phase === 'move') {

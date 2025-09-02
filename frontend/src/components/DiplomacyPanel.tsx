@@ -3,17 +3,19 @@
 
 /** @jsxImportSource react */
 import React, { useState } from 'react';
-import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation } from '@radix-tribes/shared';
+import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticMessage } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
 import ConfirmationModal from './ui/ConfirmationModal';
 import SueForPeaceModal from './SueForPeaceModal';
+import DiplomaticInbox from './DiplomaticInbox';
 
 interface DiplomacyPanelProps {
   playerTribe: Tribe;
   allTribes: Tribe[];
   diplomaticProposals: DiplomaticProposal[];
+  diplomaticMessages?: DiplomaticMessage[];
   prisonerExchangeProposals?: any[];
   onRespondToPrisonerExchange?: (proposalId: string, response: 'accept' | 'reject') => void;
 
@@ -23,11 +25,25 @@ interface DiplomacyPanelProps {
   onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onMessageResponse?: (messageId: string, response: 'accepted' | 'rejected' | 'dismissed') => void;
 }
 
 const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
-  const { playerTribe, allTribes, diplomaticProposals, turn, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal } = props;
+  const {
+    playerTribe,
+    allTribes,
+    diplomaticProposals,
+    diplomaticMessages = [],
+    turn,
+    onProposeAlliance,
+    onSueForPeace,
+    onDeclareWar,
+    onAcceptProposal,
+    onRejectProposal,
+    onMessageResponse
+  } = props;
 
+  const [activeTab, setActiveTab] = useState<'overview' | 'messages' | 'actions'>('overview');
   const [warTarget, setWarTarget] = useState<Tribe | null>(null);
   const [peaceTarget, setPeaceTarget] = useState<Tribe | null>(null);
 
@@ -128,10 +144,48 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     </div>
   );
 
+  // Count urgent messages for badge
+  const urgentMessageCount = diplomaticMessages.filter(msg =>
+    msg.toTribeId === playerTribe.id &&
+    msg.requiresResponse &&
+    msg.status === 'pending' &&
+    (!msg.expiresOnTurn || msg.expiresOnTurn > turn)
+  ).length;
+
   return (
     <>
       <Card title="Diplomacy">
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 border-b border-slate-600 mb-4">
+          {[
+            { key: 'overview', label: 'Overview', icon: '📊' },
+            { key: 'messages', label: 'Messages', icon: '📨', badge: urgentMessageCount },
+            { key: 'actions', label: 'Actions', icon: '🎯' }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center space-x-2 ${
+                activeTab === tab.key
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.badge && tab.badge > 0 && (
+                <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
+          {activeTab === 'overview' && (
+            <>
           {incomingProposals.length > 0 && (
             <div className="space-y-3">
               <h4 className="font-semibold text-slate-300 mb-2">Incoming Proposals</h4>
@@ -196,6 +250,29 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                   <h4 className="font-semibold text-slate-300 mb-2">AI Tribes</h4>
                   {renderTribeList(aiTribes)}
               </div>
+          )}
+            </>
+          )}
+
+          {activeTab === 'messages' && (
+            <DiplomaticInbox
+              messages={diplomaticMessages}
+              currentTribeId={playerTribe.id}
+              currentTurn={turn}
+              onMessageResponse={(messageId, response) => {
+                onMessageResponse?.(messageId, response);
+              }}
+            />
+          )}
+
+          {activeTab === 'actions' && (
+            <div className="space-y-4">
+              <div className="text-center py-8 text-slate-400">
+                <div className="text-4xl mb-2">🚧</div>
+                <div>Enhanced Diplomacy Actions</div>
+                <div className="text-sm">Coming soon - send ultimatums, trade proposals, and more!</div>
+              </div>
+            </div>
           )}
         </div>
       </Card>

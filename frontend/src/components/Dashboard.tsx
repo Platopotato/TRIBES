@@ -1381,6 +1381,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   playerTribe={playerTribe}
                   allTribes={allTribes}
                   diplomaticProposals={diplomaticProposals}
+                  diplomaticMessages={diplomaticMessages}
                   prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
                   onRespondToPrisonerExchange={(proposalId, response) => {
                     const action: GameAction = { id: `action-${Date.now()}`, actionType: ActionType.RespondToPrisonerExchange, actionData: { proposalId, response } } as any;
@@ -1392,6 +1393,10 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   onDeclareWar={onDeclareWar}
                   onAcceptProposal={onAcceptProposal}
                   onRejectProposal={onRejectProposal}
+                  onMessageResponse={(messageId, response) => {
+                    // Handle diplomatic message responses via Socket.IO
+                    console.log(`📨 Responding to message ${messageId} with ${response}`);
+                  }}
                 />
               )}
             </div>
@@ -1900,6 +1905,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     playerTribe={playerTribe}
                     allTribes={allTribes}
                     diplomaticProposals={diplomaticProposals}
+                    diplomaticMessages={diplomaticMessages}
                     prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
                     onRespondToPrisonerExchange={(proposalId, response) => {
                       // Create a response action to be added to planned actions
@@ -1912,6 +1918,10 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     onDeclareWar={onDeclareWar}
                     onAcceptProposal={onAcceptProposal}
                     onRejectProposal={onRejectProposal}
+                    onMessageResponse={(messageId, response) => {
+                      // Handle diplomatic message responses via Socket.IO
+                      console.log(`📨 Responding to message ${messageId} with ${response}`);
+                    }}
                   />
                 </div>
               </div>

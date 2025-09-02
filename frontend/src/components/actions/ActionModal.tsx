@@ -317,7 +317,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
       // Set the appropriate location field based on action type
       if (draftAction.actionType === ActionType.Move) {
         finalActionData.finish_location = selectedHexForDisplay;
-      } else if ([ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost].includes(draftAction.actionType)) {
+      } else if ([ActionType.Scout, ActionType.Attack, ActionType.Scavenge, ActionType.BuildOutpost, ActionType.Sabotage].includes(draftAction.actionType)) {
         finalActionData.target_location = selectedHexForDisplay;
       }
       console.log('✅ Using selected location:', selectedHexForDisplay, 'for action:', draftAction.actionType);

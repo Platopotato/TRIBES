@@ -420,7 +420,8 @@ function getDefaultEffects(): CombinedEffects {
         sabotageEffectiveness: 0,
         terrainMovementBonus: {},
         resourceCapacityBonus: 0,
-        chiefRecruitmentBonus: 0
+        chiefRecruitmentBonus: 0,
+        visibilityRangeBonus: 0
     };
 }
 

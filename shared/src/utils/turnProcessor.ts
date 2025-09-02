@@ -198,11 +198,26 @@ interface CombinedEffects {
 }
 
 function getCombinedEffects(tribe: any): CombinedEffects {
-    const effects: CombinedEffects = {
-        movementSpeedBonus: 1.0,
-        scavengeBonuses: { Food: 0, Scrap: 0, Weapons: 0 },
-        globalCombatAttackBonus: 0,
-        globalCombatDefenseBonus: 0,
+    // CRITICAL FIX: Add circuit breaker to prevent infinite loops
+    if (!tribe || typeof tribe !== 'object') {
+        console.error('🚨 EFFECTS ERROR: Invalid tribe object passed to getCombinedEffects');
+        return getDefaultEffects();
+    }
+
+    // Prevent infinite recursion by checking for processing flag
+    if (tribe._processingEffects) {
+        console.error('🚨 EFFECTS ERROR: Circular dependency detected in getCombinedEffects for', tribe.tribeName);
+        return getDefaultEffects();
+    }
+
+    tribe._processingEffects = true;
+
+    try {
+        const effects: CombinedEffects = {
+            movementSpeedBonus: 1.0,
+            scavengeBonuses: { Food: 0, Scrap: 0, Weapons: 0 },
+            globalCombatAttackBonus: 0,
+            globalCombatDefenseBonus: 0,
         terrainDefenseBonus: {
             // Base terrain defense bonuses
             [TerrainType.Mountains]: 0.30,    // +30% defense - highly defensible peaks
@@ -370,6 +385,43 @@ function getCombinedEffects(tribe: any): CombinedEffects {
     }
 
     return effects;
+    } catch (error) {
+        console.error('🚨 EFFECTS ERROR: Exception in getCombinedEffects for', tribe.tribeName, error);
+        return getDefaultEffects();
+    } finally {
+        // Always clean up the processing flag
+        delete tribe._processingEffects;
+    }
+}
+
+// Default effects to prevent crashes
+function getDefaultEffects(): CombinedEffects {
+    return {
+        movementSpeedBonus: 1.0,
+        scavengeBonuses: { Food: 0, Scrap: 0, Weapons: 0 },
+        globalCombatAttackBonus: 0,
+        globalCombatDefenseBonus: 0,
+        terrainDefenseBonus: {
+            [TerrainType.Mountains]: 0.30,
+            [TerrainType.Forest]: 0.15,
+            [TerrainType.Ruins]: 0.10,
+            [TerrainType.Desert]: 0.0,
+            [TerrainType.Wasteland]: 0.0,
+            [TerrainType.Plains]: -0.05,
+        },
+        passiveFoodGeneration: 0,
+        passiveScrapGeneration: 0,
+        researchSpeedBonus: 0,
+        moraleBonus: 0,
+        recruitmentCostReduction: 0,
+        weaponProductionBonus: 0,
+        tradeBonus: 0,
+        sabotageResistance: 0,
+        sabotageEffectiveness: 0,
+        terrainMovementBonus: {},
+        resourceCapacityBonus: 0,
+        chiefRecruitmentBonus: 0
+    };
 }
 
 // Calculate visibility range bonuses from technologies
@@ -4142,7 +4194,14 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     const poiIncome = processPOIPassiveIncome(tribe, state);
 
     // TECHNOLOGY PASSIVE EFFECTS: Apply passive food and scrap generation from completed technologies
-    const effects = getCombinedEffects(tribe);
+    let effects;
+    try {
+        effects = getCombinedEffects(tribe);
+    } catch (error) {
+        console.error(`🚨 UPKEEP ERROR: Failed to get combined effects for ${tribe.tribeName}:`, error);
+        effects = getDefaultEffects();
+    }
+
     let technologyIncomeMessage = '';
 
     if (effects.passiveFoodGeneration > 0) {
@@ -4827,11 +4886,17 @@ function processTechnologyProgress(tribe: any, project: ResearchProject): { mess
     let progressThisTurn = Math.floor(project.assignedTroops * 1);
 
     // NEW: Apply research speed bonus from technologies/assets
-    const effects = getCombinedEffects(tribe);
-    if (effects.researchSpeedBonus > 0) {
-        const bonus = Math.floor(progressThisTurn * effects.researchSpeedBonus);
-        progressThisTurn += bonus;
-        console.log(`🚀 RESEARCH SPEED BONUS: ${tribe.tribeName} gained +${bonus} research points from technology bonuses (+${Math.round(effects.researchSpeedBonus * 100)}%)`);
+    let effects;
+    try {
+        effects = getCombinedEffects(tribe);
+        if (effects.researchSpeedBonus > 0) {
+            const bonus = Math.floor(progressThisTurn * effects.researchSpeedBonus);
+            progressThisTurn += bonus;
+            console.log(`🚀 RESEARCH SPEED BONUS: ${tribe.tribeName} gained +${bonus} research points from technology bonuses (+${Math.round(effects.researchSpeedBonus * 100)}%)`);
+        }
+    } catch (error) {
+        console.error(`🚨 RESEARCH ERROR: Failed to get combined effects for ${tribe.tribeName}:`, error);
+        effects = getDefaultEffects();
     }
 
     // Apply home base efficiency modifier

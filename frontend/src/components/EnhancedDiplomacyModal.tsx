@@ -628,12 +628,22 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
     const currentMapSharingStatus = playerTribe.shareMapWithAllies !== false; // Default to true
     const allies = otherTribes.filter(t => getRelationshipStatus(t) === DiplomaticStatus.Alliance);
 
+    console.log('🗺️ INTELLIGENCE TAB RENDER:', {
+      playerTribeId: playerTribe.id,
+      globalMapSharing: currentMapSharingStatus,
+      mapSharingSettings: playerTribe.mapSharingSettings,
+      alliesCount: allies.length,
+      allies: allies.map(a => ({ id: a.id, name: a.tribeName }))
+    });
+
     // Helper function to check if map sharing is enabled for a specific ally
     const isMapSharingEnabledForAlly = (allyId: string): boolean => {
       // Check per-ally setting first, then fall back to global setting
       if (playerTribe.mapSharingSettings && playerTribe.mapSharingSettings.hasOwnProperty(allyId)) {
+        console.log(`🗺️ ALLY ${allyId} has specific setting:`, playerTribe.mapSharingSettings[allyId]);
         return playerTribe.mapSharingSettings[allyId];
       }
+      console.log(`🗺️ ALLY ${allyId} using global setting:`, currentMapSharingStatus);
       return currentMapSharingStatus; // Fall back to global setting
     };
 

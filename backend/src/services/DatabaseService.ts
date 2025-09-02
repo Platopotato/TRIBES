@@ -863,7 +863,7 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
-      diplomaticMessages: await this.loadDiplomaticMessagesWithFallback(dbGameState), // Load from DB with file fallback
+      diplomaticMessages: this.loadDiplomaticMessagesSyncWithFallback(dbGameState), // Load from DB with file fallback
       history: (() => {
         console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
         if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {
@@ -1556,6 +1556,24 @@ export class DatabaseService {
     }
   }
 
+  // Synchronous version for use in convertDbGameStateToGameState
+  private loadDiplomaticMessagesSyncWithFallback(dbGameState: any): any[] {
+    try {
+      // Try database first (if field exists and has data)
+      if (dbGameState.diplomaticMessages && Array.isArray(dbGameState.diplomaticMessages)) {
+        console.log(`📨 Loaded ${dbGameState.diplomaticMessages.length} diplomatic messages from DATABASE (sync)`);
+        return dbGameState.diplomaticMessages;
+      }
+
+      // Fallback to file storage (synchronous)
+      console.log(`📨 Database diplomaticMessages field empty/null, falling back to file storage (sync)`);
+      return this.loadDiplomaticMessagesSync();
+    } catch (error) {
+      console.error('❌ Error in loadDiplomaticMessagesSyncWithFallback:', error);
+      return this.loadDiplomaticMessagesSync(); // Final fallback to file
+    }
+  }
+
   private async loadDiplomaticMessages(): Promise<any[]> {
     try {
       const filePath = path.join(process.cwd(), 'data', 'diplomatic-messages.json');
@@ -1569,6 +1587,24 @@ export class DatabaseService {
       return [];
     } catch (error) {
       console.error('❌ Error loading diplomatic messages:', error);
+      return [];
+    }
+  }
+
+  // Synchronous version for use in non-async contexts
+  private loadDiplomaticMessagesSync(): any[] {
+    try {
+      const filePath = path.join(process.cwd(), 'data', 'diplomatic-messages.json');
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf-8');
+        const messages = JSON.parse(data);
+        console.log(`📨 Loaded ${messages.length} diplomatic messages from file storage (sync)`);
+        return messages;
+      }
+      console.log(`📨 No diplomatic messages file found, starting with empty array (sync)`);
+      return [];
+    } catch (error) {
+      console.error('❌ Error loading diplomatic messages (sync):', error);
       return [];
     }
   }

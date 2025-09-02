@@ -226,8 +226,8 @@ export class DatabaseService {
 
       // Convert database format back to GameState format
       const converted = this.convertDbGameStateToGameState(gameState);
-      const news = this.getNewsletterState();
-      const turnDeadline = this.getTurnDeadlineState();
+      const news = this.getNewsletterStateFromDb(gameState);
+      const turnDeadline = this.getTurnDeadlineFromDb(gameState);
       return { ...converted, newsletter: news, turnDeadline };
     } else {
       // File-based fallback
@@ -259,6 +259,24 @@ export class DatabaseService {
     }
   }
 
+  // Database-based newsletter methods (new)
+  private getNewsletterStateFromDb(dbGameState: any): NewsletterState {
+    try {
+      if (dbGameState.newsletter && typeof dbGameState.newsletter === 'object') {
+        console.log(`📰 Loaded newsletter from DATABASE`);
+        return dbGameState.newsletter as NewsletterState;
+      }
+
+      // Fallback to file storage for migration
+      console.log(`📰 Database newsletter field empty, falling back to file storage`);
+      return this.readNewsletterState();
+    } catch (error) {
+      console.error('❌ Error loading newsletter from database:', error);
+      return this.readNewsletterState();
+    }
+  }
+
+  // Legacy file-based methods (for fallback during migration)
   public getNewsletterState(): NewsletterState { return this.readNewsletterState(); }
   public setNewsletterState(n: NewsletterState): void { this.writeNewsletterState(n); }
 
@@ -282,14 +300,34 @@ export class DatabaseService {
       console.warn('⚠️ Could not write turn deadline file:', e);
     }
   }
+  // Database-based turn deadline methods (new)
+  private getTurnDeadlineFromDb(dbGameState: any): TurnDeadline | undefined {
+    try {
+      if (dbGameState.turnDeadline && typeof dbGameState.turnDeadline === 'object') {
+        console.log(`⏰ Loaded turn deadline from DATABASE`);
+        return dbGameState.turnDeadline as TurnDeadline;
+      }
+
+      // Fallback to file storage for migration
+      console.log(`⏰ Database turnDeadline field empty, falling back to file storage`);
+      return this.readTurnDeadlineState();
+    } catch (error) {
+      console.error('❌ Error loading turn deadline from database:', error);
+      return this.readTurnDeadlineState();
+    }
+  }
+
+  // Legacy file-based methods (for fallback during migration)
   public getTurnDeadlineState(): TurnDeadline | undefined { return this.readTurnDeadlineState(); }
   public setTurnDeadlineState(d?: TurnDeadline): void { this.writeTurnDeadlineState(d); }
 
   async updateGameState(gameState: GameState, skipValidation: boolean = false): Promise<void> {
     if (this.useDatabase && this.prisma) {
-      // Update database
+      // Update database (now includes newsletter, turnDeadline, and diplomaticMessages)
       await this.updateGameStateInDb(gameState);
       // Persist turn deadline separately in file (since DB schema doesn’t include it)
+      // Keep file backups for newsletter and turn deadline during migration period
+      this.setNewsletterState(gameState.newsletter || { newsletters: [], currentNewsletter: undefined });
       this.setTurnDeadlineState(gameState.turnDeadline);
       // Persist diplomatic messages using dual-write (database + file backup)
       if (gameState.diplomaticMessages) {
@@ -968,6 +1006,8 @@ export class DatabaseService {
             data: {
               turn: gameState.turn,
               startingLocations: gameState.startingLocations,
+              newsletter: gameState.newsletter as any,
+              turnDeadline: gameState.turnDeadline as any,
               suspended: gameState.suspended || false,
               suspensionMessage: gameState.suspensionMessage || null
             }

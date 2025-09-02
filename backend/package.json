@@ -15,6 +15,7 @@
     "db:migrate:resolve": "node resolve-migration.js",
     "db:migrate:safe": "npm run db:migrate:resolve && npm run db:migrate",
     "db:migrate:diplomatic": "node scripts/migrate-diplomatic-messages.js --force",
+    "db:migrate:file-data": "node scripts/migrate-file-data-to-database.js --force",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts"
   },

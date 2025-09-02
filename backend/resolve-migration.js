@@ -102,6 +102,27 @@ async function resolveMigration() {
       });
     });
 
+    // Step 7: Migrate file data to database
+    console.log('🔄 Migrating file data to database...');
+
+    const fileDataMigrationProcess = spawn('node', ['scripts/migrate-file-data-to-database.js', '--force'], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+
+    // Wait for file data migration to complete
+    await new Promise((resolve, reject) => {
+      fileDataMigrationProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('✅ File data migration completed successfully');
+          resolve();
+        } else {
+          console.warn('⚠️ File data migration failed, but continuing (non-critical)');
+          resolve(); // Don't fail the whole process for this
+        }
+      });
+    });
+
     console.log('🎉 Migration resolution complete');
 
   } catch (error) {

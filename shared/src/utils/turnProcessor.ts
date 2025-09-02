@@ -5123,12 +5123,19 @@ function generateEpicBattleNarrative(params: {
 
 // --- SABOTAGE ACTION PROCESSOR ---
 function processSabotageAction(tribe: any, action: any, state: any): string {
+    console.log(`🕵️ SABOTAGE START: ${tribe.tribeName} attempting ${action.actionData.sabotage_type}`);
+
     const { start_location, target_location, sabotage_type, troops, chiefsToMove, resource_target, amount } = action.actionData;
+    console.log(`🕵️ SABOTAGE PARAMS: from ${start_location} to ${target_location}, type: ${sabotage_type}`);
 
     // Validate inputs
     if (!start_location || !target_location || !sabotage_type) {
+        console.log(`❌ SABOTAGE VALIDATION FAILED: Missing parameters`);
         return `❌ Sabotage failed: Missing required mission parameters.`;
     }
+    console.log(`✅ SABOTAGE VALIDATION PASSED`);
+
+    console.log(`🔍 SABOTAGE: Looking for target tribe at ${target_location}`);
 
     // Set defaults for optional fields based on mission type
     const finalResourceTarget = resource_target || 'random';
@@ -5163,23 +5170,29 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
     }
 
     // Find target tribe
+    console.log(`🔍 SABOTAGE: Searching for target tribe with garrison at ${target_location}`);
     const targetTribe = state.tribes.find((t: any) =>
         t.garrisons && Object.keys(t.garrisons).includes(target_location)
     );
 
     if (!targetTribe) {
+        console.log(`❌ SABOTAGE: No target tribe found at ${target_location}`);
         return `❌ Sabotage failed: No tribe found at target location ${target_location}.`;
     }
+    console.log(`✅ SABOTAGE: Found target tribe ${targetTribe.tribeName} at ${target_location}`);
 
     if (targetTribe.id === tribe.id) {
         return `❌ Sabotage failed: Cannot sabotage your own tribe.`;
     }
 
     // Calculate distance and mission difficulty
+    console.log(`🗺️ SABOTAGE: Finding path from ${start_location} to ${target_location}`);
     const pathInfo = findPath(start_location, target_location, state.mapData);
     if (!pathInfo || !pathInfo.path) {
+        console.log(`❌ SABOTAGE: No path found from ${start_location} to ${target_location}`);
         return `❌ Sabotage failed: No path to target location.`;
     }
+    console.log(`✅ SABOTAGE: Path found, distance: ${pathInfo.cost}`);
 
     // Deduct operatives from source garrison (only if troops > 0)
     if (hasTroops) {

@@ -291,15 +291,27 @@ export class DatabaseService {
       await this.updateGameStateInDb(gameState);
       // Persist turn deadline separately in file (since DB schema doesn’t include it)
       this.setTurnDeadlineState(gameState.turnDeadline);
+      // Persist diplomatic messages separately in file (since DB schema doesn't include it yet)
+      if (gameState.diplomaticMessages) {
+        await this.saveDiplomaticMessages(gameState.diplomaticMessages);
+      }
     } else {
       // File-based fallback
       if (skipValidation) {
         // During backup loading, skip validation since users are loaded separately
         this.saveGameStateToFile(gameState);
+        // Also save diplomatic messages
+        if (gameState.diplomaticMessages) {
+          await this.saveDiplomaticMessages(gameState.diplomaticMessages);
+        }
       } else {
         // Normal operation - validate and clean game state first
         const cleanedGameState = await this.validateAndCleanGameState(gameState);
         this.saveGameStateToFile(cleanedGameState);
+        // Also save diplomatic messages
+        if (cleanedGameState.diplomaticMessages) {
+          await this.saveDiplomaticMessages(cleanedGameState.diplomaticMessages);
+        }
       }
     }
   }
@@ -851,7 +863,7 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
-      diplomaticMessages: [], // Initialize empty for now - will be populated from file storage
+      diplomaticMessages: await this.loadDiplomaticMessages(), // Load from file storage
       history: (() => {
         console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
         if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {
@@ -1523,6 +1535,39 @@ export class DatabaseService {
       }
 
       throw error;
+    }
+  }
+
+  // Diplomatic Messages File Storage
+  private async loadDiplomaticMessages(): Promise<any[]> {
+    try {
+      const filePath = path.join(process.cwd(), 'data', 'diplomatic-messages.json');
+      if (fs.existsSync(filePath)) {
+        const data = await fs.promises.readFile(filePath, 'utf-8');
+        const messages = JSON.parse(data);
+        console.log(`📨 Loaded ${messages.length} diplomatic messages from file storage`);
+        return messages;
+      }
+      console.log(`📨 No diplomatic messages file found, starting with empty array`);
+      return [];
+    } catch (error) {
+      console.error('❌ Error loading diplomatic messages:', error);
+      return [];
+    }
+  }
+
+  private async saveDiplomaticMessages(messages: any[]): Promise<void> {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        await fs.promises.mkdir(dataDir, { recursive: true });
+      }
+
+      const filePath = path.join(dataDir, 'diplomatic-messages.json');
+      await fs.promises.writeFile(filePath, JSON.stringify(messages, null, 2));
+      console.log(`📨 Saved ${messages.length} diplomatic messages to file storage`);
+    } catch (error) {
+      console.error('❌ Error saving diplomatic messages:', error);
     }
   }
 }

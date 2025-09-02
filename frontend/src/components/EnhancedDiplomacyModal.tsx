@@ -55,6 +55,19 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
   const [diplomaticAction, setDiplomaticAction] = useState<string | null>(null);
   const [actionData, setActionData] = useState<any>({});
   const [customMessage, setCustomMessage] = useState('');
+  const [proposalSent, setProposalSent] = useState<string | null>(null); // Track which proposal was sent
+
+  // Reset state when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setProposalSent(null);
+      setSelectedTribe(null);
+      setTradeTerms({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+      setDiplomaticAction(null);
+      setActionData({});
+      setCustomMessage('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -389,23 +402,41 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
             </div>
             
             <div className="flex space-x-2">
-              <Button 
-                onClick={() => {
-                  if (onProposeTradeAgreement) {
-                    onProposeTradeAgreement(selectedTribe.id, tradeTerms);
-                  }
-                  setSelectedTribe(null);
-                }}
-                className="bg-green-700 hover:bg-green-600"
-              >
-                📜 Propose Agreement
-              </Button>
-              <Button 
-                onClick={() => setSelectedTribe(null)}
-                className="bg-slate-700 hover:bg-slate-600"
-              >
-                Cancel
-              </Button>
+              {proposalSent === 'trade' ? (
+                <div className="flex items-center space-x-2">
+                  <div className="text-green-400 font-medium">✅ Trade proposal sent to {selectedTribe.tribeName}!</div>
+                  <Button
+                    onClick={() => {
+                      setProposalSent(null);
+                      setSelectedTribe(null);
+                      setTradeTerms({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+                    }}
+                    className="bg-blue-700 hover:bg-blue-600"
+                  >
+                    Send Another
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => {
+                      if (onProposeTradeAgreement) {
+                        onProposeTradeAgreement(selectedTribe.id, tradeTerms);
+                        setProposalSent('trade');
+                      }
+                    }}
+                    className="bg-green-700 hover:bg-green-600"
+                  >
+                    📜 Propose Agreement
+                  </Button>
+                  <Button
+                    onClick={() => setSelectedTribe(null)}
+                    className="bg-slate-700 hover:bg-slate-600"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

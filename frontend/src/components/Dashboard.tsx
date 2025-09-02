@@ -28,6 +28,7 @@ import Leaderboard from './Leaderboard';
 import PrisonerManagementModal from './PrisonerManagementModal';
 
 import { formatHexCoords, parseHexCoords } from '../lib/mapUtils';
+import { sendDiplomaticMessage } from '../lib/client';
 
 // Global type for field name and callback storage
 declare global {
@@ -1661,13 +1662,37 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
           onAcceptProposal={onAcceptProposal}
           onRejectProposal={onRejectProposal}
           onProposeTradeAgreement={(toTribeId, terms) => {
-            // Create diplomatic action for trade agreement
-            const action: GameAction = {
-              id: `action-${Date.now()}`,
-              actionType: ActionType.Trade,
-              actionData: { target_tribe_id: toTribeId, ...terms }
-            } as any;
-            setPlannedActions(prev => [...prev, action]);
+            // Send trade proposal via new diplomatic message system
+            if (playerTribe) {
+              const targetTribe = allTribes.find(t => t.id === toTribeId);
+              const offeringText = [
+                terms.food ? `${terms.food} Food` : null,
+                terms.scrap ? `${terms.scrap} Scrap` : null,
+                terms.weapons ? `${terms.weapons} Weapons` : null
+              ].filter(Boolean).join(', ') || 'nothing';
+
+              const tradeMessage = {
+                fromTribeId: playerTribe.id,
+                toTribeId,
+                messageData: {
+                  type: 'trade_proposal',
+                  subject: `Trade Agreement Proposal from ${playerTribe.tribeName}`,
+                  message: `${playerTribe.tribeName} proposes a trade agreement. We offer ${offeringText} in exchange for resources from your tribe. This agreement would last for ${terms.duration || 5} turns. Do you accept this trade proposal?`,
+                  data: {
+                    trade: {
+                      offering: { food: terms.food || 0, scrap: terms.scrap || 0, weapons: terms.weapons || 0 },
+                      requesting: { food: 0, scrap: 0, weapons: 0 }, // Will be negotiated
+                      duration: terms.duration || 5
+                    }
+                  },
+                  requiresResponse: true,
+                  expiresOnTurn: turn + 3
+                }
+              };
+
+              sendDiplomaticMessage(tradeMessage);
+              console.log(`🚛 Trade proposal sent to ${targetTribe?.tribeName}`);
+            }
           }}
           onShareIntelligence={(tribeId, info) => {
             // Toggle map sharing with allies

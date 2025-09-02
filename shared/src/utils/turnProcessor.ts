@@ -613,6 +613,8 @@ export function processGlobalTurn(gameState: GameState): GameState {
 
     // Process each tribe's actions
     for (const tribe of state.tribes) {
+        console.log(`🔄 PROCESSING TRIBE: ${tribe.tribeName} (${tribe.actions?.length || 0} actions)`);
+
         // Clear previous results: now done globally before the loop to avoid wiping
         // defender reports added during other tribes' actions.
         // (Intentionally not clearing per-tribe here.)
@@ -620,10 +622,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // CRITICAL FIX: Filter out any undefined values from exploredHexes
         tribe.exploredHexes = (tribe.exploredHexes || []).filter(hex => hex !== undefined && hex !== null);
 
-
-
-        // Process each action
-        for (const action of tribe.actions || []) {
+        // Process each action with timeout protection
+        for (let actionIndex = 0; actionIndex < (tribe.actions || []).length; actionIndex++) {
+            const action = tribe.actions[actionIndex];
+            console.log(`🎯 PROCESSING ACTION ${actionIndex + 1}/${tribe.actions.length} for ${tribe.tribeName}: ${action.actionType}`);
             let result = '';
 
             // DEBUG: Action processing debugging removed for shared package compatibility
@@ -632,23 +634,37 @@ export function processGlobalTurn(gameState: GameState): GameState {
             // Validate action data
             if (!action.actionData) {
                 result = `❌ Invalid action: ${action.actionType} - missing action data.`;
+                console.log(`❌ ACTION VALIDATION FAILED: ${tribe.tribeName} - ${action.actionType} missing data`);
             } else {
-                switch (action.actionType) {
-                case ActionType.Recruit:
-                    result = processRecruitAction(tribe, action);
-                    break;
-                case ActionType.Rest:
-                    result = processRestAction(tribe, action);
-                    break;
-                case ActionType.BuildOutpost:
-                    result = processBuildOutpostAction(tribe, action, state);
-                    break;
-                case ActionType.BuildWeapons:
-                    result = processBuildWeaponsAction(tribe, action);
-                    break;
-                case ActionType.Move:
-                    result = processMoveAction(tribe, action, state);
-                    break;
+                console.log(`⚙️ PROCESSING: ${tribe.tribeName} - ${action.actionType} with data:`, JSON.stringify(action.actionData));
+
+                try {
+                    switch (action.actionType) {
+                    case ActionType.Recruit:
+                        console.log(`👥 Processing Recruit for ${tribe.tribeName}`);
+                        result = processRecruitAction(tribe, action);
+                        console.log(`✅ Recruit completed for ${tribe.tribeName}`);
+                        break;
+                    case ActionType.Rest:
+                        console.log(`😴 Processing Rest for ${tribe.tribeName}`);
+                        result = processRestAction(tribe, action);
+                        console.log(`✅ Rest completed for ${tribe.tribeName}`);
+                        break;
+                    case ActionType.BuildOutpost:
+                        console.log(`🏗️ Processing BuildOutpost for ${tribe.tribeName}`);
+                        result = processBuildOutpostAction(tribe, action, state);
+                        console.log(`✅ BuildOutpost completed for ${tribe.tribeName}`);
+                        break;
+                    case ActionType.BuildWeapons:
+                        console.log(`🔨 Processing BuildWeapons for ${tribe.tribeName}`);
+                        result = processBuildWeaponsAction(tribe, action);
+                        console.log(`✅ BuildWeapons completed for ${tribe.tribeName}`);
+                        break;
+                    case ActionType.Move:
+                        console.log(`🚶 Processing Move for ${tribe.tribeName}`);
+                        result = processMoveAction(tribe, action, state);
+                        console.log(`✅ Move completed for ${tribe.tribeName}`);
+                        break;
                 case ActionType.Trade:
                     result = processTradeAction(tribe, action, state);
                     break;
@@ -691,10 +707,16 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     result = processSabotageAction(tribe, action, state);
                     break;
                 default:
+                    console.log(`❓ Unknown action type for ${tribe.tribeName}: ${action.actionType}`);
                     result = `${action.actionType} action processed (basic implementation).`;
+                }
+                } catch (actionError) {
+                    console.error(`🚨 ACTION ERROR: ${tribe.tribeName} - ${action.actionType} failed:`, actionError);
+                    result = `❌ Action failed: ${action.actionType} - ${actionError instanceof Error ? actionError.message : 'Unknown error'}`;
                 }
             }
 
+            console.log(`📝 STORING RESULT for ${tribe.tribeName} action ${actionIndex + 1}: ${result}`);
             tribe.lastTurnResults.push({
                 id: action.id,
                 actionType: action.actionType,
@@ -703,8 +725,12 @@ export function processGlobalTurn(gameState: GameState): GameState {
             });
         }
 
+        console.log(`✅ COMPLETED ALL ACTIONS for ${tribe.tribeName}`);
+
         // Basic upkeep
+        console.log(`🔧 PROCESSING UPKEEP for ${tribe.tribeName}`);
         processBasicUpkeep(tribe, state);
+        console.log(`✅ UPKEEP COMPLETED for ${tribe.tribeName}`);
 
         // CRITICAL: Complete turn state reset (same as Force Refresh admin function)
         tribe.actions = [];
@@ -714,8 +740,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // Backend will automatically clear lastTurnResults via applyForceRefreshToAllTribes
 
         // DEBUGGING: State reset completed for tribe
-        // Note: Logging removed for backend compatibility
+        console.log(`🔄 STATE RESET COMPLETED for ${tribe.tribeName}`);
     }
+
+    console.log(`🎯 ALL TRIBES PROCESSED - Moving to journeys and events`);
 
     // Process active journeys
     processActiveJourneys(state);

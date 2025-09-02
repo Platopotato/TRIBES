@@ -1695,6 +1695,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             }
           }}
           onShareIntelligence={(tribeId, info, targetTribeId) => {
+            console.log('🗺️ DASHBOARD onShareIntelligence called:', {
+              tribeId,
+              info,
+              targetTribeId,
+              onToggleMapSharingExists: !!onToggleMapSharing
+            });
             // Toggle map sharing with specific ally or globally
             if (info === 'enable') {
               onToggleMapSharing(true, targetTribeId);

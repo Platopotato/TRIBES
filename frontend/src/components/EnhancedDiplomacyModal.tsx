@@ -705,8 +705,17 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                 </div>
                 <button
                   onClick={() => {
+                    console.log('🗺️ TOGGLE CLICKED:', {
+                      allyId: ally.id,
+                      allyName: ally.tribeName,
+                      currentStatus: isEnabled,
+                      action: isEnabled ? 'disable' : 'enable',
+                      playerTribeId: playerTribe.id
+                    });
                     if (onShareIntelligence) {
                       onShareIntelligence(playerTribe.id, isEnabled ? 'disable' : 'enable', ally.id);
+                    } else {
+                      console.error('❌ onShareIntelligence handler not available');
                     }
                   }}
                   className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${

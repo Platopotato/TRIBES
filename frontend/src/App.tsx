@@ -338,7 +338,15 @@ const App: React.FC = () => {
   const handleAcceptProposal = (proposalId: string) => client.acceptProposal(proposalId);
   const handleRejectProposal = (proposalId: string) => client.rejectProposal(proposalId);
   const handleDeclareWar = (fromTribeId: string, toTribeId: string) => client.declareWar({ fromTribeId, toTribeId });
-  const handleToggleMapSharing = (tribeId: string, enable: boolean, targetTribeId?: string) => client.toggleMapSharing({ tribeId, enable, targetTribeId });
+  const handleToggleMapSharing = (tribeId: string, enable: boolean, targetTribeId?: string) => {
+    console.log('🗺️ APP handleToggleMapSharing called:', {
+      tribeId,
+      enable,
+      targetTribeId,
+      clientExists: !!client.toggleMapSharing
+    });
+    client.toggleMapSharing({ tribeId, enable, targetTribeId });
+  };
 
   const renderView = () => {
     if (isLoading || !gameState) {

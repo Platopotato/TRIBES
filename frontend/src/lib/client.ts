@@ -543,7 +543,15 @@ export const respondToMessage = createEmitter<{
 }>('respond_to_message');
 
 export const dismissMessage = createEmitter<string>('dismiss_message');
-export const toggleMapSharing = createEmitter<{ tribeId: string, enable: boolean, targetTribeId?: string }>('toggle_map_sharing');
+export const toggleMapSharing = (payload: { tribeId: string, enable: boolean, targetTribeId?: string }) => {
+  console.log('🗺️ CLIENT toggleMapSharing called:', payload);
+  if (socket && socket.connected) {
+    console.log(`🗺️ Socket connected (${socket.id}), emitting toggle_map_sharing`);
+    socket.emit('toggle_map_sharing', payload);
+  } else {
+    console.error(`🗺️ Socket not connected, cannot emit toggle_map_sharing. Socket state:`, socket ? { id: socket.id, connected: socket.connected } : 'null');
+  }
+};
 
 // Mobile offline action queuing
 const queueOfflineActions = () => {

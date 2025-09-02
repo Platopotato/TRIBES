@@ -48,6 +48,7 @@ interface DashboardProps {
   allAssetRequests: AssetRequest[];
   journeys: Journey[];
   diplomaticProposals: DiplomaticProposal[];
+  diplomaticMessages?: any[]; // Add diplomatic messages prop
   history?: any[]; // Add history prop
   onFinalizeTurn: (actions: GameAction[], journeyResponses: any) => void;
   onRequestChief: (chiefId: string, location: string) => void;
@@ -71,7 +72,7 @@ interface DashboardProps {
 type DashboardView = 'planning' | 'results' | 'waiting';
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, history, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, diplomaticMessages = [], history, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
 
   // Smart UI detection - mobile gets floating modals, desktop gets integrated windows
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);

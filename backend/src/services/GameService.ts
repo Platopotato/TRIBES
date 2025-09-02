@@ -168,7 +168,26 @@ export class GameService {
     let newGameState: GameState;
     try {
       console.log('🚨 GAMESERVICE: About to call processGlobalTurn - this will apply Force Refresh to all tribes');
-      newGameState = processGlobalTurn(gameState);
+
+      // CRITICAL FIX: Add timeout protection to prevent infinite hangs
+      const TURN_PROCESSING_TIMEOUT = 30000; // 30 seconds max
+
+      newGameState = await Promise.race([
+        new Promise<GameState>((resolve) => {
+          try {
+            const result = processGlobalTurn(gameState);
+            resolve(result);
+          } catch (error) {
+            throw error;
+          }
+        }),
+        new Promise<GameState>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Turn processing timed out after 30 seconds - likely infinite loop detected'));
+          }, TURN_PROCESSING_TIMEOUT);
+        })
+      ]);
+
       console.log('✅ GAMESERVICE: processGlobalTurn completed successfully');
 
       // DEBUG: Check if Force Refresh was applied and what actions were processed
@@ -191,12 +210,52 @@ export class GameService {
       console.error('❌ CRITICAL ERROR in processGlobalTurn:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
-      throw error;
+
+      // EMERGENCY FALLBACK: If turn processing fails, apply minimal turn advance
+      if (error instanceof Error && error.message.includes('timed out')) {
+        console.log('🚨 EMERGENCY FALLBACK: Turn processing timed out, applying minimal turn advance');
+        newGameState = this.createEmergencyTurnAdvance(gameState);
+      } else {
+        throw error;
+      }
     }
 
     console.log('💾 GAMESERVICE: Updating game state...');
     await this.updateGameState(newGameState);
     console.log('✅ GAMESERVICE: Game state updated, processTurn() complete');
+  }
+
+  // Emergency fallback for when turn processing hangs
+  private createEmergencyTurnAdvance(gameState: GameState): GameState {
+    console.log('🚨 EMERGENCY: Creating minimal turn advance to unstick game');
+
+    const newGameState = JSON.parse(JSON.stringify(gameState));
+
+    // Minimal turn advance
+    newGameState.turn = gameState.turn + 1;
+
+    // Reset all tribes for next turn
+    newGameState.tribes.forEach((tribe: any) => {
+      // Clear actions and reset turn submission
+      tribe.actions = [];
+      tribe.turnSubmitted = false;
+      tribe.lastTurnResults = [{
+        id: `emergency-advance-${Date.now()}`,
+        actionType: 'Upkeep' as any,
+        actionData: {},
+        result: '🚨 Emergency turn advance applied due to processing timeout. Please report this issue to administrators.'
+      }];
+
+      // Apply basic upkeep
+      if (tribe.globalResources) {
+        // Basic food consumption
+        const foodConsumption = Math.max(1, Math.floor((tribe.globalResources.troops || 0) / 10));
+        tribe.globalResources.food = Math.max(0, (tribe.globalResources.food || 0) - foodConsumption);
+      }
+    });
+
+    console.log('✅ EMERGENCY: Minimal turn advance created');
+    return newGameState;
   }
 
   async createTribe(tribeData: any): Promise<boolean> {

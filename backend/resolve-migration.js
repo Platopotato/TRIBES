@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+import { spawn } from 'child_process';
 
 async function resolveMigration() {
   console.log('🚀 MIGRATION RESOLVER: Starting migration resolution process...');
@@ -51,7 +52,6 @@ async function resolveMigration() {
     
     // Now run pending migrations
     console.log('🔄 Running pending migrations...');
-    const { spawn } = require('child_process');
 
     const migrateProcess = spawn('npx', ['prisma', 'migrate', 'deploy'], {
       stdio: 'inherit',

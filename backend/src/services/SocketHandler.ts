@@ -22,6 +22,7 @@ export class SocketHandler {
   private gameService: GameService;
   private authService: AuthService;
   private autoBackupService: AutoBackupService;
+  private recentActions: Map<string, number> = new Map(); // Track recent actions to prevent duplicates
 
   constructor(io: SocketIOServer, gameService: GameService, authService: AuthService, autoBackupService: AutoBackupService) {
     this.io = io;
@@ -320,11 +321,30 @@ export class SocketHandler {
 
     // Diplomacy handlers
     socket.on('propose_alliance', async ({ fromTribeId, toTribeId }) => {
+      // Prevent duplicate alliance proposals
+      const actionKey = `alliance-${fromTribeId}-${toTribeId}`;
+      if (this.isDuplicateAction(actionKey)) {
+        console.log(`🚫 Duplicate alliance proposal blocked: ${fromTribeId} → ${toTribeId}`);
+        return;
+      }
+
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
         const toTribe = gameState.tribes.find(t => t.id === toTribeId);
         if (fromTribe && toTribe) {
+          // Check for existing proposals
+          const existingProposal = gameState.diplomaticProposals.find(p =>
+            p.fromTribeId === fromTribeId && p.toTribeId === toTribeId && p.actionType === 'ProposeAlliance'
+          );
+          const existingMessage = gameState.diplomaticMessages?.find(m =>
+            m.fromTribeId === fromTribeId && m.toTribeId === toTribeId && m.type === 'alliance' && m.status === 'pending'
+          );
+
+          if (existingProposal || existingMessage) {
+            console.log(`🚫 Alliance proposal already exists: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+            return;
+          }
           // Create old-style proposal for backward compatibility
           gameState.diplomaticProposals.push({
             id: `proposal-${Date.now()}`,
@@ -367,11 +387,30 @@ export class SocketHandler {
     });
 
     socket.on('sue_for_peace', async ({ fromTribeId, toTribeId, reparations }) => {
+      // Prevent duplicate peace proposals
+      const actionKey = `peace-${fromTribeId}-${toTribeId}`;
+      if (this.isDuplicateAction(actionKey)) {
+        console.log(`🚫 Duplicate peace proposal blocked: ${fromTribeId} → ${toTribeId}`);
+        return;
+      }
+
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
         const toTribe = gameState.tribes.find(t => t.id === toTribeId);
         if (fromTribe && toTribe) {
+          // Check for existing proposals
+          const existingProposal = gameState.diplomaticProposals.find(p =>
+            p.fromTribeId === fromTribeId && p.toTribeId === toTribeId && p.actionType === 'SueForPeace'
+          );
+          const existingMessage = gameState.diplomaticMessages?.find(m =>
+            m.fromTribeId === fromTribeId && m.toTribeId === toTribeId && m.type === 'peace' && m.status === 'pending'
+          );
+
+          if (existingProposal || existingMessage) {
+            console.log(`🚫 Peace proposal already exists: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+            return;
+          }
           // Create old-style proposal for backward compatibility
           gameState.diplomaticProposals.push({
             id: `proposal-${Date.now()}`,
@@ -1337,6 +1376,27 @@ export class SocketHandler {
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
     });
+  }
+
+  private isDuplicateAction(actionKey: string, cooldownMs: number = 5000): boolean {
+    const now = Date.now();
+    const lastAction = this.recentActions.get(actionKey);
+
+    if (lastAction && (now - lastAction) < cooldownMs) {
+      return true; // Duplicate action within cooldown period
+    }
+
+    // Record this action and clean up old entries
+    this.recentActions.set(actionKey, now);
+
+    // Clean up entries older than 1 minute
+    for (const [key, timestamp] of this.recentActions.entries()) {
+      if (now - timestamp > 60000) {
+        this.recentActions.delete(key);
+      }
+    }
+
+    return false;
   }
 
   private async handleMessageAcceptance(message: any, gameState: any, responseData?: any) {

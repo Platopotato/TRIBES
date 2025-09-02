@@ -46,6 +46,8 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'messages' | 'actions'>('overview');
   const [warTarget, setWarTarget] = useState<Tribe | null>(null);
   const [peaceTarget, setPeaceTarget] = useState<Tribe | null>(null);
+  const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
+  const [recentActions, setRecentActions] = useState<Set<string>>(new Set());
 
   const otherTribes = allTribes.filter(t => t.id !== playerTribe.id && !t.isAI);
   const aiTribes = allTribes.filter(t => t.id !== playerTribe.id && t.isAI);
@@ -65,6 +67,66 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
       onSueForPeace(peaceTarget.id, reparations);
     }
     setPeaceTarget(null);
+  };
+
+  // Debounced action handlers with loading states
+  const handleProposeAlliance = (toTribeId: string) => {
+    const actionKey = `alliance-${toTribeId}`;
+
+    // Prevent duplicate actions
+    if (pendingActions.has(actionKey) || recentActions.has(actionKey)) {
+      console.log(`🚫 Alliance proposal to ${toTribeId} already in progress or recently sent`);
+      return;
+    }
+
+    // Set pending state
+    setPendingActions(prev => new Set(prev).add(actionKey));
+
+    // Call the actual handler
+    onProposeAlliance(toTribeId);
+
+    // Add to recent actions to prevent immediate re-sending
+    setRecentActions(prev => new Set(prev).add(actionKey));
+
+    // Clear pending state after delay
+    setTimeout(() => {
+      setPendingActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+    }, 2000);
+
+    // Clear recent actions after longer delay
+    setTimeout(() => {
+      setRecentActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+    }, 10000); // 10 seconds cooldown
+  };
+
+  const handleDeclareWar = (toTribeId: string) => {
+    const actionKey = `war-${toTribeId}`;
+
+    if (pendingActions.has(actionKey) || recentActions.has(actionKey)) {
+      console.log(`🚫 War declaration to ${toTribeId} already in progress or recently sent`);
+      return;
+    }
+
+    // Set pending and call handler
+    setPendingActions(prev => new Set(prev).add(actionKey));
+    setWarTarget(allTribes.find(t => t.id === toTribeId) || null);
+
+    // Clear pending after delay
+    setTimeout(() => {
+      setPendingActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+    }, 2000);
   };
 
   const getStatusPill = (relation: DiplomaticRelation) => {
@@ -113,8 +175,24 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                 </span>
               )}
               {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
-                <Button onClick={() => onProposeAlliance(tribe.id)} className="text-xs px-3 py-1 bg-green-800 hover:bg-green-700">
-                  🤝 Alliance
+                <Button
+                  onClick={() => handleProposeAlliance(tribe.id)}
+                  disabled={pendingActions.has(`alliance-${tribe.id}`) || recentActions.has(`alliance-${tribe.id}`)}
+                  className={`text-xs px-3 py-1 transition-all ${
+                    pendingActions.has(`alliance-${tribe.id}`)
+                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                      : recentActions.has(`alliance-${tribe.id}`)
+                        ? 'bg-green-600 cursor-not-allowed opacity-75'
+                        : 'bg-green-800 hover:bg-green-700'
+                  }`}
+                >
+                  {pendingActions.has(`alliance-${tribe.id}`) ? (
+                    <>⏳ Sending...</>
+                  ) : recentActions.has(`alliance-${tribe.id}`) ? (
+                    <>✅ Sent</>
+                  ) : (
+                    <>🤝 Alliance</>
+                  )}
                 </Button>
               )}
                {relation.status === DiplomaticStatus.War && !isProposalPending && (
@@ -129,12 +207,20 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               )}
               {relation.status !== DiplomaticStatus.War && (
                  <Button
-                    onClick={() => setWarTarget(tribe)}
-                    className="text-xs px-3 py-1 bg-red-900 hover:bg-red-800"
-                    disabled={isTruceActive}
+                    onClick={() => handleDeclareWar(tribe.id)}
+                    className={`text-xs px-3 py-1 transition-all ${
+                      pendingActions.has(`war-${tribe.id}`)
+                        ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                        : 'bg-red-900 hover:bg-red-800'
+                    }`}
+                    disabled={isTruceActive || pendingActions.has(`war-${tribe.id}`)}
                     title={isTruceActive ? `Cannot declare war due to truce.` : `Declare war on ${tribe.tribeName}`}
                   >
-                    ⚔️ War
+                    {pendingActions.has(`war-${tribe.id}`) ? (
+                      <>⏳ Processing...</>
+                    ) : (
+                      <>⚔️ War</>
+                    )}
                 </Button>
               )}
             </div>

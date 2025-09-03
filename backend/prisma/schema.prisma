@@ -196,19 +196,21 @@ model DiplomaticProposal {
   id              String @id @default(cuid())
   fromTribeId     String
   toTribeId       String
-  statusChangeTo  String // DiplomaticStatus enum as string
+  actionType      String // DiplomaticActionType enum as string
+  statusChangeTo  String? // DiplomaticStatus enum as string (optional for trade proposals)
   expiresOnTurn   Int
   fromTribeName   String
   reparations     Json?  // Reparations object
+  tradeAgreement  Json?  // Trade agreement data
   gameStateId     String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   // Relations
   fromTribe       Tribe @relation("ProposalFrom", fields: [fromTribeId], references: [id], onDelete: Cascade)
   toTribe         Tribe @relation("ProposalTo", fields: [toTribeId], references: [id], onDelete: Cascade)
   gameState       GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
-  
+
   @@map("diplomatic_proposals")
 }
 

@@ -279,41 +279,46 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               <h4 className="font-semibold text-slate-300 mb-2">Incoming Proposals</h4>
               {incomingProposals.map(p => {
                 const turnsLeft = p.expiresOnTurn - turn;
-                const isPeaceTreaty = p.statusChangeTo === DiplomaticStatus.Neutral;
-                const isTradeProposal = p.actionType === DiplomaticActionType.ProposeTradeAgreement || p.tradeAgreement;
+
+                // Simple, clear logic based on actionType
+                let proposalType = 'alliance'; // default
+                let bgColor = 'bg-blue-900/50 border-blue-700';
+                let textColor = 'text-blue-300';
+                let icon = '🤝';
+                let title = 'Alliance';
+
+                if (p.actionType === DiplomaticActionType.ProposeTradeAgreement) {
+                  proposalType = 'trade';
+                  bgColor = 'bg-purple-900/50 border-purple-700';
+                  textColor = 'text-purple-300';
+                  icon = '🚛';
+                  title = 'Trade Agreement';
+                } else if (p.actionType === DiplomaticActionType.SueForPeace) {
+                  proposalType = 'peace';
+                  bgColor = 'bg-yellow-900/50 border-yellow-700';
+                  textColor = 'text-yellow-300';
+                  icon = '🕊️';
+                  title = 'Peace Treaty';
+                }
 
                 // Debug logging
                 console.log('🔍 Proposal debug:', {
                   id: p.id,
                   actionType: p.actionType,
-                  actionTypeString: String(p.actionType),
-                  expectedTradeType: DiplomaticActionType.ProposeTradeAgreement,
-                  expectedTradeTypeString: String(DiplomaticActionType.ProposeTradeAgreement),
-                  hasTradeAgreement: !!p.tradeAgreement,
-                  isTradeProposal,
-                  isPeaceTreaty,
-                  statusChangeTo: p.statusChangeTo,
-                  fullProposal: p
+                  proposalType,
+                  title,
+                  hasTradeAgreement: !!p.tradeAgreement
                 });
 
                 return (
-                  <div key={p.id} className={`p-3 border rounded-lg space-y-2 ${
-                    isTradeProposal ? 'bg-purple-900/50 border-purple-700' :
-                    isPeaceTreaty ? 'bg-yellow-900/50 border-yellow-700' :
-                    'bg-blue-900/50 border-blue-700'
-                  }`}>
-                    <p className={`font-bold text-sm ${
-                      isTradeProposal ? 'text-purple-300' :
-                      isPeaceTreaty ? 'text-yellow-300' :
-                      'text-blue-300'
-                    }`}>
-                      {isTradeProposal ? '🚛 Trade Agreement' :
-                       isPeaceTreaty ? 'Peace' : 'Alliance'} proposal from {p.fromTribeName}
+                  <div key={p.id} className={`p-3 border rounded-lg space-y-2 ${bgColor}`}>
+                    <p className={`font-bold text-sm ${textColor}`}>
+                      {icon} {title} proposal from {p.fromTribeName}
                     </p>
-                    {isPeaceTreaty && (
+                    {proposalType === 'peace' && p.reparations && (
                       <p className="text-xs text-slate-300">{formatReparations(p.reparations)}</p>
                     )}
-                    {isTradeProposal && p.tradeAgreement && (
+                    {proposalType === 'trade' && p.tradeAgreement && (
                       <div className="text-xs text-slate-300">
                         <p>They offer each turn:</p>
                         <div className="ml-2">

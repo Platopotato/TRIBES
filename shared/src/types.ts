@@ -265,32 +265,13 @@ export interface DiplomaticProposal {
     fromTribeId: string;
     toTribeId: string;
     actionType: DiplomaticActionType;
-    statusChangeTo?: DiplomaticStatus.Alliance | DiplomaticStatus.Neutral; // For alliance/peace proposals
+    statusChangeTo?: DiplomaticStatus.Alliance | DiplomaticStatus.Neutral; // For alliance/peace proposals (optional for trade)
     expiresOnTurn: number;
     fromTribeName: string;
     reparations?: {
         food: number;
         scrap: number;
         weapons: number;
-    };
-    demands?: {
-        food?: number;
-        scrap?: number;
-        weapons?: number;
-        territory?: string; // Hex location
-        message?: string;
-    };
-    tribute?: {
-        food?: number;
-        scrap?: number;
-        weapons?: number;
-        duration?: number; // Number of turns
-    };
-    nonAggressionDuration?: number; // Turns for non-aggression pact
-    passageRequest?: {
-        startLocation: string;
-        endLocation: string;
-        duration: number; // Turns
     };
     tradeAgreement?: {
         offering: { food: number; scrap: number };

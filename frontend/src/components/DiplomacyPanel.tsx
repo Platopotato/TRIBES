@@ -272,54 +272,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
           {activeTab === 'overview' && (
             <>
-          {/* Trade Agreement Messages */}
-          {diplomaticMessages.filter(msg =>
-            msg.toTribeId === playerTribe.id &&
-            msg.type === 'trade_proposal' &&
-            msg.status === 'pending' &&
-            msg.requiresResponse
-          ).length > 0 && (
-            <div className="space-y-3 mb-6">
-              <h4 className="font-semibold text-slate-300 mb-2">📜 Trade Agreement Proposals</h4>
-              {diplomaticMessages.filter(msg =>
-                msg.toTribeId === playerTribe.id &&
-                msg.type === 'trade_proposal' &&
-                msg.status === 'pending' &&
-                msg.requiresResponse
-              ).map(msg => (
-                <div key={msg.id} className="p-3 border rounded-lg bg-purple-900/50 border-purple-700 space-y-2">
-                  <p className="font-bold text-sm text-purple-300">
-                    Trade proposal from {msg.fromTribeName}
-                  </p>
-                  <p className="text-sm text-slate-300">{msg.message}</p>
-                  {msg.data?.trade && (
-                    <div className="text-sm">
-                      <div className="text-purple-400 font-medium">They offer:</div>
-                      <div className="ml-2">
-                        {msg.data.trade.offering.food > 0 && <div>🌾 {msg.data.trade.offering.food} Food per turn</div>}
-                        {msg.data.trade.offering.scrap > 0 && <div>🔩 {msg.data.trade.offering.scrap} Scrap per turn</div>}
-                      </div>
-                      <div className="text-purple-400 font-medium mt-2">Duration: {msg.data.trade.duration} turns</div>
-                    </div>
-                  )}
-                  <div className="flex space-x-2 mt-3">
-                    <button
-                      onClick={() => onMessageResponse?.(msg.id, 'accepted')}
-                      className="px-3 py-1 bg-green-700 hover:bg-green-600 text-white rounded text-sm"
-                    >
-                      ✅ Accept
-                    </button>
-                    <button
-                      onClick={() => onMessageResponse?.(msg.id, 'rejected')}
-                      className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-sm"
-                    >
-                      ❌ Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+
 
           {incomingProposals.length > 0 && (
             <div className="space-y-3">
@@ -327,13 +280,34 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               {incomingProposals.map(p => {
                 const turnsLeft = p.expiresOnTurn - turn;
                 const isPeaceTreaty = p.statusChangeTo === DiplomaticStatus.Neutral;
+                const isTradeProposal = p.actionType === 'ProposeTradeAgreement';
+
                 return (
-                  <div key={p.id} className={`p-3 border rounded-lg space-y-2 ${isPeaceTreaty ? 'bg-yellow-900/50 border-yellow-700' : 'bg-blue-900/50 border-blue-700'}`}>
-                    <p className={`font-bold text-sm ${isPeaceTreaty ? 'text-yellow-300' : 'text-blue-300'}`}>
-                      {isPeaceTreaty ? 'Peace' : 'Alliance'} proposal from {p.fromTribeName}
+                  <div key={p.id} className={`p-3 border rounded-lg space-y-2 ${
+                    isTradeProposal ? 'bg-purple-900/50 border-purple-700' :
+                    isPeaceTreaty ? 'bg-yellow-900/50 border-yellow-700' :
+                    'bg-blue-900/50 border-blue-700'
+                  }`}>
+                    <p className={`font-bold text-sm ${
+                      isTradeProposal ? 'text-purple-300' :
+                      isPeaceTreaty ? 'text-yellow-300' :
+                      'text-blue-300'
+                    }`}>
+                      {isTradeProposal ? '🚛 Trade Agreement' :
+                       isPeaceTreaty ? 'Peace' : 'Alliance'} proposal from {p.fromTribeName}
                     </p>
                     {isPeaceTreaty && (
                       <p className="text-xs text-slate-300">{formatReparations(p.reparations)}</p>
+                    )}
+                    {isTradeProposal && p.tradeAgreement && (
+                      <div className="text-xs text-slate-300">
+                        <p>They offer each turn:</p>
+                        <div className="ml-2">
+                          {p.tradeAgreement.offering.food > 0 && <div>🌾 {p.tradeAgreement.offering.food} Food</div>}
+                          {p.tradeAgreement.offering.scrap > 0 && <div>🔩 {p.tradeAgreement.offering.scrap} Scrap</div>}
+                        </div>
+                        <p className="mt-1">Duration: {p.tradeAgreement.duration} turns</p>
+                      </div>
                     )}
                     <p className={`text-xs ${turnsLeft <= 1 ? 'text-red-400' : 'text-slate-400'}`}>Expires in {turnsLeft} turn(s)</p>
                     <div className="flex justify-end space-x-2">

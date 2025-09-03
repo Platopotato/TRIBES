@@ -292,6 +292,10 @@ export interface DiplomaticProposal {
         endLocation: string;
         duration: number; // Turns
     };
+    tradeAgreement?: {
+        offering: { food: number; scrap: number };
+        duration: number; // Number of turns
+    };
 }
 
 export interface Tribe {

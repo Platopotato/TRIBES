@@ -480,9 +480,60 @@ export class SocketHandler {
         if (proposal) {
           const fromTribe = gameState.tribes.find(t => t.id === proposal.fromTribeId);
           const toTribe = gameState.tribes.find(t => t.id === proposal.toTribeId);
-          if (fromTribe && toTribe && proposal.statusChangeTo) {
-            fromTribe.diplomacy[toTribe.id] = { status: proposal.statusChangeTo };
-            toTribe.diplomacy[fromTribe.id] = { status: proposal.statusChangeTo };
+
+          if (fromTribe && toTribe) {
+            // Handle trade agreement proposals
+            if (proposal.actionType === 'ProposeTradeAgreement' && proposal.tradeAgreement) {
+              // Initialize trade agreements array if it doesn't exist
+              if (!gameState.tradeAgreements) {
+                gameState.tradeAgreements = [];
+              }
+
+              // Create the trade agreement
+              const tradeAgreement = {
+                id: `trade-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                fromTribeId: proposal.fromTribeId,
+                toTribeId: proposal.toTribeId,
+                fromTribeName: fromTribe.tribeName,
+                toTribeName: toTribe.tribeName,
+                terms: {
+                  fromTribeGives: proposal.tradeAgreement.offering,
+                  toTribeGives: { food: 0, scrap: 0 } // Simple one-way trade for now
+                },
+                duration: proposal.tradeAgreement.duration,
+                createdTurn: gameState.turn,
+                status: 'active' as const
+              };
+
+              gameState.tradeAgreements.push(tradeAgreement);
+
+              // Notify both tribes
+              fromTribe.lastTurnResults = fromTribe.lastTurnResults || [];
+              toTribe.lastTurnResults = toTribe.lastTurnResults || [];
+
+              fromTribe.lastTurnResults.push({
+                id: `trade-agreement-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `🤝 ${toTribe.tribeName} accepted your trade agreement! You will give ${proposal.tradeAgreement.offering.food} food and ${proposal.tradeAgreement.offering.scrap} scrap each turn for ${tradeAgreement.duration} turns.`
+              });
+
+              toTribe.lastTurnResults.push({
+                id: `trade-agreement-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `🤝 Trade agreement with ${fromTribe.tribeName} is now active! You will receive ${proposal.tradeAgreement.offering.food} food and ${proposal.tradeAgreement.offering.scrap} scrap each turn for ${tradeAgreement.duration} turns.`
+              });
+
+              console.log(`🚛 Trade agreement created: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+            }
+            // Handle alliance/peace proposals
+            else if (proposal.statusChangeTo) {
+              fromTribe.diplomacy[toTribe.id] = { status: proposal.statusChangeTo };
+              toTribe.diplomacy[fromTribe.id] = { status: proposal.statusChangeTo };
+            }
+
+            // Remove the proposal
             gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p => p.id !== proposalId);
             await this.gameService.updateGameState(gameState);
             await emitGameState();
@@ -497,6 +548,34 @@ export class SocketHandler {
         gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p => p.id !== proposalId);
         await this.gameService.updateGameState(gameState);
         await emitGameState();
+      }
+    });
+
+    // Simple trade proposal system
+    socket.on('propose_trade_agreement', async ({ fromTribeId, toTribeId, terms }) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
+        if (fromTribe) {
+          const tradeProposal = {
+            id: `trade-proposal-${Date.now()}`,
+            fromTribeId,
+            toTribeId,
+            actionType: 'ProposeTradeAgreement' as any,
+            expiresOnTurn: gameState.turn + 3,
+            fromTribeName: fromTribe.tribeName,
+            tradeAgreement: {
+              offering: { food: terms.food || 0, scrap: terms.scrap || 0 },
+              duration: terms.duration || 5
+            }
+          };
+
+          gameState.diplomaticProposals.push(tradeProposal);
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+
+          console.log(`🚛 Trade proposal sent: ${fromTribe.tribeName} → ${gameState.tribes.find(t => t.id === toTribeId)?.tribeName}`);
+        }
       }
     });
 

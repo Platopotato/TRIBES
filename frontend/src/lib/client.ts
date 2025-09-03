@@ -521,6 +521,7 @@ export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: strin
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
+export const proposeTradeAgreement = createEmitter<{ fromTribeId: string, toTribeId: string, terms: any }>('propose_trade_agreement');
 
 // New unified diplomatic message system
 export const sendDiplomaticMessage = createEmitter<{

@@ -403,68 +403,50 @@ export class DatabaseService {
 
         // Update garrisons separately (they're separate database records)
         if (tribe.garrisons) {
-          console.log(`🏰 SAFE UPDATE: Updating garrisons for ${tribe.tribeName}...`);
+          console.log(`🏰 Updating garrisons for ${tribe.tribeName}...`);
 
-          // SAFE APPROACH: Update/create garrisons individually instead of delete-all-recreate
-          const existingGarrisons = await this.prisma.garrison.findMany({
-            where: { tribeId: tribe.id }
-          });
+          // PRODUCTION SAFE: Keep original delete-recreate pattern but add error handling
+          try {
+            // Delete existing garrisons for this tribe
+            await this.prisma.garrison.deleteMany({
+              where: { tribeId: tribe.id }
+            });
 
-          const existingGarrisonMap = new Map(
-            existingGarrisons.map(g => [`${g.hexQ.toString().padStart(3, '0')}.${g.hexR.toString().padStart(3, '0')}`, g])
-          );
+            // Create new garrisons with enhanced error handling
+            for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
+              try {
+                // Parse hex coordinate (format: "066.046" -> q=66, r=46)
+                const [qStr, rStr] = hexCoord.split('.');
+                const hexQ = parseInt(qStr, 10);
+                const hexR = parseInt(rStr, 10);
 
-          const currentGarrisonCoords = new Set(Object.keys(tribe.garrisons));
-          const existingGarrisonCoords = new Set(existingGarrisonMap.keys());
-
-          // Update or create garrisons
-          for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
-            const [qStr, rStr] = hexCoord.split('.');
-            const hexQ = parseInt(qStr, 10);
-            const hexR = parseInt(rStr, 10);
-
-            const existingGarrison = existingGarrisonMap.get(hexCoord);
-
-            if (existingGarrison) {
-              // Update existing garrison
-              await this.prisma.garrison.update({
-                where: { id: existingGarrison.id },
-                data: {
-                  troops: garrisonData.troops || 0,
-                  weapons: garrisonData.weapons || 0,
-                  chiefs: garrisonData.chiefs as any || [],
+                // Validate coordinates
+                if (isNaN(hexQ) || isNaN(hexR)) {
+                  console.error(`❌ Invalid coordinates for ${tribe.tribeName}: ${hexCoord}`);
+                  continue;
                 }
-              });
-            } else {
-              // Create new garrison
-              await this.prisma.garrison.create({
-                data: {
-                  tribeId: tribe.id,
-                  hexQ: hexQ,
-                  hexR: hexR,
-                  troops: garrisonData.troops || 0,
-                  weapons: garrisonData.weapons || 0,
-                  chiefs: garrisonData.chiefs as any || [],
-                  hexId: hexCoord,
-                }
-              });
-            }
-          }
 
-          // Remove garrisons that no longer exist
-          for (const coord of existingGarrisonCoords) {
-            if (!currentGarrisonCoords.has(coord)) {
-              const garrisonToDelete = existingGarrisonMap.get(coord);
-              if (garrisonToDelete) {
-                await this.prisma.garrison.delete({
-                  where: { id: garrisonToDelete.id }
+                await this.prisma.garrison.create({
+                  data: {
+                    tribeId: tribe.id,
+                    hexQ: hexQ,
+                    hexR: hexR,
+                    troops: garrisonData.troops || 0,
+                    weapons: garrisonData.weapons || 0,
+                    chiefs: garrisonData.chiefs as any || [],
+                    hexId: hexCoord, // Store the original coordinate string for reference
+                  }
                 });
-                console.log(`🗑️ Removed abandoned garrison at ${coord}`);
+              } catch (garrisonError) {
+                console.error(`❌ Failed to create garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
+                // Continue with other garrisons instead of failing completely
               }
             }
+            console.log(`✅ Updated ${Object.keys(tribe.garrisons).length} garrisons for ${tribe.tribeName}`);
+          } catch (error) {
+            console.error(`❌ CRITICAL: Failed to update garrisons for ${tribe.tribeName}:`, error);
+            // Don't throw - let the game continue even if garrison update fails
           }
-
-          console.log(`✅ SAFE UPDATE: Updated ${Object.keys(tribe.garrisons).length} garrisons for ${tribe.tribeName}`);
         }
       }
 

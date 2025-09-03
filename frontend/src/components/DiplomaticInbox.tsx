@@ -242,9 +242,8 @@ const DiplomaticInbox: React.FC<DiplomaticInboxProps> = ({
                                                                     <div>
                                                                         <div className="text-sm text-slate-400">They Offer:</div>
                                                                         <ul className="space-y-1">
-                                                                            {message.data.trade.offering.food && <li>🌾 {message.data.trade.offering.food} Food</li>}
-                                                                            {message.data.trade.offering.scrap && <li>🔩 {message.data.trade.offering.scrap} Scrap</li>}
-                                                                            {message.data.trade.offering.weapons && <li>⚔️ {message.data.trade.offering.weapons} Weapons</li>}
+                                                                            {message.data.trade.offering.food && <li>🌾 {message.data.trade.offering.food} Food per turn</li>}
+                                                                            {message.data.trade.offering.scrap && <li>🔩 {message.data.trade.offering.scrap} Scrap per turn</li>}
                                                                         </ul>
                                                                     </div>
                                                                     <div>

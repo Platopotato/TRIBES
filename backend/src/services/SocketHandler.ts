@@ -1569,9 +1569,57 @@ export class SocketHandler {
         break;
 
       case 'trade_proposal':
-        // Handle trade agreement acceptance
-        // This would set up ongoing trade routes (implementation depends on trade system)
-        console.log(`🚛 Trade agreement accepted between ${fromTribe.tribeName} and ${toTribe.tribeName}`);
+        // Handle trade agreement acceptance - create ongoing trade agreement
+        if (message.data?.trade) {
+          // Initialize trade agreements array if it doesn't exist
+          if (!gameState.tradeAgreements) {
+            gameState.tradeAgreements = [];
+          }
+
+          // Create the trade agreement
+          const tradeAgreement = {
+            id: `trade-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fromTribeId: message.fromTribeId,
+            toTribeId: message.toTribeId,
+            fromTribeName: fromTribe.tribeName,
+            toTribeName: toTribe.tribeName,
+            terms: {
+              fromTribeGives: {
+                food: message.data.trade.offering.food || 0,
+                scrap: message.data.trade.offering.scrap || 0
+              },
+              toTribeGives: {
+                food: message.data.trade.requesting.food || 0,
+                scrap: message.data.trade.requesting.scrap || 0
+              }
+            },
+            duration: message.data.trade.duration || 5,
+            createdTurn: gameState.turn,
+            status: 'active' as const
+          };
+
+          gameState.tradeAgreements.push(tradeAgreement);
+
+          // Notify both tribes
+          fromTribe.lastTurnResults = fromTribe.lastTurnResults || [];
+          toTribe.lastTurnResults = toTribe.lastTurnResults || [];
+
+          fromTribe.lastTurnResults.push({
+            id: `trade-agreement-${Date.now()}`,
+            actionType: 'Trade' as any,
+            actionData: {},
+            result: `🤝 ${toTribe.tribeName} accepted your trade agreement! Resources will be exchanged automatically each turn for ${tradeAgreement.duration} turns.`
+          });
+
+          toTribe.lastTurnResults.push({
+            id: `trade-agreement-${Date.now()}`,
+            actionType: 'Trade' as any,
+            actionData: {},
+            result: `🤝 Trade agreement with ${fromTribe.tribeName} is now active! Resources will be exchanged automatically each turn for ${tradeAgreement.duration} turns.`
+          });
+
+          console.log(`🚛 Trade agreement created between ${fromTribe.tribeName} and ${toTribe.tribeName} for ${tradeAgreement.duration} turns`);
+        }
         break;
 
       default:

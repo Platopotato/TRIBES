@@ -296,9 +296,8 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                     <div className="text-sm">
                       <div className="text-purple-400 font-medium">They offer:</div>
                       <div className="ml-2">
-                        {msg.data.trade.offering.food > 0 && <div>🌾 {msg.data.trade.offering.food} Food</div>}
-                        {msg.data.trade.offering.scrap > 0 && <div>🔩 {msg.data.trade.offering.scrap} Scrap</div>}
-                        {msg.data.trade.offering.weapons > 0 && <div>⚔️ {msg.data.trade.offering.weapons} Weapons</div>}
+                        {msg.data.trade.offering.food > 0 && <div>🌾 {msg.data.trade.offering.food} Food per turn</div>}
+                        {msg.data.trade.offering.scrap > 0 && <div>🔩 {msg.data.trade.offering.scrap} Scrap per turn</div>}
                       </div>
                       <div className="text-purple-400 font-medium mt-2">Duration: {msg.data.trade.duration} turns</div>
                     </div>

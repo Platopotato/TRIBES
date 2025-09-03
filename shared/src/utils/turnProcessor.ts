@@ -754,6 +754,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
     // Process diplomatic proposals
     processDiplomaticProposals(state);
 
+    // Process trade agreements
+    processTradeAgreements(state);
+
     // Process prisoner exchange proposals (expiry)
     processPrisonerExchanges(state);
 
@@ -848,6 +851,127 @@ export function processGlobalTurn(gameState: GameState): GameState {
     }
 
     return state;
+}
+
+function processTradeAgreements(state: any): void {
+    if (!state.tradeAgreements) {
+        state.tradeAgreements = [];
+        return;
+    }
+
+    console.log(`🚛 PROCESSING TRADE AGREEMENTS: ${state.tradeAgreements.length} active agreements`);
+
+    // Process each active trade agreement
+    state.tradeAgreements.forEach((agreement: any) => {
+        if (agreement.status !== 'active') return;
+
+        const fromTribe = state.tribes.find((t: any) => t.id === agreement.fromTribeId);
+        const toTribe = state.tribes.find((t: any) => t.id === agreement.toTribeId);
+
+        if (!fromTribe || !toTribe) {
+            console.log(`❌ Trade agreement ${agreement.id}: One or both tribes not found`);
+            agreement.status = 'cancelled';
+            return;
+        }
+
+        // Check if both tribes have enough resources
+        const fromGives = agreement.terms.fromTribeGives;
+        const toGives = agreement.terms.toTribeGives;
+
+        const fromCanAfford = (fromTribe.globalResources.food >= fromGives.food) &&
+                             (fromTribe.globalResources.scrap >= fromGives.scrap);
+        const toCanAfford = (toTribe.globalResources.food >= toGives.food) &&
+                           (toTribe.globalResources.scrap >= toGives.scrap);
+
+        if (!fromCanAfford || !toCanAfford) {
+            // Cancel the agreement if either tribe can't afford it
+            agreement.status = 'cancelled';
+
+            const insufficientTribe = !fromCanAfford ? fromTribe : toTribe;
+            const otherTribe = !fromCanAfford ? toTribe : fromTribe;
+
+            insufficientTribe.lastTurnResults.push({
+                id: `trade-cancelled-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `❌ Trade agreement with ${otherTribe.tribeName} cancelled due to insufficient resources.`
+            });
+
+            otherTribe.lastTurnResults.push({
+                id: `trade-cancelled-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `❌ Trade agreement with ${insufficientTribe.tribeName} cancelled - they couldn't afford the exchange.`
+            });
+
+            console.log(`❌ Trade agreement cancelled: ${insufficientTribe.tribeName} insufficient resources`);
+            return;
+        }
+
+        // Execute the trade
+        fromTribe.globalResources.food -= fromGives.food;
+        fromTribe.globalResources.scrap -= fromGives.scrap;
+        fromTribe.globalResources.food += toGives.food;
+        fromTribe.globalResources.scrap += toGives.scrap;
+
+        toTribe.globalResources.food -= toGives.food;
+        toTribe.globalResources.scrap -= toGives.scrap;
+        toTribe.globalResources.food += fromGives.food;
+        toTribe.globalResources.scrap += fromGives.scrap;
+
+        // Add results to both tribes
+        const fromTradeText = [
+            fromGives.food > 0 ? `${fromGives.food} food` : null,
+            fromGives.scrap > 0 ? `${fromGives.scrap} scrap` : null
+        ].filter(Boolean).join(' and ');
+
+        const toTradeText = [
+            toGives.food > 0 ? `${toGives.food} food` : null,
+            toGives.scrap > 0 ? `${toGives.scrap} scrap` : null
+        ].filter(Boolean).join(' and ');
+
+        fromTribe.lastTurnResults.push({
+            id: `trade-executed-${Date.now()}`,
+            actionType: 'Trade' as any,
+            actionData: {},
+            result: `🚛 Trade with ${toTribe.tribeName}: Gave ${fromTradeText}, received ${toTradeText}. (${agreement.duration - 1} turns remaining)`
+        });
+
+        toTribe.lastTurnResults.push({
+            id: `trade-executed-${Date.now()}`,
+            actionType: 'Trade' as any,
+            actionData: {},
+            result: `🚛 Trade with ${fromTribe.tribeName}: Gave ${toTradeText}, received ${fromTradeText}. (${agreement.duration - 1} turns remaining)`
+        });
+
+        // Decrease duration
+        agreement.duration--;
+
+        if (agreement.duration <= 0) {
+            agreement.status = 'expired';
+
+            fromTribe.lastTurnResults.push({
+                id: `trade-expired-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `📜 Trade agreement with ${toTribe.tribeName} has expired.`
+            });
+
+            toTribe.lastTurnResults.push({
+                id: `trade-expired-${Date.now()}`,
+                actionType: 'Trade' as any,
+                actionData: {},
+                result: `📜 Trade agreement with ${fromTribe.tribeName} has expired.`
+            });
+
+            console.log(`📜 Trade agreement expired: ${fromTribe.tribeName} ↔ ${toTribe.tribeName}`);
+        } else {
+            console.log(`🚛 Trade executed: ${fromTribe.tribeName} ↔ ${toTribe.tribeName} (${agreement.duration} turns left)`);
+        }
+    });
+
+    // Clean up expired and cancelled agreements (keep for history)
+    // state.tradeAgreements = state.tradeAgreements.filter((a: any) => a.status === 'active');
 }
 
 // RANDOM EVENTS SYSTEM: Process environmental events, discoveries, and encounters

@@ -585,6 +585,21 @@ export interface DetailedTurnHistoryRecord {
     turnSummary: string;
 }
 
+export interface TradeAgreement {
+    id: string;
+    fromTribeId: string;
+    toTribeId: string;
+    fromTribeName: string;
+    toTribeName: string;
+    terms: {
+        fromTribeGives: { food: number; scrap: number };
+        toTribeGives: { food: number; scrap: number };
+    };
+    duration: number; // turns remaining
+    createdTurn: number;
+    status: 'active' | 'expired' | 'cancelled';
+}
+
 export interface GameState {
     mapData: HexData[];
     tribes: Tribe[];
@@ -596,6 +611,7 @@ export interface GameState {
     diplomaticProposals: DiplomaticProposal[];
     diplomaticMessages?: DiplomaticMessage[]; // New unified message system
     prisonerExchangeProposals?: PrisonerExchangeProposal[];
+    tradeAgreements?: TradeAgreement[]; // Active trade agreements
     history?: TurnHistoryRecord[];
     detailedHistory?: DetailedTurnHistoryRecord[];
     ticker?: TickerState;

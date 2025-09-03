@@ -51,7 +51,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<DiplomacyTab>('overview');
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
-  const [tradeTerms, setTradeTerms] = useState({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+  const [tradeTerms, setTradeTerms] = useState({ food: 0, scrap: 0, duration: 5 });
   const [diplomaticAction, setDiplomaticAction] = useState<string | null>(null);
   const [actionData, setActionData] = useState<any>({});
   const [customMessage, setCustomMessage] = useState('');
@@ -358,14 +358,16 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-slate-300 mb-1">Monthly Resource Exchange</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-slate-400">Food per turn</label>
                   <input
                     type="number"
                     value={tradeTerms.food}
                     onChange={(e) => setTradeTerms({...tradeTerms, food: parseInt(e.target.value) || 0})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded p-1 text-white text-sm"
+                    className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm"
+                    min="0"
+                    max="100"
                   />
                 </div>
                 <div>
@@ -374,16 +376,9 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                     type="number"
                     value={tradeTerms.scrap}
                     onChange={(e) => setTradeTerms({...tradeTerms, scrap: parseInt(e.target.value) || 0})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded p-1 text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Weapons per turn</label>
-                  <input
-                    type="number"
-                    value={tradeTerms.weapons}
-                    onChange={(e) => setTradeTerms({...tradeTerms, weapons: parseInt(e.target.value) || 0})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded p-1 text-white text-sm"
+                    className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm"
+                    min="0"
+                    max="100"
                   />
                 </div>
               </div>
@@ -409,7 +404,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
                     onClick={() => {
                       setProposalSent(null);
                       setSelectedTribe(null);
-                      setTradeTerms({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+                      setTradeTerms({ food: 0, scrap: 0, duration: 5 });
                     }}
                     className="bg-blue-700 hover:bg-blue-600"
                   >

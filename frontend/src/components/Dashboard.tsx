@@ -1667,8 +1667,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               const targetTribe = allTribes.find(t => t.id === toTribeId);
               const offeringText = [
                 terms.food ? `${terms.food} Food` : null,
-                terms.scrap ? `${terms.scrap} Scrap` : null,
-                terms.weapons ? `${terms.weapons} Weapons` : null
+                terms.scrap ? `${terms.scrap} Scrap` : null
               ].filter(Boolean).join(', ') || 'nothing';
 
               const tradeMessage = {
@@ -1680,8 +1679,8 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   message: `${playerTribe.tribeName} proposes a trade agreement. We offer ${offeringText} in exchange for resources from your tribe. This agreement would last for ${terms.duration || 5} turns. Do you accept this trade proposal?`,
                   data: {
                     trade: {
-                      offering: { food: terms.food || 0, scrap: terms.scrap || 0, weapons: terms.weapons || 0 },
-                      requesting: { food: 0, scrap: 0, weapons: 0 }, // Will be negotiated
+                      offering: { food: terms.food || 0, scrap: terms.scrap || 0 },
+                      requesting: { food: 0, scrap: 0 }, // Will be negotiated
                       duration: terms.duration || 5
                     }
                   },

@@ -34,6 +34,25 @@ export class SocketHandler {
     this.authService.setGameService(gameService);
   }
 
+  // Helper method to safely check hex existence in database
+  private async checkHexExistsInDatabase(q: number, r: number): Promise<{ exists: boolean; error?: string }> {
+    try {
+      // Access database through a public method by creating a temporary game state query
+      const gameState = await this.gameService.getGameState();
+      if (!gameState) {
+        return { exists: false, error: 'Game state not available' };
+      }
+
+      // We can't directly access the database, so we'll check if the hex exists in the loaded game state
+      // This tells us if the hex was successfully loaded from the database
+      const hexExists = gameState.mapData.some(h => h.q === q && h.r === r);
+
+      return { exists: hexExists };
+    } catch (error) {
+      return { exists: false, error: (error as Error).message || 'Unknown error' };
+    }
+  }
+
   handleConnection(socket: Socket): void {
     // Helper functions
     const emitGameState = async () => {
@@ -585,6 +604,82 @@ export class SocketHandler {
       } catch (error) {
         console.error(`❌ DEBUG ERROR for ${tribeName}:`, error);
         socket.emit('debug_result', { error: (error as Error).message || 'Unknown error' });
+      }
+    });
+
+    // DEBUG ENDPOINT: Check hex existence in database
+    socket.on('admin:debug_hex_existence', async ({ coordinate }) => {
+      console.log(`🔍 HEX DEBUG: Checking hex existence for coordinate: ${coordinate}`);
+
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (!gameState) {
+          socket.emit('hex_debug_result', { error: 'Game state not available' });
+          return;
+        }
+
+        // Parse coordinate (e.g., "027.054" -> q=-23, r=4)
+        const [qStr, rStr] = coordinate.split('.');
+        const gameStateQ = parseInt(qStr) - 50;
+        const gameStateR = parseInt(rStr) - 50;
+
+        // Check if hex exists in game state map data
+        const gameStateHex = gameState.mapData.find(h => h.q === gameStateQ && h.r === gameStateR);
+
+        // Try to access database through a safe method
+        // We'll create a temporary method to check database hex existence
+        const hexExistsInDb = await this.checkHexExistsInDatabase(gameStateQ, gameStateR);
+
+        // Also check nearby hexes to see the pattern
+        const nearbyChecks = [];
+        for (let dq = -2; dq <= 2; dq++) {
+          for (let dr = -2; dr <= 2; dr++) {
+            if (Math.abs(dq) + Math.abs(dr) <= 2) {
+              const nearbyQ = gameStateQ + dq;
+              const nearbyR = gameStateR + dr;
+              const nearbyCoord = `${String(50 + nearbyQ).padStart(3, '0')}.${String(50 + nearbyR).padStart(3, '0')}`;
+              const nearbyGameStateHex = gameState.mapData.find(h => h.q === nearbyQ && h.r === nearbyR);
+              const nearbyDbExists = await this.checkHexExistsInDatabase(nearbyQ, nearbyR);
+
+              nearbyChecks.push({
+                coordinate: nearbyCoord,
+                q: nearbyQ,
+                r: nearbyR,
+                inGameState: !!nearbyGameStateHex,
+                inDatabase: nearbyDbExists,
+                terrain: nearbyGameStateHex?.terrain || 'N/A'
+              });
+            }
+          }
+        }
+
+        const result = {
+          coordinate: coordinate,
+          parsedCoords: { q: gameStateQ, r: gameStateR },
+          gameState: {
+            exists: !!gameStateHex,
+            terrain: gameStateHex?.terrain || 'N/A',
+            poi: gameStateHex?.poi || null
+          },
+          database: {
+            exists: hexExistsInDb.exists,
+            error: hexExistsInDb.error || null
+          },
+          nearbyHexes: nearbyChecks,
+          analysis: {
+            issue: !gameStateHex ? 'Hex missing from game state map data' :
+                   !hexExistsInDb.exists ? 'Hex missing from database' :
+                   'Hex exists in both game state and database',
+            recommendation: !hexExistsInDb.exists ? 'Database hex records may be corrupted or incomplete' : 'No issues detected'
+          }
+        };
+
+        console.log(`🔍 HEX DEBUG RESULT for ${coordinate}:`, JSON.stringify(result, null, 2));
+        socket.emit('hex_debug_result', result);
+
+      } catch (error) {
+        console.error(`❌ HEX DEBUG ERROR for ${coordinate}:`, error);
+        socket.emit('hex_debug_result', { error: (error as Error).message || 'Unknown error' });
       }
     });
 

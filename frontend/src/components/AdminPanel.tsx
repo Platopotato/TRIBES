@@ -84,7 +84,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0);
   const [selectedTestTribeId, setSelectedTestTribeId] = useState('');
   const [debugTribeName, setDebugTribeName] = useState('The Rising Sun');
-  const [debugResult, setDebugResult] = useState<any>(null); // 0=not started, 1=first confirm, 2=final confirm
+  const [debugResult, setDebugResult] = useState<any>(null);
+  const [debugHexCoord, setDebugHexCoord] = useState('027.054');
+  const [hexDebugResult, setHexDebugResult] = useState<any>(null); // 0=not started, 1=first confirm, 2=final confirm
 
   // Game suspension
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
@@ -217,14 +219,20 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setDebugResult(result);
     };
 
+    const handleHexDebugResult = (result: any) => {
+      setHexDebugResult(result);
+    };
+
     const socket = client.getSocket();
     if (socket) {
       socket.on('debug_result', handleDebugResult);
+      socket.on('hex_debug_result', handleHexDebugResult);
     }
 
     return () => {
       if (socket) {
         socket.off('debug_result', handleDebugResult);
+        socket.off('hex_debug_result', handleHexDebugResult);
       }
     };
   }, []);
@@ -1140,6 +1148,99 @@ GAME STATISTICS:
                                   </div>
                                 </div>
                               ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Debug Hex Existence */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-300">🗺️ Hex Database Debug</h4>
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          className="flex-1 bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm"
+                          value={debugHexCoord}
+                          onChange={(e) => setDebugHexCoord(e.target.value)}
+                          placeholder="Hex coordinate (e.g., 027.054)..."
+                        />
+                        <Button
+                          onClick={() => {
+                            if (debugHexCoord.trim()) {
+                              client.debugHexExistence({ coordinate: debugHexCoord.trim() });
+                              setHexDebugResult(null);
+                            }
+                          }}
+                          disabled={!debugHexCoord.trim()}
+                          className="bg-green-600 hover:bg-green-700 text-sm px-3"
+                        >
+                          🗺️ Check Hex
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400">Check if hex exists in both game state and database</p>
+
+                      {hexDebugResult && (
+                        <div className="mt-3 p-3 bg-slate-800 border border-slate-600 rounded text-xs">
+                          {hexDebugResult.error ? (
+                            <div className="text-red-400">❌ Error: {hexDebugResult.error}</div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="text-blue-400">🗺️ Hex: {hexDebugResult.coordinate}</div>
+                              <div>📍 Parsed coords: q={hexDebugResult.parsedCoords?.q}, r={hexDebugResult.parsedCoords?.r}</div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="p-2 bg-slate-700 rounded">
+                                  <div className="font-medium">Game State</div>
+                                  <div className={hexDebugResult.gameState?.exists ? 'text-green-400' : 'text-red-400'}>
+                                    {hexDebugResult.gameState?.exists ? '✅ Exists' : '❌ Missing'}
+                                  </div>
+                                  {hexDebugResult.gameState?.terrain && (
+                                    <div>Terrain: {hexDebugResult.gameState.terrain}</div>
+                                  )}
+                                </div>
+
+                                <div className="p-2 bg-slate-700 rounded">
+                                  <div className="font-medium">Database</div>
+                                  <div className={hexDebugResult.database?.exists ? 'text-green-400' : 'text-red-400'}>
+                                    {hexDebugResult.database?.exists ? '✅ Exists' : '❌ Missing'}
+                                  </div>
+                                  {hexDebugResult.database?.error && (
+                                    <div className="text-red-400">Error: {hexDebugResult.database.error}</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="p-2 bg-slate-700 rounded">
+                                <div className="font-medium text-yellow-400">Analysis</div>
+                                <div>{hexDebugResult.analysis?.issue}</div>
+                                <div className="text-slate-400">{hexDebugResult.analysis?.recommendation}</div>
+                              </div>
+
+                              {hexDebugResult.nearbyHexes && hexDebugResult.nearbyHexes.length > 0 && (
+                                <div className="p-2 bg-slate-700 rounded">
+                                  <div className="font-medium">Nearby Hexes (5x5 area)</div>
+                                  <div className="grid grid-cols-5 gap-1 text-xs mt-1">
+                                    {hexDebugResult.nearbyHexes.map((hex: any, i: number) => (
+                                      <div
+                                        key={i}
+                                        className={`p-1 rounded text-center ${
+                                          hex.inGameState && hex.inDatabase ? 'bg-green-800' :
+                                          hex.inGameState ? 'bg-yellow-800' :
+                                          'bg-red-800'
+                                        }`}
+                                        title={`${hex.coordinate} (${hex.q},${hex.r}) - ${hex.terrain}`}
+                                      >
+                                        {hex.inGameState && hex.inDatabase ? '✅' :
+                                         hex.inGameState ? '⚠️' : '❌'}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    ✅ = Both, ⚠️ = Game only, ❌ = Neither
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

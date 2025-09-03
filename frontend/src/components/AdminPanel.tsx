@@ -223,16 +223,27 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setHexDebugResult(result);
     };
 
+    const handleTestTurnResult = (result: any) => {
+      console.log('🧪 Test turn result:', result);
+      if (result.success) {
+        alert(`✅ Test turn completed!\n\nTribe: ${result.tribe}\nActions processed: ${result.actionsProcessed}\n\n${result.message}`);
+      } else {
+        alert(`❌ Test turn failed: ${result.error}`);
+      }
+    };
+
     const socket = client.getSocket();
     if (socket) {
       socket.on('debug_result', handleDebugResult);
       socket.on('hex_debug_result', handleHexDebugResult);
+      socket.on('test_turn_result', handleTestTurnResult);
     }
 
     return () => {
       if (socket) {
         socket.off('debug_result', handleDebugResult);
         socket.off('hex_debug_result', handleHexDebugResult);
+        socket.off('test_turn_result', handleTestTurnResult);
       }
     };
   }, []);

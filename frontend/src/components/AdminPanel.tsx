@@ -217,10 +217,15 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setDebugResult(result);
     };
 
-    client.socket.on('debug_result', handleDebugResult);
+    const socket = client.getSocket();
+    if (socket) {
+      socket.on('debug_result', handleDebugResult);
+    }
 
     return () => {
-      client.socket.off('debug_result', handleDebugResult);
+      if (socket) {
+        socket.off('debug_result', handleDebugResult);
+      }
     };
   }, []);
 

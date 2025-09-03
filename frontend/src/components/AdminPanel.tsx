@@ -82,7 +82,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [dangerousActionConfirmStep, setDangerousActionConfirmStep] = useState<string | null>(null);
   const [confirmationText, setConfirmationText] = useState('');
   const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0);
-  const [selectedTestTribeId, setSelectedTestTribeId] = useState(''); // 0=not started, 1=first confirm, 2=final confirm
+  const [selectedTestTribeId, setSelectedTestTribeId] = useState('');
+  const [debugTribeName, setDebugTribeName] = useState('The Rising Sun');
+  const [debugResult, setDebugResult] = useState<any>(null); // 0=not started, 1=first confirm, 2=final confirm
 
   // Game suspension
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
@@ -209,6 +211,17 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Fetch current announcement on component mount
   useEffect(() => {
     fetchCurrentAnnouncement();
+
+    // Listen for debug results
+    const handleDebugResult = (result: any) => {
+      setDebugResult(result);
+    };
+
+    client.socket.on('debug_result', handleDebugResult);
+
+    return () => {
+      client.socket.off('debug_result', handleDebugResult);
+    };
   }, []);
 
   const fetchCurrentAnnouncement = async () => {
@@ -1070,6 +1083,62 @@ GAME STATISTICS:
                         </Button>
                       </div>
                       <p className="text-xs text-slate-400">Process one tribe's actions without advancing the global turn</p>
+                    </div>
+
+                    {/* Debug Tribe Garrison Status */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-300">🔍 Database Debug</h4>
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          className="flex-1 bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm"
+                          value={debugTribeName}
+                          onChange={(e) => setDebugTribeName(e.target.value)}
+                          placeholder="Tribe name to debug..."
+                        />
+                        <Button
+                          onClick={() => {
+                            if (debugTribeName.trim()) {
+                              client.debugTribeGarrison({ tribeName: debugTribeName.trim() });
+                              setDebugResult(null);
+                            }
+                          }}
+                          disabled={!debugTribeName.trim()}
+                          className="bg-blue-600 hover:bg-blue-700 text-sm px-3"
+                        >
+                          🔍 Debug
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400">Check tribe's garrison database status and foreign key issues</p>
+
+                      {debugResult && (
+                        <div className="mt-3 p-3 bg-slate-800 border border-slate-600 rounded text-xs">
+                          {debugResult.error ? (
+                            <div className="text-red-400">❌ Error: {debugResult.error}</div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="text-green-400">✅ Tribe: {debugResult.tribe?.name}</div>
+                              <div>📍 Location: {debugResult.tribe?.location}</div>
+                              <div>🏰 Garrisons: {debugResult.summary?.totalGarrisons}</div>
+                              <div>✅ Valid hex refs: {debugResult.summary?.validHexReferences}</div>
+                              <div>❌ Invalid hex refs: {debugResult.summary?.invalidHexReferences}</div>
+
+                              {debugResult.garrisons?.map((g: any, i: number) => (
+                                <div key={i} className="ml-2 p-2 bg-slate-700 rounded">
+                                  <div>Garrison {i + 1}: {g.troops} troops, {g.weapons} weapons</div>
+                                  <div>Coords: ({g.hexQ}, {g.hexR})</div>
+                                  <div className={g.hexIdFormat.includes('BAD') ? 'text-red-400' : 'text-green-400'}>
+                                    HexId: {g.hexIdFormat}
+                                  </div>
+                                  <div className={g.hexRecordExists ? 'text-green-400' : 'text-red-400'}>
+                                    Hex Record: {g.hexRecordExists ? '✅ Exists' : '❌ Missing'}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Process Turn Button with Multi-Step Safety */}

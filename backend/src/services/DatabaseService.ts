@@ -426,6 +426,20 @@ export class DatabaseService {
                   continue;
                 }
 
+                // CRITICAL FIX: Find the actual Hex record to get the proper hexId
+                const hexRecord = await this.prisma.hex.findFirst({
+                  where: {
+                    q: hexQ,
+                    r: hexR,
+                    gameStateId: currentGameState.id
+                  }
+                });
+
+                if (!hexRecord) {
+                  console.error(`❌ No hex record found for ${tribe.tribeName} at coordinates ${hexCoord} (q=${hexQ}, r=${hexR})`);
+                  continue;
+                }
+
                 await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
@@ -434,7 +448,7 @@ export class DatabaseService {
                     troops: garrisonData.troops || 0,
                     weapons: garrisonData.weapons || 0,
                     chiefs: garrisonData.chiefs as any || [],
-                    hexId: hexCoord, // Store the original coordinate string for reference
+                    hexId: hexRecord.id, // Use the actual Hex record ID, not coordinate string
                   }
                 });
               } catch (garrisonError) {

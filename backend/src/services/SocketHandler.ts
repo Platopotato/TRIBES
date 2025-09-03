@@ -527,6 +527,76 @@ export class SocketHandler {
       }
     });
 
+    // DEBUG ENDPOINT: Check tribe garrison database status
+    socket.on('admin:debug_tribe_garrison', async ({ tribeName }) => {
+      console.log(`🔍 DEBUG: Checking garrison status for tribe: ${tribeName}`);
+
+      try {
+        const databaseService = this.gameService.databaseService;
+        if (!databaseService.prisma) {
+          socket.emit('debug_result', { error: 'Database not available' });
+          return;
+        }
+
+        // Query 1: Basic tribe and garrison info
+        const tribeData = await databaseService.prisma.tribe.findFirst({
+          where: { tribeName: tribeName },
+          include: {
+            garrisons: true
+          }
+        });
+
+        if (!tribeData) {
+          socket.emit('debug_result', { error: `Tribe "${tribeName}" not found` });
+          return;
+        }
+
+        // Query 2: Check hex reference validity
+        const garrisonDetails = await Promise.all(
+          tribeData.garrisons.map(async (garrison) => {
+            const hexRecord = await databaseService.prisma.hex.findUnique({
+              where: { id: garrison.hexId }
+            });
+
+            return {
+              garrisonId: garrison.id,
+              hexQ: garrison.hexQ,
+              hexR: garrison.hexR,
+              troops: garrison.troops,
+              weapons: garrison.weapons,
+              hexId: garrison.hexId,
+              hexIdFormat: garrison.hexId.match(/^[0-9]{3}\.[0-9]{3}$/) ? 'COORDINATE_STRING (BAD)' :
+                          garrison.hexId.match(/^[a-z0-9]{25}$/) ? 'CUID (GOOD)' : 'UNKNOWN_FORMAT',
+              hexRecordExists: !!hexRecord,
+              hexRecordTerrain: hexRecord?.terrain || 'N/A'
+            };
+          })
+        );
+
+        const result = {
+          tribe: {
+            id: tribeData.id,
+            name: tribeData.tribeName,
+            location: tribeData.location,
+            createdAt: tribeData.createdAt
+          },
+          garrisons: garrisonDetails,
+          summary: {
+            totalGarrisons: tribeData.garrisons.length,
+            validHexReferences: garrisonDetails.filter(g => g.hexRecordExists).length,
+            invalidHexReferences: garrisonDetails.filter(g => !g.hexRecordExists).length
+          }
+        };
+
+        console.log(`🔍 DEBUG RESULT for ${tribeName}:`, JSON.stringify(result, null, 2));
+        socket.emit('debug_result', result);
+
+      } catch (error) {
+        console.error(`❌ DEBUG ERROR for ${tribeName}:`, error);
+        socket.emit('debug_result', { error: error.message });
+      }
+    });
+
     // SAFE TEST ENDPOINT: Process single tribe's actions without affecting others
     socket.on('admin:test_tribe_turn', async ({ tribeId }) => {
       console.log(`🧪 SAFE TEST: Processing turn for single tribe: ${tribeId}`);

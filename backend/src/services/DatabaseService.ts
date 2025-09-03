@@ -431,7 +431,7 @@ export class DatabaseService {
                   where: {
                     q: hexQ,
                     r: hexR,
-                    gameStateId: currentGameState.id
+                    gameStateId: existingGameState.id
                   }
                 });
 

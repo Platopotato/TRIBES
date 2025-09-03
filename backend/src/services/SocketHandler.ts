@@ -532,59 +532,50 @@ export class SocketHandler {
       console.log(`🔍 DEBUG: Checking garrison status for tribe: ${tribeName}`);
 
       try {
-        const databaseService = this.gameService.databaseService;
-        if (!databaseService.prisma) {
-          socket.emit('debug_result', { error: 'Database not available' });
+        // Get database service through public method
+        const gameState = await this.gameService.getGameState();
+        if (!gameState) {
+          socket.emit('debug_result', { error: 'Game state not available' });
           return;
         }
 
-        // Query 1: Basic tribe and garrison info
-        const tribeData = await databaseService.prisma.tribe.findFirst({
-          where: { tribeName: tribeName },
-          include: {
-            garrisons: true
-          }
-        });
-
-        if (!tribeData) {
+        // Find tribe in game state
+        const tribe = gameState.tribes.find(t => t.tribeName === tribeName);
+        if (!tribe) {
           socket.emit('debug_result', { error: `Tribe "${tribeName}" not found` });
           return;
         }
 
-        // Query 2: Check hex reference validity
-        const garrisonDetails = await Promise.all(
-          tribeData.garrisons.map(async (garrison) => {
-            const hexRecord = await databaseService.prisma.hex.findUnique({
-              where: { id: garrison.hexId }
-            });
-
-            return {
-              garrisonId: garrison.id,
-              hexQ: garrison.hexQ,
-              hexR: garrison.hexR,
-              troops: garrison.troops,
-              weapons: garrison.weapons,
-              hexId: garrison.hexId,
-              hexIdFormat: garrison.hexId.match(/^[0-9]{3}\.[0-9]{3}$/) ? 'COORDINATE_STRING (BAD)' :
-                          garrison.hexId.match(/^[a-z0-9]{25}$/) ? 'CUID (GOOD)' : 'UNKNOWN_FORMAT',
-              hexRecordExists: !!hexRecord,
-              hexRecordTerrain: hexRecord?.terrain || 'N/A'
-            };
-          })
-        );
+        // Analyze garrison data from game state
+        const garrisonDetails = Object.entries(tribe.garrisons || {}).map(([hexCoord, garrisonData]) => {
+          return {
+            hexCoord: hexCoord,
+            troops: (garrisonData as any).troops || 0,
+            weapons: (garrisonData as any).weapons || 0,
+            chiefs: (garrisonData as any).chiefs || [],
+            hexIdFormat: hexCoord.match(/^[0-9]{3}\.[0-9]{3}$/) ? 'COORDINATE_STRING (EXPECTED)' :
+                        hexCoord.match(/^[a-z0-9]{25}$/) ? 'CUID (UNEXPECTED)' : 'UNKNOWN_FORMAT'
+          };
+        });
 
         const result = {
           tribe: {
-            id: tribeData.id,
-            name: tribeData.tribeName,
-            location: tribeData.location,
-            createdAt: tribeData.createdAt
+            id: tribe.id,
+            name: tribe.tribeName,
+            location: tribe.location,
+            playerName: tribe.playerName
           },
           garrisons: garrisonDetails,
           summary: {
-            totalGarrisons: tribeData.garrisons.length,
-            validHexReferences: garrisonDetails.filter(g => g.hexRecordExists).length,
-            invalidHexReferences: garrisonDetails.filter(g => !g.hexRecordExists).length
+            totalGarrisons: garrisonDetails.length,
+            coordinateStringFormat: garrisonDetails.filter(g => g.hexIdFormat.includes('COORDINATE_STRING')).length,
+            otherFormats: garrisonDetails.filter(g => !g.hexIdFormat.includes('COORDINATE_STRING')).length
+          },
+          analysis: {
+            issue: garrisonDetails.length > 0 && garrisonDetails.every(g => g.hexIdFormat.includes('COORDINATE_STRING'))
+              ? 'CONFIRMED: Garrisons use coordinate strings in game state (this is normal)'
+              : 'Garrisons have mixed or unexpected formats',
+            recommendation: 'Check database directly to see if foreign key constraint violations occurred during save'
           }
         };
 
@@ -593,7 +584,7 @@ export class SocketHandler {
 
       } catch (error) {
         console.error(`❌ DEBUG ERROR for ${tribeName}:`, error);
-        socket.emit('debug_result', { error: error.message });
+        socket.emit('debug_result', { error: (error as Error).message || 'Unknown error' });
       }
     });
 

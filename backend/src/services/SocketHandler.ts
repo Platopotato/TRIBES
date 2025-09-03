@@ -649,7 +649,35 @@ export class SocketHandler {
       console.log(`🚫 Admin removing player: ${userId}`);
       const gameState = await this.gameService.getGameState();
       if (gameState) {
-        // Remove tribe associated with this player
+        // Find the tribe to be removed
+        const tribeToRemove = gameState.tribes.find(t => t.playerId === userId);
+        if (!tribeToRemove) {
+          console.log(`❌ No tribe found for user ${userId}`);
+          return;
+        }
+
+        console.log(`🗑️ Removing tribe: ${tribeToRemove.tribeName} (${tribeToRemove.id})`);
+
+        // CRITICAL FIX: Clean up diplomatic proposals involving this tribe
+        if (gameState.diplomaticProposals) {
+          const originalCount = gameState.diplomaticProposals.length;
+          gameState.diplomaticProposals = gameState.diplomaticProposals.filter(
+            proposal => proposal.fromTribeId !== tribeToRemove.id && proposal.toTribeId !== tribeToRemove.id
+          );
+          const removedCount = originalCount - gameState.diplomaticProposals.length;
+          if (removedCount > 0) {
+            console.log(`🗑️ Removed ${removedCount} diplomatic proposals involving ${tribeToRemove.tribeName}`);
+          }
+        }
+
+        // Clean up diplomacy references in other tribes
+        gameState.tribes.forEach(tribe => {
+          if (tribe.diplomacy && tribe.diplomacy[tribeToRemove.id]) {
+            delete tribe.diplomacy[tribeToRemove.id];
+          }
+        });
+
+        // Remove the tribe
         gameState.tribes = gameState.tribes.filter(t => t.playerId !== userId);
         await this.gameService.updateGameState(gameState);
 
@@ -658,7 +686,7 @@ export class SocketHandler {
 
         await emitGameState();
         await emitUsers();
-        console.log(`✅ Player ${userId} removed successfully`);
+        console.log(`✅ Player ${userId} and tribe ${tribeToRemove.tribeName} removed successfully`);
       }
     });
 

@@ -527,9 +527,9 @@ export class SocketHandler {
       }
     });
 
-    // TEST ENDPOINT: Process single tribe's turn for debugging
+    // SAFE TEST ENDPOINT: Process single tribe's actions without affecting others
     socket.on('admin:test_tribe_turn', async ({ tribeId }) => {
-      console.log(`🧪 TEST: Processing turn for single tribe: ${tribeId}`);
+      console.log(`🧪 SAFE TEST: Processing turn for single tribe: ${tribeId}`);
       const gameState = await this.gameService.getGameState();
       if (gameState) {
         const tribe = gameState.tribes.find(t => t.id === tribeId);
@@ -537,23 +537,38 @@ export class SocketHandler {
           console.log(`🧪 Found tribe: ${tribe.tribeName} with ${tribe.actions.length} actions`);
           console.log(`🧪 Current garrisons:`, Object.keys(tribe.garrisons));
 
-          // Process just this tribe's actions (without advancing global turn)
-          const { processTribeActions } = await import('../../shared/src/utils/turnProcessor');
+          // SAFE APPROACH: Process actions manually without using processTribeActions
+          // This avoids the dangerous action clearing and turn submission reset
 
-          // Create a copy to avoid modifying the real game state
-          const testGameState = JSON.parse(JSON.stringify(gameState));
-          const testTribe = testGameState.tribes.find((t: any) => t.id === tribeId);
+          const originalActions = [...tribe.actions];
+          const originalTurnSubmitted = tribe.turnSubmitted;
 
-          if (testTribe) {
-            processTribeActions(testTribe, testGameState);
+          try {
+            // Process each action individually (safe simulation)
+            for (let i = 0; i < tribe.actions.length; i++) {
+              const action = tribe.actions[i];
+              console.log(`🧪 Testing action ${i + 1}: ${action.actionType}`);
 
-            // Save only this tribe's changes to database (for testing)
-            await this.gameService.updateGameState(testGameState);
-            await emitGameState();
+              // Log what the action would do without actually executing it
+              if (action.actionType === 'Move') {
+                const startLoc = action.actionData?.start_location;
+                const destLoc = action.actionData?.finish_location;
+                const troops = action.actionData?.troops || 0;
+                console.log(`🧪 MOVE TEST: ${troops} troops from ${startLoc} to ${destLoc}`);
+                console.log(`🧪 Current garrison at ${startLoc}:`, tribe.garrisons[startLoc]);
+              }
+            }
 
-            console.log(`🧪 TEST COMPLETE: ${testTribe.tribeName} processed`);
-            console.log(`🧪 New garrisons:`, Object.keys(testTribe.garrisons));
-            console.log(`🧪 Last turn results:`, testTribe.lastTurnResults.slice(-3));
+            console.log(`🧪 SAFE TEST COMPLETE: ${tribe.tribeName} - actions simulated only`);
+            console.log(`🧪 No actual changes made to game state`);
+            console.log(`🧪 Actions preserved:`, tribe.actions.length);
+            console.log(`🧪 Turn submission status preserved:`, tribe.turnSubmitted);
+
+          } catch (error) {
+            console.error(`🧪 TEST ERROR for ${tribe.tribeName}:`, error);
+            // Restore original state if anything went wrong
+            tribe.actions = originalActions;
+            tribe.turnSubmitted = originalTurnSubmitted;
           }
         }
       }

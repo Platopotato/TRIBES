@@ -3,7 +3,7 @@
 
 /** @jsxImportSource react */
 import React, { useState } from 'react';
-import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticMessage } from '@radix-tribes/shared';
+import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticMessage, DiplomaticActionType } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
@@ -280,7 +280,17 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               {incomingProposals.map(p => {
                 const turnsLeft = p.expiresOnTurn - turn;
                 const isPeaceTreaty = p.statusChangeTo === DiplomaticStatus.Neutral;
-                const isTradeProposal = p.actionType === 'ProposeTradeAgreement';
+                const isTradeProposal = p.actionType === DiplomaticActionType.ProposeTradeAgreement || p.tradeAgreement;
+
+                // Debug logging
+                console.log('🔍 Proposal debug:', {
+                  id: p.id,
+                  actionType: p.actionType,
+                  hasTradeAgreement: !!p.tradeAgreement,
+                  isTradeProposal,
+                  isPeaceTreaty,
+                  statusChangeTo: p.statusChangeTo
+                });
 
                 return (
                   <div key={p.id} className={`p-3 border rounded-lg space-y-2 ${

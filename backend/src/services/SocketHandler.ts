@@ -337,17 +337,15 @@ export class SocketHandler {
           const existingProposal = gameState.diplomaticProposals.find(p =>
             p.fromTribeId === fromTribeId && p.toTribeId === toTribeId && p.actionType === 'ProposeAlliance'
           );
-          const existingMessage = gameState.diplomaticMessages?.find(m =>
-            m.fromTribeId === fromTribeId && m.toTribeId === toTribeId && m.type === 'alliance' && m.status === 'pending'
-          );
 
-          if (existingProposal || existingMessage) {
+          if (existingProposal) {
             console.log(`🚫 Alliance proposal already exists: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
             return;
           }
-          // Create old-style proposal for backward compatibility
+
+          // Create simple diplomatic proposal (same as trade proposals)
           gameState.diplomaticProposals.push({
-            id: `proposal-${Date.now()}`,
+            id: `alliance-proposal-${Date.now()}`,
             fromTribeId,
             toTribeId,
             actionType: DiplomaticActionType.ProposeAlliance,
@@ -356,32 +354,10 @@ export class SocketHandler {
             fromTribeName: fromTribe.tribeName
           });
 
-          // ALSO create new-style message for unified inbox
-          if (!gameState.diplomaticMessages) {
-            gameState.diplomaticMessages = [];
-          }
-
-          const allianceMessage = {
-            id: `msg-alliance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            type: 'alliance' as any,
-            fromTribeId,
-            fromTribeName: fromTribe.tribeName,
-            toTribeId,
-            subject: `Alliance Proposal from ${fromTribe.tribeName}`,
-            message: `${fromTribe.tribeName} proposes forming an alliance. Together we can achieve more than we could alone. Do you accept this alliance?`,
-            data: {},
-            requiresResponse: true,
-            expiresOnTurn: gameState.turn + 3,
-            status: 'pending' as any,
-            createdTurn: gameState.turn,
-            createdAt: new Date()
-          };
-
-          gameState.diplomaticMessages.push(allianceMessage);
           await this.gameService.updateGameState(gameState);
           await emitGameState();
 
-          console.log(`🤝 Alliance proposal sent: ${fromTribe.tribeName} → ${toTribe.tribeName} (both old and new systems)`);
+          console.log(`🤝 Alliance proposal sent: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
         }
       }
     });

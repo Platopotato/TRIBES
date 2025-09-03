@@ -631,7 +631,15 @@ export class SocketHandler {
         const hexExistsInDb = await this.checkHexExistsInDatabase(gameStateQ, gameStateR);
 
         // Also check nearby hexes to see the pattern
-        const nearbyChecks = [];
+        const nearbyChecks: Array<{
+          coordinate: string;
+          q: number;
+          r: number;
+          inGameState: boolean;
+          inDatabase: boolean;
+          terrain: string;
+        }> = [];
+
         for (let dq = -2; dq <= 2; dq++) {
           for (let dr = -2; dr <= 2; dr++) {
             if (Math.abs(dq) + Math.abs(dr) <= 2) {
@@ -646,7 +654,7 @@ export class SocketHandler {
                 q: nearbyQ,
                 r: nearbyR,
                 inGameState: !!nearbyGameStateHex,
-                inDatabase: nearbyDbExists,
+                inDatabase: nearbyDbExists.exists,
                 terrain: nearbyGameStateHex?.terrain || 'N/A'
               });
             }

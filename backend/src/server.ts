@@ -11,7 +11,7 @@ dotenv.config();
 
 // Migration resolution for production
 async function resolveMigrationIssues() {
-  console.log('🔧 SERVER STARTUP: Running migration resolution...');
+  console.log('🔧 SERVER STARTUP: Running migration resolution... (redeploy)');
   console.log('🔧 Environment:', process.env.NODE_ENV);
 
   try {

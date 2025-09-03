@@ -488,6 +488,7 @@ export const processTurn = () => {
 export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
 export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const removeJourney = createEmitter<string>('admin:removeJourney');
+export const testTribeTurn = createEmitter<{ tribeId: string }>('admin:test_tribe_turn');
 export const startNewGame = () => socket.emit('start_new_game');
 export const loadBackup = createEmitter<FullBackupState>('load_backup');
 export const requestEnhancedBackup = () => socket.emit('admin:requestEnhancedBackup');

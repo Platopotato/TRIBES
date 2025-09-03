@@ -527,6 +527,38 @@ export class SocketHandler {
       }
     });
 
+    // TEST ENDPOINT: Process single tribe's turn for debugging
+    socket.on('admin:test_tribe_turn', async ({ tribeId }) => {
+      console.log(`🧪 TEST: Processing turn for single tribe: ${tribeId}`);
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        const tribe = gameState.tribes.find(t => t.id === tribeId);
+        if (tribe) {
+          console.log(`🧪 Found tribe: ${tribe.tribeName} with ${tribe.actions.length} actions`);
+          console.log(`🧪 Current garrisons:`, Object.keys(tribe.garrisons));
+
+          // Process just this tribe's actions (without advancing global turn)
+          const { processTribeActions } = await import('../../shared/src/utils/turnProcessor');
+
+          // Create a copy to avoid modifying the real game state
+          const testGameState = JSON.parse(JSON.stringify(gameState));
+          const testTribe = testGameState.tribes.find((t: any) => t.id === tribeId);
+
+          if (testTribe) {
+            processTribeActions(testTribe, testGameState);
+
+            // Save only this tribe's changes to database (for testing)
+            await this.gameService.updateGameState(testGameState);
+            await emitGameState();
+
+            console.log(`🧪 TEST COMPLETE: ${testTribe.tribeName} processed`);
+            console.log(`🧪 New garrisons:`, Object.keys(testTribe.garrisons));
+            console.log(`🧪 Last turn results:`, testTribe.lastTurnResults.slice(-3));
+          }
+        }
+      }
+    });
+
     // Simple trade proposal system
     socket.on('propose_trade_agreement', async ({ fromTribeId, toTribeId, terms }) => {
       const gameState = await this.gameService.getGameState();

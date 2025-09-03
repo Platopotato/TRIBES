@@ -81,7 +81,8 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [safetyLockEnabled, setSafetyLockEnabled] = useState(true);
   const [dangerousActionConfirmStep, setDangerousActionConfirmStep] = useState<string | null>(null);
   const [confirmationText, setConfirmationText] = useState('');
-  const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0); // 0=not started, 1=first confirm, 2=final confirm
+  const [processTurnConfirmStep, setProcessTurnConfirmStep] = useState(0);
+  const [selectedTestTribeId, setSelectedTestTribeId] = useState(''); // 0=not started, 1=first confirm, 2=final confirm
 
   // Game suspension
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
@@ -1037,6 +1038,38 @@ GAME STATISTICS:
                       {!safetyLockEnabled && (
                         <p className="text-xs text-orange-400 mt-2">⚠️ Dangerous actions are now available. Use with extreme caution!</p>
                       )}
+                    </div>
+
+                    {/* Test Single Tribe Turn (for debugging) */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-300">🧪 Debug Tools</h4>
+                      <div className="flex space-x-2">
+                        <select
+                          className="flex-1 bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm"
+                          value={selectedTestTribeId}
+                          onChange={(e) => setSelectedTestTribeId(e.target.value)}
+                        >
+                          <option value="">Select tribe to test...</option>
+                          {gameState.tribes.map(tribe => (
+                            <option key={tribe.id} value={tribe.id}>
+                              {tribe.tribeName} ({tribe.actions.length} actions)
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          onClick={() => {
+                            if (selectedTestTribeId) {
+                              client.testTribeTurn({ tribeId: selectedTestTribeId });
+                              console.log(`🧪 Testing turn for tribe: ${selectedTestTribeId}`);
+                            }
+                          }}
+                          disabled={!selectedTestTribeId}
+                          className="bg-purple-600 hover:bg-purple-700 text-sm px-3"
+                        >
+                          🧪 Test Turn
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400">Process one tribe's actions without advancing the global turn</p>
                     </div>
 
                     {/* Process Turn Button with Multi-Step Safety */}

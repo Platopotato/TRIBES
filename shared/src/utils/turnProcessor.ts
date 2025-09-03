@@ -3037,9 +3037,36 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 	    const destKeyStd = convertToStandardFormat(destination);
 
 
-    const startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[startKey];
+    // CRITICAL FIX: Comprehensive garrison lookup for new tribes
+    let startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[startKey];
+
+    // Additional fallback: try all possible coordinate formats
     if (!startGarrison) {
-        return `❌ No garrison found at ${startKey} to move troops from.`;
+        // Try to find garrison by checking all keys
+        const allGarrisonKeys = Object.keys(tribe.garrisons);
+        console.log(`🔍 GARRISON DEBUG: Looking for garrison at ${startLocation} (normalized: ${startKey})`);
+        console.log(`🔍 Available garrisons:`, allGarrisonKeys);
+
+        // Try to find a matching garrison by coordinate conversion
+        for (const garrisonKey of allGarrisonKeys) {
+            const normalizedGarrisonKey = convertToStandardFormat(garrisonKey);
+            if (normalizedGarrisonKey === startKey) {
+                startGarrison = tribe.garrisons[garrisonKey];
+                console.log(`✅ Found garrison using key: ${garrisonKey} -> ${normalizedGarrisonKey}`);
+                break;
+            }
+        }
+    }
+
+    // Final fallback: if this is the tribe's home location, create a garrison
+    if (!startGarrison && tribe.location && (convertToStandardFormat(tribe.location) === startKey)) {
+        console.log(`🏠 GARRISON FIX: Creating missing home garrison for ${tribe.tribeName} at ${tribe.location}`);
+        startGarrison = { troops: 20, weapons: 10, chiefs: [] };
+        tribe.garrisons[tribe.location] = startGarrison;
+    }
+
+    if (!startGarrison) {
+        return `❌ No garrison found at ${startKey} to move troops from. Available garrisons: ${Object.keys(tribe.garrisons).join(', ')}`;
     }
 
     // Validate resources

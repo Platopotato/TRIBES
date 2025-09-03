@@ -286,10 +286,14 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                 console.log('🔍 Proposal debug:', {
                   id: p.id,
                   actionType: p.actionType,
+                  actionTypeString: String(p.actionType),
+                  expectedTradeType: DiplomaticActionType.ProposeTradeAgreement,
+                  expectedTradeTypeString: String(DiplomaticActionType.ProposeTradeAgreement),
                   hasTradeAgreement: !!p.tradeAgreement,
                   isTradeProposal,
                   isPeaceTreaty,
-                  statusChangeTo: p.statusChangeTo
+                  statusChangeTo: p.statusChangeTo,
+                  fullProposal: p
                 });
 
                 return (

@@ -537,13 +537,14 @@ export class SocketHandler {
             id: `trade-proposal-${Date.now()}`,
             fromTribeId,
             toTribeId,
-            actionType: 'ProposeTradeAgreement' as any,
+            actionType: DiplomaticActionType.ProposeTradeAgreement,
             expiresOnTurn: gameState.turn + 3,
             fromTribeName: fromTribe.tribeName,
             tradeAgreement: {
               offering: { food: terms.food || 0, scrap: terms.scrap || 0 },
               duration: terms.duration || 5
             }
+            // Note: No statusChangeTo for trade agreements - they don't change diplomatic status
           };
 
           gameState.diplomaticProposals.push(tradeProposal);

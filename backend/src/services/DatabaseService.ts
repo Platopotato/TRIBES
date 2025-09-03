@@ -415,42 +415,80 @@ export class DatabaseService {
             // Create new garrisons with enhanced error handling
             for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
               try {
-                // Parse hex coordinate (format: "066.046" -> q=66, r=46)
+                // Parse hex coordinate (format: "035.033")
                 const [qStr, rStr] = hexCoord.split('.');
-                const hexQ = parseInt(qStr, 10);
-                const hexR = parseInt(rStr, 10);
+                const q = parseInt(qStr, 10);
+                const r = parseInt(rStr, 10);
 
                 // Validate coordinates
-                if (isNaN(hexQ) || isNaN(hexR)) {
+                if (isNaN(q) || isNaN(r)) {
                   console.error(`❌ Invalid coordinates for ${tribe.tribeName}: ${hexCoord}`);
                   continue;
                 }
 
-                // CRITICAL FIX: Find the actual Hex record to get the proper hexId
-                const hexRecord = await this.prisma.hex.findFirst({
-                  where: {
-                    q: hexQ,
-                    r: hexR,
-                    gameStateId: existingGameState.id
-                  }
+                console.log(`🎯 GARRISON FIX: Looking for hex at ${hexCoord} for ${tribe.tribeName}`);
+
+                // CRITICAL FIX: Use same sophisticated hex lookup as restore method
+                let hexRecord: any = null;
+                let strategyUsed = "";
+
+                // Strategy 1: Direct lookup (for coordinates like 035.033 = q=35, r=33)
+                console.log(`🔍 Strategy 1: Direct lookup q=${q}, r=${r}`);
+                hexRecord = await this.prisma.hex.findFirst({
+                  where: { q, r, gameStateId: existingGameState.id }
                 });
+                if (hexRecord) {
+                  strategyUsed = "Direct lookup";
+                  console.log(`✅ SUCCESS! Strategy 1 worked: Direct lookup`);
+                }
 
                 if (!hexRecord) {
-                  console.error(`❌ No hex record found for ${tribe.tribeName} at coordinates ${hexCoord} (q=${hexQ}, r=${hexR})`);
+                  // Strategy 2: Offset coordinates (game state format: 035.033 -> q=-15, r=-17)
+                  const offsetQ = q - 50;
+                  const offsetR = r - 50;
+                  console.log(`🔍 Strategy 2: Offset coordinates q=${q}→${offsetQ}, r=${r}→${offsetR}`);
+                  hexRecord = await this.prisma.hex.findFirst({
+                    where: { q: offsetQ, r: offsetR, gameStateId: existingGameState.id }
+                  });
+                  if (hexRecord) {
+                    strategyUsed = "Offset coordinates";
+                    console.log(`✅ SUCCESS! Strategy 2 worked: Offset coordinates`);
+                  }
+                }
+
+                if (!hexRecord) {
+                  // Strategy 3: Backup transformation (backup coords to map coords)
+                  const transformedQ = q - 70;
+                  const transformedR = r - 40;
+                  console.log(`🔍 Strategy 3: Backup transformation q=${q}→${transformedQ}, r=${r}→${transformedR}`);
+                  hexRecord = await this.prisma.hex.findFirst({
+                    where: { q: transformedQ, r: transformedR, gameStateId: existingGameState.id }
+                  });
+                  if (hexRecord) {
+                    strategyUsed = "Backup transformation";
+                    console.log(`✅ SUCCESS! Strategy 3 worked: Backup transformation`);
+                  }
+                }
+
+                if (hexRecord) {
+                  console.log(`🎉 GARRISON SUCCESS: Found hex using ${strategyUsed} for ${tribe.tribeName} at ${hexCoord}`);
+                } else {
+                  console.error(`❌ GARRISON FAILED: All strategies failed for ${tribe.tribeName} at ${hexCoord}`);
                   continue;
                 }
 
                 await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
-                    hexQ: hexQ,
-                    hexR: hexR,
+                    hexQ: hexRecord.q, // Use the actual hex coordinates from database
+                    hexR: hexRecord.r, // Use the actual hex coordinates from database
                     troops: garrisonData.troops || 0,
                     weapons: garrisonData.weapons || 0,
                     chiefs: garrisonData.chiefs as any || [],
                     hexId: hexRecord.id, // Use the actual Hex record ID, not coordinate string
                   }
                 });
+                console.log(`✅ GARRISON CREATED: ${tribe.tribeName} at ${hexCoord} using ${strategyUsed}`);
               } catch (garrisonError) {
                 console.error(`❌ Failed to create garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
                 // Continue with other garrisons instead of failing completely

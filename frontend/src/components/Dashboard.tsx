@@ -28,7 +28,7 @@ import Leaderboard from './Leaderboard';
 import PrisonerManagementModal from './PrisonerManagementModal';
 
 import { formatHexCoords, parseHexCoords } from '../lib/mapUtils';
-import { sendDiplomaticMessage } from '../lib/client';
+import { sendDiplomaticMessage, respondToMessage } from '../lib/client';
 
 // Global type for field name and callback storage
 declare global {
@@ -1398,6 +1398,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   onMessageResponse={(messageId, response) => {
                     // Handle diplomatic message responses via Socket.IO
                     console.log(`📨 Responding to message ${messageId} with ${response}`);
+                    respondToMessage({ messageId, response });
                   }}
                 />
               )}
@@ -1952,6 +1953,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     onMessageResponse={(messageId, response) => {
                       // Handle diplomatic message responses via Socket.IO
                       console.log(`📨 Responding to message ${messageId} with ${response}`);
+                      respondToMessage({ messageId, response });
                     }}
                   />
                 </div>

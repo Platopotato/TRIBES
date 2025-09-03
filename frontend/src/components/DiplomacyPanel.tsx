@@ -272,6 +272,56 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
           {activeTab === 'overview' && (
             <>
+          {/* Trade Agreement Messages */}
+          {diplomaticMessages.filter(msg =>
+            msg.toTribeId === playerTribe.id &&
+            msg.type === 'trade_proposal' &&
+            msg.status === 'pending' &&
+            msg.requiresResponse
+          ).length > 0 && (
+            <div className="space-y-3 mb-6">
+              <h4 className="font-semibold text-slate-300 mb-2">📜 Trade Agreement Proposals</h4>
+              {diplomaticMessages.filter(msg =>
+                msg.toTribeId === playerTribe.id &&
+                msg.type === 'trade_proposal' &&
+                msg.status === 'pending' &&
+                msg.requiresResponse
+              ).map(msg => (
+                <div key={msg.id} className="p-3 border rounded-lg bg-purple-900/50 border-purple-700 space-y-2">
+                  <p className="font-bold text-sm text-purple-300">
+                    Trade proposal from {msg.fromTribeName}
+                  </p>
+                  <p className="text-sm text-slate-300">{msg.message}</p>
+                  {msg.data?.trade && (
+                    <div className="text-sm">
+                      <div className="text-purple-400 font-medium">They offer:</div>
+                      <div className="ml-2">
+                        {msg.data.trade.offering.food > 0 && <div>🌾 {msg.data.trade.offering.food} Food</div>}
+                        {msg.data.trade.offering.scrap > 0 && <div>🔩 {msg.data.trade.offering.scrap} Scrap</div>}
+                        {msg.data.trade.offering.weapons > 0 && <div>⚔️ {msg.data.trade.offering.weapons} Weapons</div>}
+                      </div>
+                      <div className="text-purple-400 font-medium mt-2">Duration: {msg.data.trade.duration} turns</div>
+                    </div>
+                  )}
+                  <div className="flex space-x-2 mt-3">
+                    <button
+                      onClick={() => onMessageResponse?.(msg.id, 'accepted')}
+                      className="px-3 py-1 bg-green-700 hover:bg-green-600 text-white rounded text-sm"
+                    >
+                      ✅ Accept
+                    </button>
+                    <button
+                      onClick={() => onMessageResponse?.(msg.id, 'rejected')}
+                      className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-sm"
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {incomingProposals.length > 0 && (
             <div className="space-y-3">
               <h4 className="font-semibold text-slate-300 mb-2">Incoming Proposals</h4>

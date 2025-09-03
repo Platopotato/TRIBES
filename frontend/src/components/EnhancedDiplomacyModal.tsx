@@ -62,7 +62,7 @@ const EnhancedDiplomacyModal: React.FC<EnhancedDiplomacyModalProps> = ({
     if (!isOpen) {
       setProposalSent(null);
       setSelectedTribe(null);
-      setTradeTerms({ food: 0, scrap: 0, weapons: 0, duration: 5 });
+      setTradeTerms({ food: 0, scrap: 0, duration: 5 });
       setDiplomaticAction(null);
       setActionData({});
       setCustomMessage('');

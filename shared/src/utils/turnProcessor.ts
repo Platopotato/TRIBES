@@ -3216,6 +3216,10 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         if (!destGarrison.chiefs) destGarrison.chiefs = [];
         destGarrison.chiefs.push(...movingChiefs);
 
+        // CRITICAL FIX: Update tribe location for fast-track movement
+        tribe.location = destKey;
+        console.log(`🚨🚨🚨 TRIBE LOCATION UPDATED: ${tribe.tribeName} moved from ${startKey} to ${destKey}`);
+
         // FOG OF WAR: Add destination and path hexes to explored hexes for fast movement
         if (!tribe.exploredHexes.includes(destKey)) {
             tribe.exploredHexes.push(destKey);

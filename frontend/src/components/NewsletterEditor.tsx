@@ -42,13 +42,15 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   });
 
   useEffect(() => {
-    if (turnNewsletter) {
-      setTitle(turnNewsletter.title);
-      setContent(turnNewsletter.content);
-      setIsEditing(false); // Show display mode when newsletter exists
-    } else {
-      setTitle(`Turn ${currentTurn} Newsletter`);
-      setContent(`# Turn ${currentTurn} Newsletter
+    // Only update local state if we're not currently editing
+    // This prevents overwriting user changes when newsletter updates after save
+    if (!isEditing) {
+      if (turnNewsletter) {
+        setTitle(turnNewsletter.title);
+        setContent(turnNewsletter.content);
+      } else {
+        setTitle(`Turn ${currentTurn} Newsletter`);
+        setContent(`# Turn ${currentTurn} Newsletter
 
 ## Major Events This Turn
 
@@ -78,9 +80,10 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
 
 ---
 *The Radix Tribes Chronicle - Turn ${currentTurn}*`);
-      setIsEditing(true); // Show editing mode when no newsletter exists
+        setIsEditing(true); // Show editing mode when no newsletter exists
+      }
     }
-  }, [turnNewsletter, currentTurn]);
+  }, [turnNewsletter, currentTurn, isEditing]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -95,7 +98,8 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
       isPublished: false
     });
 
-    // Don't set isEditing(false) here - let useEffect handle it when turnNewsletter updates
+    // Exit editing mode after save
+    setIsEditing(false);
   };
 
   const handlePublish = () => {

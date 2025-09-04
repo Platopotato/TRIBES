@@ -3038,6 +3038,8 @@ function processMoveAction(tribe: any, action: any, state: any): string {
 
 
     // CRITICAL FIX: Comprehensive garrison lookup for new tribes
+    console.log(`🔍 GARRISON LOOKUP: startLocation="${startLocation}", startKey="${startKey}"`);
+    console.log(`🔍 Available garrisons:`, Object.keys(tribe.garrisons));
     let startGarrison = tribe.garrisons[startLocation] || tribe.garrisons[startKey];
 
     // Additional fallback: try all possible coordinate formats
@@ -3148,11 +3150,21 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     const FAST_TRACK_THRESHOLD = 1;
     const isFastTrackable = arrivalTurn <= FAST_TRACK_THRESHOLD;
 
+    // CRITICAL DEBUG: Check object references before deduction
+    console.log(`🔍 BEFORE DEDUCTION: startGarrison === tribe.garrisons[startLocation]:`, startGarrison === tribe.garrisons[startLocation]);
+    console.log(`🔍 BEFORE DEDUCTION: startGarrison === tribe.garrisons[startKey]:`, startGarrison === tribe.garrisons[startKey]);
+    console.log(`🔍 BEFORE DEDUCTION: startGarrison.troops = ${startGarrison.troops}`);
+
     // Deduct forces from source garrison
     startGarrison.troops -= troopsToMove;
     startGarrison.weapons -= weaponsToMove;
     const movingChiefs = availableChiefs.filter((chief: any) => chiefsToMove.includes(chief.name));
     startGarrison.chiefs = availableChiefs.filter((chief: any) => !chiefsToMove.includes(chief.name));
+
+    // CRITICAL DEBUG: Check if deduction actually affected the garrison collection
+    console.log(`🔍 AFTER DEDUCTION: startGarrison.troops = ${startGarrison.troops}`);
+    console.log(`🔍 AFTER DEDUCTION: tribe.garrisons[startLocation]?.troops = ${tribe.garrisons[startLocation]?.troops}`);
+    console.log(`🔍 AFTER DEDUCTION: tribe.garrisons[startKey]?.troops = ${tribe.garrisons[startKey]?.troops}`);
 
     if (isFastTrackable) {
         // INSTANT MOVEMENT for short distances

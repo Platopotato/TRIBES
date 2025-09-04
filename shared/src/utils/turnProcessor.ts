@@ -3061,8 +3061,14 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     // Final fallback: if this is the tribe's home location, create a garrison
     if (!startGarrison && tribe.location && (convertToStandardFormat(tribe.location) === startKey)) {
         console.log(`🏠 GARRISON FIX: Creating missing home garrison for ${tribe.tribeName} at ${tribe.location}`);
-        startGarrison = { troops: 20, weapons: 10, chiefs: [] };
-        tribe.garrisons[tribe.location] = startGarrison;
+
+        // CRITICAL FIX: Check if garrison already exists before creating
+        if (!tribe.garrisons[tribe.location]) {
+            tribe.garrisons[tribe.location] = { troops: 20, weapons: 10, chiefs: [] };
+        }
+
+        // ALWAYS point to the actual garrison object in the collection
+        startGarrison = tribe.garrisons[tribe.location];
     }
 
     if (!startGarrison) {
@@ -3151,6 +3157,8 @@ function processMoveAction(tribe: any, action: any, state: any): string {
     if (isFastTrackable) {
         // INSTANT MOVEMENT for short distances
         const destKey = convertToStandardFormat(destination);
+
+
 
         // CRITICAL FIX: Check if hex has an empty outpost to capture (fast-track movement)
         const { q, r } = parseHexCoords(destKey);

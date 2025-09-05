@@ -605,6 +605,7 @@ export interface GameState {
     newsletter?: NewsletterState;
     suspended?: boolean;
     suspensionMessage?: string;
+    poiExtractionThisTurn?: Record<string, { food: number; scrap: number; weapons: number }>; // Track POI extraction per turn
     // These are now primarily for use within the map editor for generating new base maps
     mapSeed?: number;
     mapSettings?: MapSettings;

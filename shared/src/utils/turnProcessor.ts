@@ -2991,14 +2991,19 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
         return `No garrison found at ${location} to build weapons.`;
     }
 
-    const scrapCost = 3;
+    // Use player's scrap input, fallback to 3 for compatibility
+    const scrapCost = Math.max(1, parseInt(action.actionData.scrap) || 3);
     if (tribe.globalResources.scrap < scrapCost) {
         return `Insufficient scrap to build weapons. Need ${scrapCost} scrap, have ${tribe.globalResources.scrap}.`;
     }
 
-    // NEW: Apply weapon production bonus from technologies/assets
+    // Calculate weapons based on scrap input: 0.4 weapons per scrap + intelligence bonus
+    const intelligenceBonus = (tribe.stats?.intelligence || 0) * 0.02;
+    const baseWeaponsProduced = Math.floor(scrapCost * (0.4 + intelligenceBonus));
+    let weaponsProduced = Math.max(1, baseWeaponsProduced); // Minimum 1 weapon
+
+    // Apply weapon production bonus from technologies/assets
     const effects = getCombinedEffects(tribe);
-    let weaponsProduced = 1;
     if (effects.weaponProductionBonus > 0) {
         const bonusChance = effects.weaponProductionBonus;
         if (Math.random() < bonusChance) {
@@ -3011,8 +3016,9 @@ function processBuildWeaponsAction(tribe: any, action: any): string {
     tribe.globalResources.scrap -= scrapCost;
     garrison.weapons += weaponsProduced;
 
-    const bonusMessage = weaponsProduced > 1 ? ` (Bonus: +${weaponsProduced - 1} extra weapon!)` : '';
-    return `Successfully built ${weaponsProduced} weapon${weaponsProduced > 1 ? 's' : ''} at ${location}. Cost: ${scrapCost} scrap.${bonusMessage}`;
+    const bonusMessage = effects.weaponProductionBonus > 0 && weaponsProduced > baseWeaponsProduced ? ` (Tech Bonus: +${weaponsProduced - baseWeaponsProduced} extra weapon!)` : '';
+    const intelligenceMessage = intelligenceBonus > 0 ? ` (Intelligence bonus: +${Math.round(intelligenceBonus * 100)}%)` : '';
+    return `Successfully built ${weaponsProduced} weapon${weaponsProduced > 1 ? 's' : ''} at ${location}. Cost: ${scrapCost} scrap.${bonusMessage}${intelligenceMessage}`;
 }
 
 // --- PHASE 2: MOVEMENT & JOURNEY PROCESSORS ---

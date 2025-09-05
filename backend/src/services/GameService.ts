@@ -272,30 +272,47 @@ export class GameService {
     const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
     console.log(`🚫 Occupied set:`, Array.from(occupiedLocations));
 
-    // CRITICAL FIX: Check if starting locations exist and are valid
+    // CRITICAL DEBUG: Check if starting locations exist and are valid
     if (!gameState.startingLocations || gameState.startingLocations.length === 0) {
-      console.log(`🚨 CRITICAL: No starting locations found! Generating emergency starting locations...`);
-      gameState.startingLocations = [
-        "050.050", "052.048", "048.052", "054.046", "046.054",
-        "056.044", "044.056", "058.042", "042.058", "060.040"
-      ];
-      console.log(`🔧 Emergency starting locations created:`, gameState.startingLocations);
-      await this.updateGameState(gameState);
+      console.log(`🚨 CRITICAL BUG: No starting locations found in game state!`);
+      console.log(`🔍 This indicates a database loading or game state corruption issue`);
+      return false;
     }
 
-    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
-    console.log(`✅ Selected available start: ${availableStart}`);
+    // CRITICAL DEBUG: Test the find logic step by step
+    console.log(`🔍 TESTING STARTING LOCATION SELECTION LOGIC:`);
+    let availableStart: string | undefined = undefined;
 
-    // ADDITIONAL DEBUG: Check each starting location individually
-    console.log(`🔍 DETAILED STARTING LOCATION CHECK:`);
-    gameState.startingLocations.forEach((loc, index) => {
+    for (let i = 0; i < gameState.startingLocations.length; i++) {
+      const loc = gameState.startingLocations[i];
       const isOccupied = occupiedLocations.has(loc);
-      console.log(`  ${index + 1}. ${loc} - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
-    });
+      console.log(`  ${i + 1}. Testing "${loc}" - Occupied: ${isOccupied}`);
+
+      if (isOccupied) {
+        const occupyingTribe = gameState.tribes.find(t => t.location === loc);
+        console.log(`     Occupied by: ${occupyingTribe?.tribeName || 'Unknown tribe'}`);
+      }
+
+      if (!isOccupied && !availableStart) {
+        availableStart = loc;
+        console.log(`     ✅ SELECTED as first available!`);
+      }
+    }
+
+    console.log(`🎯 FINAL SELECTION: ${availableStart || 'NONE AVAILABLE'}`);
+
+    // Double-check with original find logic
+    const findResult = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+    console.log(`🔍 Original find() result: ${findResult}`);
+
+    if (availableStart !== findResult) {
+      console.log(`🚨 LOGIC MISMATCH: Manual selection (${availableStart}) != find() result (${findResult})`);
+    }
 
     if (!availableStart) {
       console.log(`❌ TRIBE CREATION FAILED: No available starting locations!`);
       console.log(`🔍 All ${gameState.startingLocations.length} starting locations are occupied`);
+      console.log(`🚨 This should not happen unless all starting locations are truly occupied`);
       return false;
     }
 

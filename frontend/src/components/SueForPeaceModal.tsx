@@ -18,8 +18,6 @@ const SueForPeaceModal: React.FC<SueForPeaceModalProps> = ({ isOpen, onClose, on
 
   if (!isOpen) return null;
 
-  const totalWeapons = Object.values(playerTribe.garrisons).reduce((sum, g) => sum + g.weapons, 0);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setReparations(prev => ({ ...prev, [name]: Math.max(0, parseInt(value) || 0) }));
@@ -27,7 +25,8 @@ const SueForPeaceModal: React.FC<SueForPeaceModalProps> = ({ isOpen, onClose, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(reparations);
+    // Always set weapons to 0 since they're not centralized
+    onSubmit({ ...reparations, weapons: 0 });
     onClose();
   };
 
@@ -36,7 +35,7 @@ const SueForPeaceModal: React.FC<SueForPeaceModalProps> = ({ isOpen, onClose, on
       <div className="w-full max-w-md" onClick={e => e.stopPropagation()}>
         <Card title={`Sue for Peace with ${targetTribe.tribeName}`}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-slate-400">Offer reparations to encourage them to accept peace. The resources will be transferred from your reserves if they accept.</p>
+            <p className="text-slate-400">Offer food and scrap as reparations to encourage them to accept peace. The resources will be transferred from your reserves if they accept.</p>
             
             <div>
               <SmartNumberInput
@@ -60,10 +59,7 @@ const SueForPeaceModal: React.FC<SueForPeaceModalProps> = ({ isOpen, onClose, on
                 showMaxButton={true}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Weapons (Your total: {totalWeapons})</label>
-              <input type="number" name="weapons" value={reparations.weapons} onChange={handleChange} min="0" max={totalWeapons} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2" />
-            </div>
+            {/* Weapons removed - not centralized, causes transfer issues */}
 
             <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
               <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>

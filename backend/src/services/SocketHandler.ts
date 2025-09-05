@@ -423,8 +423,8 @@ export class SocketHandler {
             gameState.diplomaticMessages = [];
           }
 
-          const reparationsText = reparations && (reparations.food || reparations.scrap || reparations.weapons)
-            ? `We offer the following reparations: ${reparations.food ? `${reparations.food} Food` : ''}${reparations.scrap ? ` ${reparations.scrap} Scrap` : ''}${reparations.weapons ? ` ${reparations.weapons} Weapons` : ''}.`
+          const reparationsText = reparations && (reparations.food || reparations.scrap)
+            ? `We offer the following reparations: ${reparations.food ? `${reparations.food} Food` : ''}${reparations.scrap ? ` ${reparations.scrap} Scrap` : ''}.`
             : 'We seek peace without reparations.';
 
           const peaceMessage = {
@@ -1827,18 +1827,7 @@ export class SocketHandler {
             fromTribe.globalResources.scrap = Math.max(0, (fromTribe.globalResources.scrap || 0) - reparations.scrap);
             toTribe.globalResources.scrap = (toTribe.globalResources.scrap || 0) + reparations.scrap;
           }
-          if (reparations.weapons) {
-            // Handle weapons transfer (more complex as they're garrison-specific)
-            const fromGarrisons = Object.values(fromTribe.garrisons || {});
-            const toGarrisons = Object.values(toTribe.garrisons || {});
-            if (fromGarrisons.length > 0 && toGarrisons.length > 0) {
-              const fromGarrison = fromGarrisons[0] as any;
-              const toGarrison = toGarrisons[0] as any;
-              const weaponsToTransfer = Math.min(reparations.weapons, fromGarrison.weapons || 0);
-              fromGarrison.weapons = (fromGarrison.weapons || 0) - weaponsToTransfer;
-              toGarrison.weapons = (toGarrison.weapons || 0) + weaponsToTransfer;
-            }
-          }
+          // Weapons removed from reparations - not centralized, causes transfer issues
         }
         break;
 

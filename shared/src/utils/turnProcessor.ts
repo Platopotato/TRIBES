@@ -3703,6 +3703,11 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     // Convert coordinates to standard format
     const location = convertToStandardFormat(locationRaw);
 
+    // Prevent scavenging where player has a garrison - source already gathered
+    if (tribe.garrisons[location]) {
+        return `❌ The source at ${location} has already been gathered by your stationed garrison. No additional resources obtained.`;
+    }
+
     // Add to explored hexes
     if (!tribe.exploredHexes.includes(location)) {
         tribe.exploredHexes.push(location);

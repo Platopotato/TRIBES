@@ -4872,19 +4872,23 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
 
         switch (poi.type) {
             case 'Factory':
-                // Factories produce food at 5x troop count
-                const foodProduced = troopCount * 5;
+                // Factories produce food at 5x troop count, capped at 500 per turn
+                const rawFoodProduced = troopCount * 5;
+                const foodProduced = Math.min(rawFoodProduced, 500);
                 tribe.globalResources.food += foodProduced;
                 totalFoodIncome += foodProduced;
-                incomeMessages.push(`🏭 Factory at ${location}: ${troopCount} troops produced ${foodProduced} food`);
+                const foodCapMessage = rawFoodProduced > 500 ? ` ⚠️ Large garrison capped at 500 food per turn.` : '';
+                incomeMessages.push(`🏭 Factory at ${location}: ${troopCount} troops produced ${foodProduced} food${foodCapMessage}`);
                 break;
 
             case 'Mine':
-                // Mines produce scrap at 5x troop count
-                const scrapProduced = troopCount * 5;
+                // Mines produce scrap at 5x troop count, capped at 500 per turn
+                const rawScrapProduced = troopCount * 5;
+                const scrapProduced = Math.min(rawScrapProduced, 500);
                 tribe.globalResources.scrap += scrapProduced;
                 totalScrapIncome += scrapProduced;
-                incomeMessages.push(`⛏️ Mine at ${location}: ${troopCount} troops produced ${scrapProduced} scrap`);
+                const scrapCapMessage = rawScrapProduced > 500 ? ` ⚠️ Large garrison capped at 500 scrap per turn.` : '';
+                incomeMessages.push(`⛏️ Mine at ${location}: ${troopCount} troops produced ${scrapProduced} scrap${scrapCapMessage}`);
                 break;
 
             case 'Food Source':

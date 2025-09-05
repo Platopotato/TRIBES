@@ -19,7 +19,7 @@ import HelpModal from './HelpModal';
 import ChiefStatusPanel from './ChiefStatusPanel';
 import CodexModal from './CodexModal';
 import QuickReference from './QuickReference';
-import EnhancedDiplomacyModal from './EnhancedDiplomacyModal';
+// import EnhancedDiplomacyModal from './EnhancedDiplomacyModal'; // Removed complex diplomacy
 import PendingTradesPanel from './PendingTradesPanel';
 
 import JourneysPanel from './JourneysPanel';
@@ -28,7 +28,7 @@ import Leaderboard from './Leaderboard';
 import PrisonerManagementModal from './PrisonerManagementModal';
 
 import { formatHexCoords, parseHexCoords } from '../lib/mapUtils';
-import { sendDiplomaticMessage, respondToMessage, proposeTradeAgreement } from '../lib/client';
+// import { sendDiplomaticMessage, respondToMessage, proposeTradeAgreement } from '../lib/client'; // Removed complex diplomacy
 
 // Global type for field name and callback storage
 declare global {
@@ -180,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [isCodexOpen, setIsCodexOpen] = useState(false);
   const [isQuickRefOpen, setIsQuickRefOpen] = useState(false);
   const [isDiplomacyModalOpen, setIsDiplomacyModalOpen] = useState(false);
-  const [isEnhancedDiplomacyOpen, setIsEnhancedDiplomacyOpen] = useState(false);
+  // const [isEnhancedDiplomacyOpen, setIsEnhancedDiplomacyOpen] = useState(false); // Removed complex diplomacy
   const [isChiefsModalOpen, setIsChiefsModalOpen] = useState(false);
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
   const [isStandingsModalOpen, setIsStandingsModalOpen] = useState(false);
@@ -674,7 +674,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   🔬 Research
                 </button>
                 <button
-                  onClick={() => setIsEnhancedDiplomacyOpen(true)}
+                  onClick={() => setIsDiplomacyModalOpen(true)}
                   className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
                 >
                   🤝 Diplomacy
@@ -1369,37 +1369,18 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         {activeTab === 'diplomacy' && (
           <div className="space-y-4">
             <div className="bg-slate-800 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-white">🤝 Diplomacy</h2>
-                <button
-                  onClick={() => setIsEnhancedDiplomacyOpen(true)}
-                  className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
-                >
-                  📋 Advanced Diplomacy
-                </button>
-              </div>
+              <h2 className="text-lg font-bold text-white mb-4">🤝 Diplomacy</h2>
               {playerTribe && (
                 <DiplomacyPanel
                   playerTribe={playerTribe}
                   allTribes={allTribes}
                   diplomaticProposals={diplomaticProposals}
-                  diplomaticMessages={diplomaticMessages}
-                  prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
-                  onRespondToPrisonerExchange={(proposalId, response) => {
-                    const action: GameAction = { id: `action-${Date.now()}`, actionType: ActionType.RespondToPrisonerExchange, actionData: { proposalId, response } } as any;
-                    setPlannedActions(prev => [...prev, action]);
-                  }}
                   turn={turn}
                   onProposeAlliance={onProposeAlliance}
                   onSueForPeace={onSueForPeace}
                   onDeclareWar={onDeclareWar}
                   onAcceptProposal={onAcceptProposal}
                   onRejectProposal={onRejectProposal}
-                  onMessageResponse={(messageId, response) => {
-                    // Handle diplomatic message responses via Socket.IO
-                    console.log(`📨 Responding to message ${messageId} with ${response}`);
-                    respondToMessage({ messageId, response });
-                  }}
                 />
               )}
             </div>
@@ -1648,71 +1629,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       {isCodexOpen && <CodexModal onClose={() => setIsCodexOpen(false)} allTribes={allTribes} allChiefRequests={allChiefRequests} allAssetRequests={allAssetRequests} />}
       {isQuickRefOpen && <QuickReference onClose={() => setIsQuickRefOpen(false)} />}
 
-      {/* Enhanced Diplomacy Modal */}
-      {isEnhancedDiplomacyOpen && playerTribe && (
-        <EnhancedDiplomacyModal
-          isOpen={isEnhancedDiplomacyOpen}
-          onClose={() => setIsEnhancedDiplomacyOpen(false)}
-          playerTribe={playerTribe}
-          allTribes={allTribes}
-          diplomaticProposals={diplomaticProposals}
-          turn={turn}
-          onProposeAlliance={onProposeAlliance}
-          onSueForPeace={onSueForPeace}
-          onDeclareWar={onDeclareWar}
-          onAcceptProposal={onAcceptProposal}
-          onRejectProposal={onRejectProposal}
-          onProposeTradeAgreement={(toTribeId, terms) => {
-            // Send trade proposal via simple diplomatic proposal system
-            if (playerTribe) {
-              proposeTradeAgreement({
-                fromTribeId: playerTribe.id,
-                toTribeId,
-                terms
-              });
-              console.log(`🚛 Simple trade proposal sent to ${allTribes.find(t => t.id === toTribeId)?.tribeName}`);
-            }
-          }}
-          onShareIntelligence={(tribeId, info, targetTribeId) => {
-            console.log('🗺️ DASHBOARD onShareIntelligence called:', {
-              tribeId,
-              info,
-              targetTribeId,
-              onToggleMapSharingExists: !!onToggleMapSharing
-            });
-            // Toggle map sharing with specific ally or globally
-            if (info === 'enable') {
-              onToggleMapSharing(true, targetTribeId);
-            } else if (info === 'disable') {
-              onToggleMapSharing(false, targetTribeId);
-            }
-          }}
-          onSendPeaceEnvoy={(toTribeId, message) => {
-            // Create diplomatic action for peace envoy
-            console.log(`Sending peace envoy to ${toTribeId}: ${message}`);
-          }}
-          onSendDemands={(toTribeId, demands) => {
-            // Create diplomatic action for demands
-            console.log(`Sending demands to ${toTribeId}:`, demands);
-          }}
-          onRequestAid={(toTribeId, request) => {
-            // Create diplomatic action for aid request
-            console.log(`Requesting aid from ${toTribeId}:`, request);
-          }}
-          onOfferTribute={(toTribeId, tribute) => {
-            // Create diplomatic action for tribute offer
-            console.log(`Offering tribute to ${toTribeId}:`, tribute);
-          }}
-          onProposeNonAggression={(toTribeId, duration) => {
-            // Create diplomatic action for non-aggression pact
-            console.log(`Proposing non-aggression pact with ${toTribeId} for ${duration} turns`);
-          }}
-          onRequestPassage={(toTribeId, passage) => {
-            // Create diplomatic action for passage request
-            console.log(`Requesting passage from ${toTribeId}:`, passage);
-          }}
-        />
-      )}
+      {/* Removed Enhanced Diplomacy Modal - using simple diplomacy only */}
 
       {/* Mobile Map Selection Overlay */}
       {showMapInModal && (
@@ -1916,24 +1833,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     playerTribe={playerTribe}
                     allTribes={allTribes}
                     diplomaticProposals={diplomaticProposals}
-                    diplomaticMessages={diplomaticMessages}
-                    prisonerExchangeProposals={(window as any).gameState?.prisonerExchangeProposals || []}
-                    onRespondToPrisonerExchange={(proposalId, response) => {
-                      // Create a response action to be added to planned actions
-                      const action: GameAction = { id: `action-${Date.now()}`, actionType: ActionType.RespondToPrisonerExchange, actionData: { proposalId, response } } as any;
-                      setPlannedActions(prev => [...prev, action]);
-                    }}
                     turn={turn}
                     onProposeAlliance={onProposeAlliance}
                     onSueForPeace={onSueForPeace}
                     onDeclareWar={onDeclareWar}
                     onAcceptProposal={onAcceptProposal}
                     onRejectProposal={onRejectProposal}
-                    onMessageResponse={(messageId, response) => {
-                      // Handle diplomatic message responses via Socket.IO
-                      console.log(`📨 Responding to message ${messageId} with ${response}`);
-                      respondToMessage({ messageId, response });
-                    }}
                   />
                 </div>
               </div>

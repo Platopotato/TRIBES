@@ -40,7 +40,11 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
     selectedTurn,
     mode,
     hasSelectedNewsletter: !!selectedNewsletter,
-    allNewslettersCount: allNewsletters.length
+    allNewslettersCount: allNewsletters.length,
+    selectedNewsletterTitle: selectedNewsletter?.title,
+    selectedNewsletterContent: selectedNewsletter?.content?.substring(0, 50) + '...',
+    currentNewsletterTitle: currentNewsletter?.title,
+    allNewsletterTurns: allNewsletters.map(n => n.turn)
   });
 
   const getNewsletterTemplate = (turn: number) => `# Turn ${turn} Newsletter

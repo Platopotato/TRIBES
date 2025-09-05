@@ -1196,16 +1196,28 @@ export class SocketHandler {
           // File-backed newsletter state
           const news = (this.gameService as any).database?.getNewsletterState?.() || (gameState.newsletter || { newsletters: [] });
 
-          // Generate ID and set published date
-          const newsletter = {
-            id: `newsletter-${Date.now()}`,
-            ...newsletterData,
-            publishedAt: new Date()
-          };
+          // Find existing newsletter for this turn
+          const idx = news.newsletters.findIndex((n: any) => n.turn === newsletterData.turn);
+          let newsletter;
 
-          // Update or add newsletter
-          const idx = news.newsletters.findIndex((n: any) => n.turn === newsletter.turn);
-          if (idx >= 0) news.newsletters[idx] = newsletter; else news.newsletters.push(newsletter);
+          if (idx >= 0) {
+            // Update existing newsletter - preserve ID and publishedAt
+            newsletter = {
+              ...news.newsletters[idx],
+              ...newsletterData,
+              // Keep original publishedAt if it exists, otherwise set new one
+              publishedAt: news.newsletters[idx].publishedAt || new Date()
+            };
+            news.newsletters[idx] = newsletter;
+          } else {
+            // Create new newsletter
+            newsletter = {
+              id: `newsletter-${Date.now()}`,
+              ...newsletterData,
+              publishedAt: new Date()
+            };
+            news.newsletters.push(newsletter);
+          }
 
           // Set as current newsletter if it's for the current turn
           if (newsletter.turn === gameState.turn) {

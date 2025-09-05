@@ -41,11 +41,29 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
     mode,
     hasSelectedNewsletter: !!selectedNewsletter,
     allNewslettersCount: allNewsletters.length,
-    selectedNewsletterTitle: selectedNewsletter?.title,
-    selectedNewsletterContent: selectedNewsletter?.content?.substring(0, 50) + '...',
-    currentNewsletterTitle: currentNewsletter?.title,
     allNewsletterTurns: allNewsletters.map(n => n.turn)
   });
+
+  if (selectedNewsletter) {
+    console.log('📰 Selected Newsletter Details:', {
+      id: selectedNewsletter.id,
+      turn: selectedNewsletter.turn,
+      title: selectedNewsletter.title,
+      contentLength: selectedNewsletter.content?.length,
+      isPublished: selectedNewsletter.isPublished,
+      publishedAt: selectedNewsletter.publishedAt
+    });
+  }
+
+  if (currentNewsletter) {
+    console.log('📰 Current Newsletter Details:', {
+      id: currentNewsletter.id,
+      turn: currentNewsletter.turn,
+      title: currentNewsletter.title,
+      contentLength: currentNewsletter.content?.length,
+      isPublished: currentNewsletter.isPublished
+    });
+  }
 
   const getNewsletterTemplate = (turn: number) => `# Turn ${turn} Newsletter
 

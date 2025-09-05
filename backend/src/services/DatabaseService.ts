@@ -967,7 +967,20 @@ export class DatabaseService {
         diplomacy: this.buildDiplomacyObject(tribe)
       })),
       turn: dbGameState.turn,
-      startingLocations: dbGameState.startingLocations,
+      startingLocations: (() => {
+        console.log(`🔍 DB CONVERSION: Loading starting locations from database`);
+        console.log(`📍 Raw starting locations:`, dbGameState.startingLocations);
+        console.log(`📍 Type:`, typeof dbGameState.startingLocations);
+        console.log(`📍 Is Array:`, Array.isArray(dbGameState.startingLocations));
+
+        // Ensure starting locations is always an array
+        const startingLocs = Array.isArray(dbGameState.startingLocations)
+          ? dbGameState.startingLocations
+          : [];
+
+        console.log(`📍 Final starting locations:`, startingLocs);
+        return startingLocs;
+      })(),
       chiefRequests: dbGameState.chiefRequests,
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,

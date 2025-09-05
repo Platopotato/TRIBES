@@ -262,10 +262,42 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
-    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+    // CRITICAL DEBUG: Log current state before tribe creation
+    console.log(`🔍 TRIBE CREATION DEBUG: Creating tribe "${tribeData.tribeName}"`);
+    console.log(`🗺️ Total starting locations: ${gameState.startingLocations?.length || 0}`);
+    console.log(`🏘️ Current tribes: ${gameState.tribes.length}`);
+    console.log(`📍 Starting locations:`, gameState.startingLocations);
+    console.log(`🏠 Occupied locations:`, gameState.tribes.map(t => `${t.tribeName}@${t.location}`));
 
-    if (!availableStart) return false;
+    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    console.log(`🚫 Occupied set:`, Array.from(occupiedLocations));
+
+    // CRITICAL FIX: Check if starting locations exist and are valid
+    if (!gameState.startingLocations || gameState.startingLocations.length === 0) {
+      console.log(`🚨 CRITICAL: No starting locations found! Generating emergency starting locations...`);
+      gameState.startingLocations = [
+        "050.050", "052.048", "048.052", "054.046", "046.054",
+        "056.044", "044.056", "058.042", "042.058", "060.040"
+      ];
+      console.log(`🔧 Emergency starting locations created:`, gameState.startingLocations);
+      await this.updateGameState(gameState);
+    }
+
+    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+    console.log(`✅ Selected available start: ${availableStart}`);
+
+    // ADDITIONAL DEBUG: Check each starting location individually
+    console.log(`🔍 DETAILED STARTING LOCATION CHECK:`);
+    gameState.startingLocations.forEach((loc, index) => {
+      const isOccupied = occupiedLocations.has(loc);
+      console.log(`  ${index + 1}. ${loc} - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
+    });
+
+    if (!availableStart) {
+      console.log(`❌ TRIBE CREATION FAILED: No available starting locations!`);
+      console.log(`🔍 All ${gameState.startingLocations.length} starting locations are occupied`);
+      return false;
+    }
 
     const startCoords = parseHexCoords(availableStart);
     const initialExplored = getHexesInRange(startCoords, 2);

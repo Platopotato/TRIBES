@@ -518,10 +518,6 @@ function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, sta
 }
 
 export function processGlobalTurn(gameState: GameState): GameState {
-    // Reset POI extraction tracking for new turn
-    console.log(`🔄 RESETTING POI EXTRACTION: Clearing per-turn extraction limits`);
-    gameState.poiExtractionThisTurn = {};
-
     // CRITICAL FIX: Normalize all tribe coordinates BEFORE any processing
     console.log(`🔧 NORMALIZING COORDINATES: Ensuring all garrison keys are in standard format`);
     gameState.tribes.forEach((tribe: any) => {
@@ -3874,35 +3870,13 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     // Compute total gained before applying carry caps/inventory updates
     resourceGained = Math.floor(baseAmount * troopMultiplier * poiBonus);
 
-    // POI EXTRACTION CAP: Limit resource extraction per POI per turn
-    if (poi && state) {
-        // Initialize POI extraction tracking if not exists
-        if (!state.poiExtractionThisTurn) {
-            state.poiExtractionThisTurn = {};
+    // SIMPLE POI CAP: Maximum 1000 resources per scavenging action at POIs
+    if (poi) {
+        const extractionCap = 1000;
+        if (resourceGained > extractionCap) {
+            resourceGained = extractionCap;
+            poiMessage += ` ⚠️ Large army capped at ${extractionCap} ${resourceName} per action.`;
         }
-
-        // Initialize this POI's extraction if not exists
-        if (!state.poiExtractionThisTurn[location]) {
-            state.poiExtractionThisTurn[location] = { food: 0, scrap: 0, weapons: 0 };
-        }
-
-        const poiExtraction = state.poiExtractionThisTurn[location];
-        const extractionCap = 1000; // Maximum resources per POI per turn
-        const currentExtracted = poiExtraction[resourceName as keyof typeof poiExtraction] || 0;
-        const remainingCapacity = Math.max(0, extractionCap - currentExtracted);
-
-        if (remainingCapacity <= 0) {
-            return `🚫 The ${poi.type} at ${location} has been fully harvested this turn (${extractionCap}/${extractionCap} ${resourceName} extracted). Try a different location or wait for next turn.`;
-        }
-
-        // Cap the resource gained to remaining capacity
-        if (resourceGained > remainingCapacity) {
-            resourceGained = remainingCapacity;
-            poiMessage += ` ⚠️ POI extraction limit reached (${extractionCap} ${resourceName}/turn).`;
-        }
-
-        // Track the extraction
-        poiExtraction[resourceName as keyof typeof poiExtraction] += resourceGained;
     }
 
     // Carry capacity and correct destination for weapons

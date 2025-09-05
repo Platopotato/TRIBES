@@ -1224,8 +1224,12 @@ export class SocketHandler {
             news.currentNewsletter = newsletter;
           }
 
-          // Persist
+          // CRITICAL: Update the main game state newsletter field
+          gameState.newsletter = news;
+
+          // Persist both to newsletter storage AND main game state
           (this.gameService as any).database?.setNewsletterState?.(news);
+          await this.gameService.updateGameState(gameState);
 
           await emitGameState();
           console.log(`✅ Newsletter saved and emitted for turn ${newsletter.turn}`);

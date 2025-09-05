@@ -202,14 +202,14 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   };
 
   const handleExportNewsletter = () => {
-    if (!turnNewsletter) return;
+    if (!selectedNewsletter) return;
 
     const exportData = {
-      turn: turnNewsletter.turn,
-      title: turnNewsletter.title,
-      content: turnNewsletter.content,
-      isPublished: turnNewsletter.isPublished,
-      publishedAt: turnNewsletter.publishedAt,
+      turn: selectedNewsletter.turn,
+      title: selectedNewsletter.title,
+      content: selectedNewsletter.content,
+      isPublished: selectedNewsletter.isPublished,
+      publishedAt: selectedNewsletter.publishedAt,
       exportedAt: new Date().toISOString()
     };
 
@@ -219,7 +219,7 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = `newsletter-turn-${turnNewsletter.turn}.json`;
+    link.download = `newsletter-turn-${selectedNewsletter.turn}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

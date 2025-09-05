@@ -42,15 +42,16 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   });
 
   useEffect(() => {
-    if (turnNewsletter) {
-      // Newsletter exists - update content and exit editing mode
-      setTitle(turnNewsletter.title);
-      setContent(turnNewsletter.content);
-      setIsEditing(false);
-    } else {
-      // No newsletter exists - set up template and enter editing mode
-      setTitle(`Turn ${currentTurn} Newsletter`);
-      setContent(`# Turn ${currentTurn} Newsletter
+    // Only update content when not editing to preserve user changes
+    if (!isEditing) {
+      if (turnNewsletter) {
+        // Newsletter exists - update content
+        setTitle(turnNewsletter.title);
+        setContent(turnNewsletter.content);
+      } else {
+        // No newsletter exists - set up template and enter editing mode
+        setTitle(`Turn ${currentTurn} Newsletter`);
+        setContent(`# Turn ${currentTurn} Newsletter
 
 ## Major Events This Turn
 
@@ -80,9 +81,10 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
 
 ---
 *The Radix Tribes Chronicle - Turn ${currentTurn}*`);
-      setIsEditing(true); // Show editing mode when no newsletter exists
+        setIsEditing(true); // Show editing mode when no newsletter exists
+      }
     }
-  }, [turnNewsletter, currentTurn]);
+  }, [turnNewsletter, currentTurn, isEditing]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -97,7 +99,8 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
       isPublished: false
     });
 
-    // Don't set isEditing(false) here - let the useEffect handle it when the newsletter actually updates
+    // Exit editing mode after save - this will allow useEffect to update with saved content
+    setTimeout(() => setIsEditing(false), 100);
   };
 
   const handlePublish = () => {

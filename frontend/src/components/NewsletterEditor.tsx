@@ -30,9 +30,8 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadContent, setUploadContent] = useState('');
 
-  // Find newsletter for selected turn
-  const selectedNewsletter = allNewsletters.find(n => n.turn === selectedTurn) ||
-    (selectedTurn === currentTurn ? currentNewsletter : null);
+  // Find newsletter for selected turn - only use exact match, don't fall back to currentNewsletter
+  const selectedNewsletter = allNewsletters.find(n => n.turn === selectedTurn);
 
   // Debug logging
   console.log('📰 NewsletterEditor State:', {

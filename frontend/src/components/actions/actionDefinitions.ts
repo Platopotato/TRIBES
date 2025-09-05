@@ -166,6 +166,16 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
       { name: 'chiefsToMove', label: 'Spy Chiefs', type: 'chief_select' },
     ],
   },
+  [ActionType.ReduceTroops]: {
+    name: 'Reduce Troops',
+    description: 'Remove troops from a garrison to reduce upkeep costs and optimize army size.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' }),
+    fields: [
+      { name: 'location', label: 'Garrison Location', type: 'garrison_select' },
+      { name: 'troops', label: 'Troops to Remove', type: 'number', defaultValue: 1, max: 'troops' },
+      { name: 'info', label: 'Info', type: 'info', info: 'Troops are permanently removed. No resources returned.' }
+    ],
+  },
 };
 
   // Non-plannable diplomacy actions are intentionally omitted from the action grid.

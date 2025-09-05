@@ -709,6 +709,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.Sabotage:
                     result = processSabotageAction(tribe, action, state);
                     break;
+                case ActionType.ReduceTroops:
+                    result = processReduceTroopsAction(tribe, action);
+                    break;
                 default:
                     console.log(`❓ Unknown action type for ${tribe.tribeName}: ${action.actionType}`);
                     result = `${action.actionType} action processed (basic implementation).`;
@@ -2975,6 +2978,42 @@ function processSetRationAction(tribe: any, action: any): string {
     }
 
     return `📋 Ration level set to ${rationLevel}. ${effectMessage}`;
+}
+
+function processReduceTroopsAction(tribe: any, action: any): string {
+    const locationRaw = action.actionData.location;
+    const troopsToRemove = parseInt(action.actionData.troops) || 0;
+
+    if (!locationRaw) {
+        return `❌ Reduce Troops failed: No location specified.`;
+    }
+
+    if (troopsToRemove <= 0) {
+        return `❌ Reduce Troops failed: Must specify a positive number of troops to remove.`;
+    }
+
+    const location = convertToStandardFormat(locationRaw);
+    const garrison = tribe.garrisons[location];
+
+    if (!garrison) {
+        return `❌ Reduce Troops failed: No garrison found at ${location}.`;
+    }
+
+    const currentTroops = garrison.troops || 0;
+    if (troopsToRemove > currentTroops) {
+        return `❌ Reduce Troops failed: Cannot remove ${troopsToRemove} troops from garrison with only ${currentTroops} troops.`;
+    }
+
+    // Remove troops from garrison
+    garrison.troops -= troopsToRemove;
+
+    // If garrison is now empty, remove it entirely
+    if (garrison.troops <= 0 && (!garrison.chiefs || garrison.chiefs.length === 0) && (!garrison.weapons || garrison.weapons <= 0)) {
+        delete tribe.garrisons[location];
+        return `🗑️ Dismissed ${troopsToRemove} troops from ${location}. Garrison abandoned (no remaining forces).`;
+    }
+
+    return `🗑️ Dismissed ${troopsToRemove} troops from ${location}. Remaining garrison: ${garrison.troops} troops.`;
 }
 
 function processBuildWeaponsAction(tribe: any, action: any): string {

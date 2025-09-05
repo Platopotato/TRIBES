@@ -296,7 +296,35 @@ export class GameService {
     });
 
     gameState.tribes.push(newTribe);
+
+    // CRITICAL FIX: Force immediate database save and reload to ensure garrison persistence
+    console.log(`🔧 NEW TRIBE FIX: Forcing immediate save/reload for ${newTribe.tribeName} to ensure garrison persistence`);
     await this.updateGameState(gameState);
+
+    // Reload game state to verify garrison was saved correctly
+    const reloadedState = await this.getGameState();
+    if (reloadedState) {
+      const reloadedTribe = reloadedState.tribes.find(t => t.id === newTribe.id);
+
+      if (reloadedTribe) {
+        const garrisonCount = Object.keys(reloadedTribe.garrisons || {}).length;
+        console.log(`✅ NEW TRIBE VERIFICATION: ${reloadedTribe.tribeName} has ${garrisonCount} garrisons after save/reload`);
+
+        if (garrisonCount === 0) {
+          console.log(`🚨 NEW TRIBE GARRISON LOST: Manually fixing ${reloadedTribe.tribeName} garrison`);
+          reloadedTribe.garrisons = {
+            [reloadedTribe.location]: {
+              troops: 20,
+              weapons: 10,
+              chiefs: []
+            }
+          };
+          await this.updateGameState(reloadedState);
+          console.log(`🔧 NEW TRIBE GARRISON RESTORED: ${reloadedTribe.tribeName} garrison manually restored`);
+        }
+      }
+    }
+
     return true;
   }
 

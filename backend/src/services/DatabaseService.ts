@@ -477,7 +477,7 @@ export class DatabaseService {
                   continue;
                 }
 
-                await this.prisma.garrison.create({
+                const createdGarrison = await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
                     hexQ: hexRecord.q, // Use the actual hex coordinates from database
@@ -488,7 +488,7 @@ export class DatabaseService {
                     hexId: hexRecord.id, // Use the actual Hex record ID, not coordinate string
                   }
                 });
-                console.log(`✅ GARRISON CREATED: ${tribe.tribeName} at ${hexCoord} using ${strategyUsed}`);
+                console.log(`✅ GARRISON CREATED: ${tribe.tribeName} at ${hexCoord} using ${strategyUsed} - DB ID: ${createdGarrison.id}, Troops: ${createdGarrison.troops}`);
               } catch (garrisonError) {
                 console.error(`❌ Failed to create garrison for ${tribe.tribeName} at ${hexCoord}:`, garrisonError);
                 // Continue with other garrisons instead of failing completely
@@ -938,20 +938,22 @@ export class DatabaseService {
         journeyResponses: tribe.journeyResponses,
         maxActionsOverride: tribe.maxActionsOverride,
         garrisons: (() => {
-          const garrisons = tribe.garrisons.reduce((acc: any, garrison: any) => {
+          console.log(`🔍 DB CONVERSION: Processing garrisons for ${tribe.tribeName} - found ${tribe.garrisons?.length || 0} garrison records`);
+
+          const garrisons = (tribe.garrisons || []).reduce((acc: any, garrison: any) => {
             const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
             acc[hexKey] = {
               troops: garrison.troops,
               weapons: garrison.weapons,
               chiefs: garrison.chiefs
             };
-            // Reduced logging for performance
+            console.log(`🏰 GARRISON LOADED: ${tribe.tribeName} at ${hexKey} - ${garrison.troops} troops, ${garrison.weapons} weapons, ${garrison.chiefs?.length || 0} chiefs`);
             return acc;
           }, {});
 
           // CRITICAL FIX: Ensure every tribe has at least their home garrison
           if (Object.keys(garrisons).length === 0 && tribe.location) {
-            console.log(`🚨 GARRISON FIX: ${tribe.tribeName} has no garrisons, creating home garrison at ${tribe.location}`);
+            console.log(`🚨 GARRISON FIX: ${tribe.tribeName} has no garrisons in database, creating home garrison at ${tribe.location}`);
             garrisons[tribe.location] = {
               troops: 20,
               weapons: 10,

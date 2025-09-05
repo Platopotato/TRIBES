@@ -1360,20 +1360,14 @@ export class SocketHandler {
             newsletter.isPublished = true;
             newsletter.publishedAt = new Date();
 
-            // CRITICAL: Update main game state newsletter field
-            const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
-            const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
-            if (idx >= 0) news.newsletters[idx] = newsletter;
-
             // Update current newsletter if it's for current turn
             if (newsletter.turn === gameState.turn) {
+              const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
               news.currentNewsletter = newsletter;
+              const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
+              if (idx >= 0) news.newsletters[idx] = newsletter;
+              (this.gameService as any).database?.setNewsletterState?.(news);
             }
-
-            // Update both storage systems
-            gameState.newsletter = news;
-            (this.gameService as any).database?.setNewsletterState?.(news);
-            await this.gameService.updateGameState(gameState);
 
             await emitGameState();
             console.log(`✅ Newsletter published: ${newsletter.title}`);
@@ -1393,20 +1387,14 @@ export class SocketHandler {
           if (newsletter) {
             newsletter.isPublished = false;
 
-            // CRITICAL: Update main game state newsletter field
-            const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
-            const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
-            if (idx >= 0) news.newsletters[idx] = newsletter;
-
             // Clear current newsletter if it's the one being unpublished
+            const news = (this.gameService as any).database?.getNewsletterState?.() || { newsletters: [] };
             if (news.currentNewsletter?.id === newsletterId) {
               news.currentNewsletter = undefined;
             }
-
-            // Update both storage systems
-            gameState.newsletter = news;
+            const idx = news.newsletters.findIndex((n: any) => n.id === newsletterId);
+            if (idx >= 0) news.newsletters[idx] = newsletter;
             (this.gameService as any).database?.setNewsletterState?.(news);
-            await this.gameService.updateGameState(gameState);
 
             await emitGameState();
             console.log(`✅ Newsletter unpublished: ${newsletter.title}`);

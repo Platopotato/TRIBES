@@ -21,37 +21,29 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
   onUnpublish,
   onUploadNewsletter
 }) => {
+  const [mode, setMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [selectedTurn, setSelectedTurn] = useState<number>(currentTurn);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTurn, setUploadTurn] = useState<number>(currentTurn - 1);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadContent, setUploadContent] = useState('');
 
-  // Find newsletter for current turn from either currentNewsletter or allNewsletters
-  const turnNewsletter = currentNewsletter || allNewsletters.find(n => n.turn === currentTurn);
+  // Find newsletter for selected turn
+  const selectedNewsletter = allNewsletters.find(n => n.turn === selectedTurn) ||
+    (selectedTurn === currentTurn ? currentNewsletter : null);
 
   // Debug logging
   console.log('📰 NewsletterEditor State:', {
     currentTurn,
-    hasCurrentNewsletter: !!currentNewsletter,
-    allNewslettersCount: allNewsletters.length,
-    hasTurnNewsletter: !!turnNewsletter,
-    isEditing
+    selectedTurn,
+    mode,
+    hasSelectedNewsletter: !!selectedNewsletter,
+    allNewslettersCount: allNewsletters.length
   });
 
-  useEffect(() => {
-    // Only update content when not editing to preserve user changes
-    if (!isEditing) {
-      if (turnNewsletter) {
-        // Newsletter exists - update content
-        setTitle(turnNewsletter.title);
-        setContent(turnNewsletter.content);
-      } else {
-        // No newsletter exists - set up template and enter editing mode
-        setTitle(`Turn ${currentTurn} Newsletter`);
-        setContent(`# Turn ${currentTurn} Newsletter
+  const getNewsletterTemplate = (turn: number) => `# Turn ${turn} Newsletter
 
 ## Major Events This Turn
 
@@ -80,11 +72,27 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
 *Tease what might happen next turn to build excitement*
 
 ---
-*The Radix Tribes Chronicle - Turn ${currentTurn}*`);
-        setIsEditing(true); // Show editing mode when no newsletter exists
-      }
+*The Radix Tribes Chronicle - Turn ${turn}*`;
+
+  const handleCreateNew = () => {
+    setMode('create');
+    setTitle(`Turn ${selectedTurn} Newsletter`);
+    setContent(getNewsletterTemplate(selectedTurn));
+  };
+
+  const handleEdit = () => {
+    if (selectedNewsletter) {
+      setMode('edit');
+      setTitle(selectedNewsletter.title);
+      setContent(selectedNewsletter.content);
     }
-  }, [turnNewsletter, currentTurn, isEditing]);
+  };
+
+  const handleCancel = () => {
+    setMode('view');
+    setTitle('');
+    setContent('');
+  };
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -93,32 +101,34 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
     }
 
     onSave({
-      turn: currentTurn,
+      turn: selectedTurn,
       title: title.trim(),
       content: content.trim(),
       isPublished: false
     });
 
-    // Exit editing mode after save - this will allow useEffect to update with saved content
-    setTimeout(() => setIsEditing(false), 100);
+    // Return to view mode after save
+    setMode('view');
+    setTitle('');
+    setContent('');
   };
 
   const handlePublish = () => {
-    if (!turnNewsletter) {
+    if (!selectedNewsletter) {
       alert('Please save the newsletter first before publishing');
       return;
     }
 
     if (confirm('Publish this newsletter? Players will be able to see it immediately.')) {
-      onPublish(turnNewsletter.id);
+      onPublish(selectedNewsletter.id);
     }
   };
 
   const handleUnpublish = () => {
-    if (!turnNewsletter) return;
+    if (!selectedNewsletter) return;
 
     if (confirm('Unpublish this newsletter? Players will no longer be able to see it.')) {
-      onUnpublish(turnNewsletter.id);
+      onUnpublish(selectedNewsletter.id);
     }
   };
 
@@ -220,7 +230,7 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-blue-400">
-          📰 Turn {currentTurn} Newsletter
+          📰 Newsletter Management
         </h3>
 
         <div className="flex items-center space-x-2">
@@ -232,48 +242,99 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
               📤 Upload Previous
             </Button>
           )}
+        </div>
+      </div>
 
-          {turnNewsletter && (
+      {/* Turn Selection and Actions */}
+      <div className="flex items-center space-x-4 p-4 bg-slate-800 rounded border border-slate-600">
+        <div className="flex items-center space-x-2">
+          <label className="text-white font-medium">Turn:</label>
+          <select
+            value={selectedTurn}
+            onChange={(e) => setSelectedTurn(Number(e.target.value))}
+            className="bg-slate-700 text-white px-3 py-1 rounded border border-slate-600"
+            disabled={mode !== 'view'}
+          >
+            {Array.from({ length: currentTurn }, (_, i) => i + 1).map(turn => (
+              <option key={turn} value={turn}>Turn {turn}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {selectedNewsletter && (
             <span className={`px-2 py-1 rounded text-xs font-bold ${
-              turnNewsletter.isPublished
+              selectedNewsletter.isPublished
                 ? 'bg-green-600 text-white'
                 : 'bg-yellow-600 text-white'
             }`}>
-              {turnNewsletter.isPublished ? 'PUBLISHED' : 'DRAFT'}
+              {selectedNewsletter.isPublished ? 'PUBLISHED' : 'DRAFT'}
             </span>
+          )}
+
+          {mode === 'view' && (
+            <>
+              {selectedNewsletter ? (
+                <Button
+                  onClick={handleEdit}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  ✏️ Edit
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleCreateNew}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  ➕ Create Newsletter
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {!isEditing && turnNewsletter ? (
-        // Display mode
+      {/* View Mode - Display Newsletter */}
+      {mode === 'view' && selectedNewsletter && (
         <div className="space-y-4">
           <div className="p-4 rounded bg-slate-800 border border-slate-600">
-            <h4 className="font-bold text-white mb-2">{turnNewsletter.title}</h4>
+            <h4 className="font-bold text-white mb-2">{selectedNewsletter.title}</h4>
             <div
               className="prose prose-invert prose-sm max-w-none"
               dangerouslySetInnerHTML={{
-                __html: turnNewsletter.content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/^# (.*$)/gm, '<h1>$1</h1>').replace(/^## (.*$)/gm, '<h2>$1</h2>').replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                __html: selectedNewsletter.content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/^# (.*$)/gm, '<h1>$1</h1>').replace(/^## (.*$)/gm, '<h2>$1</h2>').replace(/^### (.*$)/gm, '<h3>$1</h3>')
               }}
             />
           </div>
 
           <div className="flex space-x-3">
             <Button
-              onClick={() => setIsEditing(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              ✏️ Edit Newsletter
-            </Button>
-
-            <Button
-              onClick={handleExportNewsletter}
+              onClick={() => {
+                const exportData = {
+                  turn: selectedNewsletter.turn,
+                  title: selectedNewsletter.title,
+                  content: selectedNewsletter.content,
+                  isPublished: selectedNewsletter.isPublished,
+                  publishedAt: selectedNewsletter.publishedAt,
+                  exportedAt: new Date().toISOString()
+                };
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `newsletter-turn-${selectedNewsletter.turn}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }}
               className="bg-slate-600 hover:bg-slate-700"
             >
               💾 Export
             </Button>
 
-            {turnNewsletter.isPublished ? (
+            {selectedNewsletter.isPublished ? (
               <Button
                 onClick={handleUnpublish}
                 className="bg-orange-600 hover:bg-orange-700"
@@ -290,54 +351,59 @@ const NewsletterEditor: React.FC<NewsletterEditorProps> = ({
             )}
           </div>
         </div>
-      ) : (
-        // Edit mode
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Newsletter Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter newsletter title..."
-            />
-          </div>
+      )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Newsletter Content
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={20}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              placeholder="Write your newsletter content here... Use markdown-style formatting:&#10;# Large Heading&#10;## Medium Heading&#10;### Small Heading&#10;**Bold Text**&#10;*Italic Text*"
-            />
-            <p className="text-xs text-slate-400 mt-1">
-              Use markdown-style formatting: # for headings, **bold**, *italic*
-            </p>
+      {/* Edit/Create Mode */}
+      {(mode === 'edit' || mode === 'create') && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-800 rounded border border-slate-600">
+            <h4 className="text-white font-bold mb-4">
+              {mode === 'create' ? `Creating Newsletter for Turn ${selectedTurn}` : `Editing Turn ${selectedTurn} Newsletter`}
+            </h4>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Newsletter Title
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter newsletter title..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Newsletter Content
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={20}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="Write your newsletter content here... Use markdown-style formatting:&#10;# Large Heading&#10;## Medium Heading&#10;### Small Heading&#10;**Bold Text**&#10;*Italic Text*"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Use markdown-style formatting: # for headings, **bold**, *italic*
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex space-x-3">
-            <Button 
+            <Button
               onClick={handleSave}
               className="bg-green-600 hover:bg-green-700"
+              disabled={!title.trim() || !content.trim()}
             >
               💾 Save Newsletter
             </Button>
 
-            <Button 
-              onClick={() => {
-                setIsEditing(false);
-                if (currentNewsletter) {
-                  setTitle(currentNewsletter.title);
-                  setContent(currentNewsletter.content);
-                }
-              }}
+            <Button
+              onClick={handleCancel}
               variant="secondary"
             >
               Cancel

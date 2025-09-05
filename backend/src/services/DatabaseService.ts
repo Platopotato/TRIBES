@@ -1577,12 +1577,12 @@ export class DatabaseService {
                 id: proposal.id,
                 fromTribeId: proposal.fromTribeId,
                 toTribeId: proposal.toTribeId,
-                // actionType: proposal.actionType || 'ProposeAlliance', // Commented out due to schema mismatch
-                statusChangeTo: proposal.statusChangeTo || '', // Empty string instead of null
+                actionType: proposal.actionType || 'ProposeAlliance', // Default to alliance for backward compatibility
+                statusChangeTo: proposal.statusChangeTo || null, // Can be null for trade proposals
                 expiresOnTurn: proposal.expiresOnTurn || gameState.turn + 1,
                 fromTribeName: proposal.fromTribeName || 'Unknown',
                 reparations: proposal.reparations as any,
-                // tradeAgreement: proposal.tradeAgreement as any, // Commented out due to schema mismatch
+                tradeAgreement: proposal.tradeAgreement as any,
                 gameStateId: currentGameState.id
               }
             });

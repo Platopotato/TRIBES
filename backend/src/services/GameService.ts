@@ -270,8 +270,25 @@ export class GameService {
     console.log(`📍 Starting locations (all):`, gameState.startingLocations);
     console.log(`🏠 Occupied locations:`, gameState.tribes.map(t => `${t.tribeName}@${t.location}`));
 
-    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
-    console.log(`🚫 Occupied set:`, Array.from(occupiedLocations));
+    // CRITICAL FIX: Check both tribe.location AND actual garrison locations
+    const occupiedLocations = new Set<string>();
+
+    gameState.tribes.forEach(tribe => {
+      // Add tribe's official location
+      if (tribe.location) {
+        occupiedLocations.add(tribe.location);
+      }
+
+      // Add all garrison locations (in case tribe.location is wrong)
+      if (tribe.garrisons) {
+        Object.keys(tribe.garrisons).forEach(garrisonLoc => {
+          occupiedLocations.add(garrisonLoc);
+          console.log(`🏰 GARRISON FOUND: ${tribe.tribeName} has garrison at ${garrisonLoc}`);
+        });
+      }
+    });
+
+    console.log(`🚫 Occupied set (including garrisons):`, Array.from(occupiedLocations));
 
     // CRITICAL DEBUG: Check if starting locations exist and are valid
     if (!gameState.startingLocations || gameState.startingLocations.length === 0) {

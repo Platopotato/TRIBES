@@ -1,7 +1,7 @@
 // Debug script to inspect starting locations and tribe locations
 // Run this to identify the exact starting location selection bug
 
-const io = require('socket.io-client');
+import { io } from 'socket.io-client';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'your-admin-password';
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001';

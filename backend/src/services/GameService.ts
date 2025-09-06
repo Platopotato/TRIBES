@@ -266,7 +266,8 @@ export class GameService {
     console.log(`🔍 TRIBE CREATION DEBUG: Creating tribe "${tribeData.tribeName}"`);
     console.log(`🗺️ Total starting locations: ${gameState.startingLocations?.length || 0}`);
     console.log(`🏘️ Current tribes: ${gameState.tribes.length}`);
-    console.log(`📍 Starting locations:`, gameState.startingLocations);
+    console.log(`📍 Starting locations (first 5):`, gameState.startingLocations?.slice(0, 5));
+    console.log(`📍 Starting locations (all):`, gameState.startingLocations);
     console.log(`🏠 Occupied locations:`, gameState.tribes.map(t => `${t.tribeName}@${t.location}`));
 
     const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
@@ -319,6 +320,10 @@ export class GameService {
     const startCoords = parseHexCoords(availableStart);
     const initialExplored = getHexesInRange(startCoords, 2);
 
+    console.log(`🏗️ CREATING NEW TRIBE: ${tribeData.tribeName} at location: ${availableStart}`);
+    console.log(`🔍 VERIFICATION: availableStart = "${availableStart}"`);
+    console.log(`🔍 VERIFICATION: typeof availableStart = ${typeof availableStart}`);
+
     const newTribe: Tribe = {
       ...tribeData,
       id: `tribe-${Date.now()}`,
@@ -343,6 +348,9 @@ export class GameService {
       newTribe.diplomacy[existingTribe.id] = { status: initialStatus };
       existingTribe.diplomacy[newTribe.id] = { status: initialStatus };
     });
+
+    console.log(`✅ NEW TRIBE CREATED: ${newTribe.tribeName} at ${newTribe.location}`);
+    console.log(`🏰 NEW TRIBE GARRISON: ${JSON.stringify(newTribe.garrisons)}`);
 
     gameState.tribes.push(newTribe);
 

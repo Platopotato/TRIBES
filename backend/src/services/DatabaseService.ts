@@ -477,6 +477,18 @@ export class DatabaseService {
                   continue;
                 }
 
+                // CRITICAL DEBUG: Check coordinate consistency
+                const originalQ = parseInt(hexCoord.split('.')[0], 10);
+                const originalR = parseInt(hexCoord.split('.')[1], 10);
+                console.log(`🔍 COORDINATE CHECK: Original "${hexCoord}" (q=${originalQ}, r=${originalR}) vs Database (q=${hexRecord.q}, r=${hexRecord.r})`);
+
+                if (originalQ !== hexRecord.q || originalR !== hexRecord.r) {
+                  console.log(`🚨 COORDINATE MISMATCH: This will cause Game Editor issues!`);
+                  console.log(`   Original: q=${originalQ}, r=${originalR}`);
+                  console.log(`   Database: q=${hexRecord.q}, r=${hexRecord.r}`);
+                  console.log(`   Strategy: ${strategyUsed}`);
+                }
+
                 const createdGarrison = await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
@@ -947,7 +959,13 @@ export class DatabaseService {
               weapons: garrison.weapons,
               chiefs: garrison.chiefs
             };
-            console.log(`🏰 GARRISON LOADED: ${tribe.tribeName} at ${hexKey} - ${garrison.troops} troops, ${garrison.weapons} weapons, ${garrison.chiefs?.length || 0} chiefs`);
+            console.log(`🏰 GARRISON LOADED: ${tribe.tribeName} at ${hexKey} (DB: q=${garrison.hexQ}, r=${garrison.hexR}) - ${garrison.troops} troops, ${garrison.weapons} weapons, ${garrison.chiefs?.length || 0} chiefs`);
+
+            // CRITICAL DEBUG: Check if this matches tribe's expected location
+            if (tribe.location && hexKey !== tribe.location) {
+              console.log(`🚨 LOCATION MISMATCH: ${tribe.tribeName} expects home at ${tribe.location} but garrison loaded at ${hexKey}`);
+            }
+
             return acc;
           }, {});
 

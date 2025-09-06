@@ -4931,19 +4931,23 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
                 break;
 
             case 'Food Source':
-                // Food Sources produce food at 3x troop count (less than factories but still good)
-                const foodFromSource = troopCount * 3;
+                // Food Sources produce food at 3x troop count, capped at 800 per turn
+                const rawFoodFromSource = troopCount * 3;
+                const foodFromSource = Math.min(rawFoodFromSource, 800);
                 tribe.globalResources.food += foodFromSource;
                 totalFoodIncome += foodFromSource;
-                incomeMessages.push(`🍎 Food Source at ${location}: ${troopCount} troops harvested ${foodFromSource} food`);
+                const foodSourceCapMessage = rawFoodFromSource > 800 ? ` ⚠️ Large garrison capped at 800 food per turn.` : '';
+                incomeMessages.push(`🍎 Food Source at ${location}: ${troopCount} troops harvested ${foodFromSource} food${foodSourceCapMessage}`);
                 break;
 
             case 'Scrapyard':
-                // Scrapyards produce scrap at 3x troop count (less than mines but still good)
-                const scrapFromYard = troopCount * 3;
+                // Scrapyards produce scrap at 3x troop count, capped at 800 per turn
+                const rawScrapFromYard = troopCount * 3;
+                const scrapFromYard = Math.min(rawScrapFromYard, 800);
                 tribe.globalResources.scrap += scrapFromYard;
                 totalScrapIncome += scrapFromYard;
-                incomeMessages.push(`⚙️ Scrapyard at ${location}: ${troopCount} troops salvaged ${scrapFromYard} scrap`);
+                const scrapyardCapMessage = rawScrapFromYard > 800 ? ` ⚠️ Large garrison capped at 800 scrap per turn.` : '';
+                incomeMessages.push(`⚙️ Scrapyard at ${location}: ${troopCount} troops salvaged ${scrapFromYard} scrap${scrapyardCapMessage}`);
                 break;
 
             case 'Research Lab':

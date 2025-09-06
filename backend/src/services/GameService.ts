@@ -288,15 +288,20 @@ export class GameService {
       const loc = gameState.startingLocations[i];
       const isOccupied = occupiedLocations.has(loc);
       console.log(`  ${i + 1}. Testing "${loc}" - Occupied: ${isOccupied}`);
+      console.log(`     🔍 DEBUG: loc type = ${typeof loc}, value = "${loc}"`);
+      console.log(`     🔍 DEBUG: occupiedLocations.has("${loc}") = ${occupiedLocations.has(loc)}`);
 
       if (isOccupied) {
         const occupyingTribe = gameState.tribes.find(t => t.location === loc);
         console.log(`     Occupied by: ${occupyingTribe?.tribeName || 'Unknown tribe'}`);
       }
 
-      if (!isOccupied && !availableStart) {
+      if (!isOccupied && availableStart === undefined) {
         availableStart = loc;
         console.log(`     ✅ SELECTED as first available!`);
+        console.log(`     🔍 DOUBLE-CHECK: occupiedLocations.has("${loc}") = ${occupiedLocations.has(loc)}`);
+        console.log(`     🔍 OCCUPIED SET CONTENTS:`, Array.from(occupiedLocations));
+        break; // CRITICAL FIX: Stop at first available location
       }
     }
 

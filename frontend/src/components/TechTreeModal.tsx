@@ -246,7 +246,7 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
                  </div>
 
                 <Button
-                    className="w-full"
+                    className="w-full mt-4 mb-2"
                     onClick={handleStart}
                     disabled={!meetsTroopRequirement || !hasEnoughScrap || isAlreadyResearching}
                 >
@@ -541,8 +541,8 @@ const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose, tribe, a
 
             {/* Research Details - Bottom Panel (only when tech selected) */}
             {selectedTech && (
-              <div className="flex-shrink-0 bg-neutral-900 border-t border-neutral-700 max-h-64 overflow-y-auto">
-                <div className="p-4">
+              <div className="flex-shrink-0 bg-neutral-900 border-t border-neutral-700 max-h-80 overflow-y-auto">
+                <div className="p-4 pb-6">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold text-purple-400">Research Details</h3>
                     <button

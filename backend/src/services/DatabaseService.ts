@@ -403,6 +403,82 @@ export class DatabaseService {
     return;
   }
 
+  // DIAGNOSTIC: Check outpost ownership at specific hex
+  async diagnoseOutpostOwnership(hexCoord: string): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🔍 OUTPOST OWNERSHIP DIAGNOSTIC FOR ${hexCoord}`);
+    console.log('='.repeat(80));
+
+    try {
+      // Load current game state
+      const gameState = await this.getGameState();
+      if (!gameState) {
+        console.log('❌ No game state found');
+        return;
+      }
+
+      // Find the hex in map data
+      const { q, r } = parseHexCoords(hexCoord);
+      const hex = gameState.mapData.find((h: any) => h.q === q && h.r === r);
+
+      if (!hex) {
+        console.log(`❌ Hex not found at ${hexCoord} (q=${q}, r=${r})`);
+        return;
+      }
+
+      console.log(`📍 HEX FOUND: ${hexCoord} (q=${q}, r=${r})`);
+      console.log(`   Terrain: ${hex.terrain}`);
+
+      if (hex.poi) {
+        console.log(`🏛️ POI FOUND:`);
+        console.log(`   Type: ${hex.poi.type}`);
+        console.log(`   ID: ${hex.poi.id}`);
+        console.log(`   Fortified: ${hex.poi.fortified}`);
+        console.log(`   OutpostOwner: ${hex.poi.outpostOwner}`);
+        console.log(`   Rarity: ${hex.poi.rarity}`);
+
+        // Check ownership logic
+        if (hex.poi.type === 'Outpost') {
+          const s = String(hex.poi.id || '');
+          const idx = s.indexOf('poi-outpost-');
+          if (idx !== -1) {
+            const rest = s.slice(idx + 'poi-outpost-'.length);
+            const ownerId = rest.split('-')[0] || null;
+            console.log(`🏴 STANDALONE OUTPOST OWNER: ${ownerId}`);
+          }
+        }
+
+        if (hex.poi.fortified && hex.poi.outpostOwner) {
+          console.log(`🏰 FORTIFIED POI OWNER: ${hex.poi.outpostOwner}`);
+        }
+      } else {
+        console.log(`❌ NO POI at ${hexCoord}`);
+      }
+
+      // Check which tribes have garrisons here
+      console.log(`🏕️ GARRISONS AT ${hexCoord}:`);
+      let foundGarrisons = false;
+      for (const tribe of gameState.tribes) {
+        if (tribe.garrisons && tribe.garrisons[hexCoord]) {
+          console.log(`   ${tribe.tribeName} (${tribe.id}): ${JSON.stringify(tribe.garrisons[hexCoord])}`);
+          foundGarrisons = true;
+        }
+      }
+      if (!foundGarrisons) {
+        console.log(`   No garrisons found at ${hexCoord}`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error in outpost ownership diagnostic:', error);
+    }
+
+    console.log('='.repeat(80));
+    console.log('🔍 OUTPOST OWNERSHIP DIAGNOSTIC END');
+    console.log('='.repeat(80));
+    console.log('');
+  }
+
   private mockHash(data: string): string {
     return `hashed_${data}_salted_v1`;
   }

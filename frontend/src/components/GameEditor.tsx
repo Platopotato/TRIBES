@@ -421,6 +421,28 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           >
             {isRestoring ? '🔄 Restoring...' : '🔄 Undo Fix'}
           </Button>
+
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              placeholder="061.055"
+              className="px-2 py-1 border rounded text-black"
+              id="outpost-hex-input"
+            />
+            <Button
+              onClick={() => {
+                const input = document.getElementById('outpost-hex-input') as HTMLInputElement;
+                if (input?.value) {
+                  client.diagnoseOutpost(input.value);
+                  alert(`Diagnosing outpost at ${input.value} - check server logs`);
+                }
+              }}
+              variant="secondary"
+            >
+              🔍 Diagnose Outpost
+            </Button>
+          </div>
+
           <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
         </div>
       </div>

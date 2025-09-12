@@ -45,6 +45,11 @@ export class GameService {
     await this.databaseService.restoreGarrisonCoordinates();
   }
 
+  // DIAGNOSTIC: Check outpost ownership at specific hex
+  async diagnoseOutpostOwnership(hexCoord: string): Promise<void> {
+    await this.databaseService.diagnoseOutpostOwnership(hexCoord);
+  }
+
   get database(): DatabaseService {
     return this.databaseService;
   }

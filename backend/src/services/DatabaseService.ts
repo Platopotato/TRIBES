@@ -210,7 +210,7 @@ export class DatabaseService {
     }
   }
 
-  // BACKUP: Create backup of garrison coordinates before fixing
+  // BACKUP: Create file-based backup of garrison coordinates before fixing
   async backupGarrisonCoordinates(): Promise<void> {
     if (!this.prisma) {
       console.log('❌ Database not available for garrison coordinate backup');
@@ -222,40 +222,41 @@ export class DatabaseService {
     try {
       // Get all current garrison coordinates
       const allGarrisons = await this.prisma.garrison.findMany({
-        select: { id: true, hexQ: true, hexR: true }
+        include: { tribe: { select: { tribeName: true } } }
       });
 
       // Store backup in a JSON format that can be easily restored
       const backupData = {
         timestamp: new Date().toISOString(),
+        description: 'Garrison coordinate backup before coordinate fix',
+        totalGarrisons: allGarrisons.length,
         garrisons: allGarrisons.map(g => ({
           id: g.id,
+          tribeName: g.tribe.tribeName,
           originalQ: g.hexQ,
           originalR: g.hexR
         }))
       };
 
-      // Store backup in a simple way using existing tables
-      // We'll use the game state to store backup data temporarily
-      const currentGameState = await this.prisma.gameState.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
+      // Create backup file in the backend directory
+      const fs = await import('fs');
+      const path = await import('path');
 
-      if (currentGameState) {
-        // Store backup in the game state's metadata (we'll add a backup field)
-        await this.prisma.gameState.update({
-          where: { id: currentGameState.id },
-          data: {
-            // Store backup in a custom field - we'll use the existing JSON fields
-            mapSettings: {
-              ...((currentGameState.mapSettings as any) || {}),
-              garrisonCoordinateBackup: backupData
-            }
-          }
-        });
+      const backupDir = path.join(process.cwd(), 'coordinate-backups');
+
+      // Ensure backup directory exists
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
       }
 
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupFilePath = path.join(backupDir, `garrison-coordinates-backup-${timestamp}.json`);
+
+      // Write backup to file
+      fs.writeFileSync(backupFilePath, JSON.stringify(backupData, null, 2));
+
       console.log(`✅ BACKUP CREATED: ${allGarrisons.length} garrison coordinates backed up`);
+      console.log(`📁 BACKUP FILE: ${backupFilePath}`);
 
     } catch (error) {
       console.error('❌ Failed to create garrison coordinate backup:', error);
@@ -263,7 +264,51 @@ export class DatabaseService {
     }
   }
 
-  // RESTORE: Restore garrison coordinates from backup
+  // LIST: List available coordinate backups
+  async listGarrisonCoordinateBackups(): Promise<void> {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const backupDir = path.join(process.cwd(), 'coordinate-backups');
+
+      console.log('📁 AVAILABLE COORDINATE BACKUPS:');
+
+      if (!fs.existsSync(backupDir)) {
+        console.log('   No backup directory found');
+        return;
+      }
+
+      const backupFiles = fs.readdirSync(backupDir)
+        .filter(file => file.startsWith('garrison-coordinates-backup-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+
+      if (backupFiles.length === 0) {
+        console.log('   No backup files found');
+        return;
+      }
+
+      for (const backupFile of backupFiles) {
+        try {
+          const backupFilePath = path.join(backupDir, backupFile);
+          const backupContent = fs.readFileSync(backupFilePath, 'utf8');
+          const backupData = JSON.parse(backupContent);
+
+          console.log(`   📄 ${backupFile}`);
+          console.log(`      Created: ${backupData.timestamp}`);
+          console.log(`      Garrisons: ${backupData.totalGarrisons}`);
+          console.log('');
+        } catch (error) {
+          console.log(`   ❌ ${backupFile} (corrupted)`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to list coordinate backups:', error);
+    }
+  }
+
+  // RESTORE: Restore garrison coordinates from file backup
   async restoreGarrisonCoordinates(): Promise<void> {
     if (!this.prisma) {
       console.log('❌ Database not available for garrison coordinate restore');
@@ -276,25 +321,39 @@ export class DatabaseService {
     console.log('='.repeat(80));
 
     try {
-      // Get the backup from game state
-      const currentGameState = await this.prisma.gameState.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
+      const fs = await import('fs');
+      const path = await import('path');
 
-      if (!currentGameState || !currentGameState.mapSettings) {
-        console.log('❌ No backup found to restore from');
+      const backupDir = path.join(process.cwd(), 'coordinate-backups');
+
+      // Check if backup directory exists
+      if (!fs.existsSync(backupDir)) {
+        console.log('❌ No backup directory found');
         return;
       }
 
-      const mapSettings = currentGameState.mapSettings as any;
-      const backupData = mapSettings.garrisonCoordinateBackup;
+      // Get all backup files and find the most recent one
+      const backupFiles = fs.readdirSync(backupDir)
+        .filter(file => file.startsWith('garrison-coordinates-backup-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
 
-      if (!backupData) {
-        console.log('❌ No garrison coordinate backup found in game state');
+      if (backupFiles.length === 0) {
+        console.log('❌ No backup files found');
         return;
       }
 
-      console.log(`📅 Restoring from backup created: ${backupData.timestamp}`);
+      const latestBackupFile = backupFiles[0];
+      const backupFilePath = path.join(backupDir, latestBackupFile);
+
+      console.log(`📁 RESTORING FROM: ${latestBackupFile}`);
+
+      // Read backup file
+      const backupContent = fs.readFileSync(backupFilePath, 'utf8');
+      const backupData = JSON.parse(backupContent);
+
+      console.log(`📅 Backup created: ${backupData.timestamp}`);
+      console.log(`📊 Total garrisons in backup: ${backupData.totalGarrisons}`);
 
       let restoredCount = 0;
       let errorCount = 0;
@@ -308,9 +367,10 @@ export class DatabaseService {
               hexR: garrisonBackup.originalR
             }
           });
+          console.log(`🔄 RESTORED: ${garrisonBackup.tribeName} garrison q=${garrisonBackup.originalQ}, r=${garrisonBackup.originalR}`);
           restoredCount++;
         } catch (error) {
-          console.error(`❌ Error restoring garrison ${garrisonBackup.id}:`, error);
+          console.error(`❌ Error restoring garrison ${garrisonBackup.id} (${garrisonBackup.tribeName}):`, error);
           errorCount++;
         }
       }
@@ -318,6 +378,7 @@ export class DatabaseService {
       console.log(`✅ GARRISON COORDINATE RESTORE COMPLETE:`);
       console.log(`   Restored: ${restoredCount} garrisons`);
       console.log(`   Errors: ${errorCount} garrisons`);
+      console.log(`   Backup file: ${backupFilePath}`);
 
       console.log('='.repeat(80));
       console.log('🔄 GARRISON COORDINATE RESTORE END');

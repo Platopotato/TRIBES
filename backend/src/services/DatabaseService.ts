@@ -7,6 +7,7 @@ import {
   User,
   Tribe,
   generateMapData,
+  parseHexCoords,
   SECURITY_QUESTIONS,
   NewsletterState,
   TurnDeadline,
@@ -415,10 +416,8 @@ export class DatabaseService {
             // Create new garrisons with enhanced error handling
             for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
               try {
-                // Parse hex coordinate (format: "035.033")
-                const [qStr, rStr] = hexCoord.split('.');
-                const q = parseInt(qStr, 10);
-                const r = parseInt(rStr, 10);
+                // CRITICAL FIX: Use proper coordinate parsing instead of raw integer parsing
+                const { q, r } = parseHexCoords(hexCoord);
 
                 // Validate coordinates
                 if (isNaN(q) || isNaN(r)) {
@@ -428,47 +427,12 @@ export class DatabaseService {
 
                 console.log(`🎯 GARRISON FIX: Looking for hex at ${hexCoord} for ${tribe.tribeName}`);
 
-                // CRITICAL FIX: Use same sophisticated hex lookup as restore method
-                let hexRecord: any = null;
-                let strategyUsed = "";
-
-                // Strategy 1: Direct lookup (for coordinates like 035.033 = q=35, r=33)
-                console.log(`🔍 Strategy 1: Direct lookup q=${q}, r=${r}`);
-                hexRecord = await this.prisma.hex.findFirst({
+                // FIXED: Direct lookup with proper coordinate parsing
+                console.log(`🎯 FIXED LOOKUP: Looking for hex at q=${q}, r=${r} (${hexCoord}) using proper coordinate parsing`);
+                const hexRecord = await this.prisma.hex.findFirst({
                   where: { q, r, gameStateId: existingGameState.id }
                 });
-                if (hexRecord) {
-                  strategyUsed = "Direct lookup";
-                  console.log(`✅ SUCCESS! Strategy 1 worked: Direct lookup`);
-                }
-
-                if (!hexRecord) {
-                  // Strategy 2: Offset coordinates (game state format: 035.033 -> q=-15, r=-17)
-                  const offsetQ = q - 50;
-                  const offsetR = r - 50;
-                  console.log(`🔍 Strategy 2: Offset coordinates q=${q}→${offsetQ}, r=${r}→${offsetR}`);
-                  hexRecord = await this.prisma.hex.findFirst({
-                    where: { q: offsetQ, r: offsetR, gameStateId: existingGameState.id }
-                  });
-                  if (hexRecord) {
-                    strategyUsed = "Offset coordinates";
-                    console.log(`✅ SUCCESS! Strategy 2 worked: Offset coordinates`);
-                  }
-                }
-
-                if (!hexRecord) {
-                  // Strategy 3: Backup transformation (backup coords to map coords)
-                  const transformedQ = q - 70;
-                  const transformedR = r - 40;
-                  console.log(`🔍 Strategy 3: Backup transformation q=${q}→${transformedQ}, r=${r}→${transformedR}`);
-                  hexRecord = await this.prisma.hex.findFirst({
-                    where: { q: transformedQ, r: transformedR, gameStateId: existingGameState.id }
-                  });
-                  if (hexRecord) {
-                    strategyUsed = "Backup transformation";
-                    console.log(`✅ SUCCESS! Strategy 3 worked: Backup transformation`);
-                  }
-                }
+                const strategyUsed = hexRecord ? "Direct lookup (fixed)" : "Not found";
 
                 if (hexRecord) {
                   console.log(`🎉 GARRISON SUCCESS: Found hex using ${strategyUsed} for ${tribe.tribeName} at ${hexCoord}`);
@@ -477,14 +441,13 @@ export class DatabaseService {
                   continue;
                 }
 
-                // CRITICAL DEBUG: Check coordinate consistency
-                const originalQ = parseInt(hexCoord.split('.')[0], 10);
-                const originalR = parseInt(hexCoord.split('.')[1], 10);
-                console.log(`🔍 COORDINATE CHECK: Original "${hexCoord}" (q=${originalQ}, r=${originalR}) vs Database (q=${hexRecord.q}, r=${hexRecord.r})`);
+                // COORDINATE CONSISTENCY: Now using proper parsing, should always match
+                const { q: originalQ, r: originalR } = parseHexCoords(hexCoord);
+                console.log(`✅ COORDINATE CHECK: "${hexCoord}" -> (q=${originalQ}, r=${originalR}) matches Database (q=${hexRecord.q}, r=${hexRecord.r})`);
 
                 if (originalQ !== hexRecord.q || originalR !== hexRecord.r) {
-                  console.log(`🚨 COORDINATE MISMATCH: This will cause Game Editor issues!`);
-                  console.log(`   Original: q=${originalQ}, r=${originalR}`);
+                  console.log(`🚨 UNEXPECTED MISMATCH: This should not happen with proper parsing!`);
+                  console.log(`   Parsed: q=${originalQ}, r=${originalR}`);
                   console.log(`   Database: q=${hexRecord.q}, r=${hexRecord.r}`);
                   console.log(`   Strategy: ${strategyUsed}`);
                 }
@@ -1269,61 +1232,17 @@ export class DatabaseService {
 
             for (const [hexCoord, garrisonData] of Object.entries(tribe.garrisons)) {
               try {
-                // Parse hex coordinates (format: "051.044")
-                const coordParts = hexCoord.split('.');
-                if (coordParts.length !== 2) {
-                  console.log(`❌ Invalid hex coordinate format: ${hexCoord}`);
-                  continue;
-                }
+                // CRITICAL FIX: Use proper coordinate parsing instead of raw integer parsing
+                // parseHexCoords converts "051.044" -> {q: 1, r: -6} (subtracts 50 offset)
+                const { q, r } = parseHexCoords(hexCoord);
 
-                const q = parseInt(coordParts[0], 10);
-                const r = parseInt(coordParts[1], 10);
+                console.log(`🎯 FIXED LOOKUP: Looking for hex at q=${q}, r=${r} (${hexCoord}) using proper coordinate parsing`);
 
-                console.log(`🎯 WINNER STRATEGY: Looking for hex at q=${q}, r=${r} (${hexCoord})`);
-
-                // WINNER: Try multiple coordinate lookup strategies with clear logging
-                let hex: any = null;
-                let strategyUsed = "";
-
-                // Strategy 1: Direct lookup
-                console.log(`🔍 Strategy 1: Direct lookup q=${q}, r=${r}`);
-                hex = await tx.hex.findFirst({
+                // FIXED: Direct lookup with proper coordinate parsing (no more transformation needed)
+                const hex = await tx.hex.findFirst({
                   where: { q, r, gameStateId: currentGameState.id }
                 });
-                if (hex) {
-                  strategyUsed = "Direct lookup";
-                  console.log(`✅ WINNER! Strategy 1 worked: Direct lookup`);
-                }
-
-                if (!hex) {
-                  // Strategy 2: Try coordinate transformation (backup coords to map coords)
-                  // Backup uses 30-80 range, map uses -40 to +40 range
-                  // Transform: backup_q - 70 = map_q (e.g., 51 - 70 = -19)
-                  const transformedQ = q - 70;
-                  const transformedR = r - 40;
-                  console.log(`🔍 Strategy 2: Coordinate transformation q=${q}→${transformedQ}, r=${r}→${transformedR}`);
-                  hex = await tx.hex.findFirst({
-                    where: { q: transformedQ, r: transformedR, gameStateId: currentGameState.id }
-                  });
-                  if (hex) {
-                    strategyUsed = "Coordinate transformation";
-                    console.log(`✅ WINNER! Strategy 2 worked: Coordinate transformation`);
-                  }
-                }
-
-                if (!hex) {
-                  // Strategy 3: Try different transformation
-                  const altQ = q - 91; // Try different offset
-                  const altR = r - 44;
-                  console.log(`🔍 Strategy 3: Alternative transformation q=${q}→${altQ}, r=${r}→${altR}`);
-                  hex = await tx.hex.findFirst({
-                    where: { q: altQ, r: altR, gameStateId: currentGameState.id }
-                  });
-                  if (hex) {
-                    strategyUsed = "Alternative transformation";
-                    console.log(`✅ WINNER! Strategy 3 worked: Alternative transformation`);
-                  }
-                }
+                const strategyUsed = hex ? "Direct lookup (fixed)" : "Not found";
 
                 if (hex) {
                   console.log(`🎉 SUCCESS: Found hex using ${strategyUsed} for ${hexCoord}`);

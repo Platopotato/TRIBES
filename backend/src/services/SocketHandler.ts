@@ -973,6 +973,19 @@ export class SocketHandler {
       }
     });
 
+    // FIX: Admin handler to fix outpost ownership
+    socket.on('admin:fixOutpostOwnership', async (hexCoord: string) => {
+      console.log(`🔧 ADMIN: Fixing outpost ownership at ${hexCoord}`);
+      try {
+        await this.gameService.fixOutpostOwnership(hexCoord);
+        socket.emit('admin:outpostOwnershipFixed', { success: true });
+        console.log(`✅ ADMIN: Outpost ownership fixed for ${hexCoord}`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Error fixing outpost ownership:`, error);
+        socket.emit('admin:outpostOwnershipFixed', { success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
+
     // Admin-specific handlers
     socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
       console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);

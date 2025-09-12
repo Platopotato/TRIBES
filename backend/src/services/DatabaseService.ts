@@ -479,6 +479,77 @@ export class DatabaseService {
     console.log('');
   }
 
+  // FIX: Correct outpost ownership mismatches
+  async fixOutpostOwnership(hexCoord: string): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🔧 FIXING OUTPOST OWNERSHIP AT ${hexCoord}`);
+    console.log('='.repeat(80));
+
+    try {
+      // Load current game state
+      const gameState = await this.getGameState();
+      if (!gameState) {
+        console.log('❌ No game state found');
+        return;
+      }
+
+      // Find the hex in map data
+      const { q, r } = parseHexCoords(hexCoord);
+      const hex = gameState.mapData.find((h: any) => h.q === q && h.r === r);
+
+      if (!hex || !hex.poi || !hex.poi.fortified) {
+        console.log(`❌ No fortified POI found at ${hexCoord}`);
+        return;
+      }
+
+      // Find which tribe has a garrison here
+      let garrisonOwner: any = null;
+      for (const tribe of gameState.tribes) {
+        if (tribe.garrisons && tribe.garrisons[hexCoord]) {
+          garrisonOwner = tribe;
+          break;
+        }
+      }
+
+      if (!garrisonOwner) {
+        console.log(`❌ No garrison found at ${hexCoord}`);
+        return;
+      }
+
+      console.log(`🏕️ GARRISON OWNER: ${garrisonOwner.tribeName} (${garrisonOwner.id})`);
+      console.log(`🏰 CURRENT POI OWNER: ${hex.poi.outpostOwner}`);
+
+      if (hex.poi.outpostOwner === garrisonOwner.id) {
+        console.log(`✅ Ownership already correct - no fix needed`);
+        return;
+      }
+
+      // Fix the ownership
+      const oldOwner = hex.poi.outpostOwner;
+      hex.poi.outpostOwner = garrisonOwner.id;
+      hex.poi.id = `poi-fortified-${hex.poi.type}-${garrisonOwner.id}-${hexCoord}`;
+
+      console.log(`🔧 FIXING OWNERSHIP:`);
+      console.log(`   From: ${oldOwner}`);
+      console.log(`   To: ${garrisonOwner.id}`);
+      console.log(`   New ID: ${hex.poi.id}`);
+
+      // Save the updated game state
+      await this.updateGameStateInDb(gameState);
+
+      console.log(`✅ OUTPOST OWNERSHIP FIXED SUCCESSFULLY`);
+
+    } catch (error) {
+      console.error('❌ Error fixing outpost ownership:', error);
+    }
+
+    console.log('='.repeat(80));
+    console.log('🔧 OUTPOST OWNERSHIP FIX END');
+    console.log('='.repeat(80));
+    console.log('');
+  }
+
   private mockHash(data: string): string {
     return `hashed_${data}_salted_v1`;
   }

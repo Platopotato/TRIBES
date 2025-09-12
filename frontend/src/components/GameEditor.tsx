@@ -441,6 +441,20 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             >
               🔍 Diagnose Outpost
             </Button>
+            <Button
+              onClick={() => {
+                const input = document.getElementById('outpost-hex-input') as HTMLInputElement;
+                if (input?.value) {
+                  if (confirm(`Fix outpost ownership at ${input.value}?\n\nThis will transfer outpost ownership to the tribe with a garrison there.`)) {
+                    client.fixOutpostOwnership(input.value);
+                    alert(`Fixing outpost ownership at ${input.value} - check server logs`);
+                  }
+                }
+              }}
+              variant="secondary"
+            >
+              🔧 Fix Ownership
+            </Button>
           </div>
 
           <Button onClick={onBack} variant="secondary">← Back to Admin</Button>

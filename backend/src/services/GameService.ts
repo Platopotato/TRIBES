@@ -50,6 +50,11 @@ export class GameService {
     await this.databaseService.diagnoseOutpostOwnership(hexCoord);
   }
 
+  // FIX: Correct outpost ownership mismatches
+  async fixOutpostOwnership(hexCoord: string): Promise<void> {
+    await this.databaseService.fixOutpostOwnership(hexCoord);
+  }
+
   get database(): DatabaseService {
     return this.databaseService;
   }

@@ -394,85 +394,13 @@ export class DatabaseService {
     }
   }
 
-  // CRITICAL: Fix existing garrison coordinates in database (SAFE VERSION)
+  // DISABLED: Coordinate fix function removed - no longer needed
+  // The Game Editor coordinate corruption has been fixed at the source
+  // All coordinates are now properly maintained during database sync
   async fixGarrisonCoordinates(): Promise<void> {
-    if (!this.prisma) {
-      console.log('❌ Database not available for garrison coordinate fix');
-      return;
-    }
-
-    console.log('');
-    console.log('='.repeat(80));
-    console.log('🔧 GARRISON COORDINATE FIX START');
-    console.log('='.repeat(80));
-
-    try {
-      // STEP 1: Create backup first
-      await this.backupGarrisonCoordinates();
-
-      // STEP 2: Get all garrisons that need coordinate fixes
-      // SAFE LOGIC: Only fix coordinates outside valid map range (-40 to +40)
-      const problematicGarrisons = await this.prisma.garrison.findMany({
-        where: {
-          OR: [
-            { hexQ: { gt: 40 } },   // Outside valid map range
-            { hexR: { gt: 40 } },
-            { hexQ: { lt: -40 } },
-            { hexR: { lt: -40 } }
-          ]
-        },
-        include: { tribe: { select: { tribeName: true } } }
-      });
-
-      console.log(`🎯 FOUND ${problematicGarrisons.length} garrisons with coordinates outside valid map range (-40 to +40)`);
-
-      let fixedCount = 0;
-      let errorCount = 0;
-
-      for (const garrison of problematicGarrisons) {
-        try {
-          // Convert string coordinates to proper map coordinates
-          const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
-          const { q: correctQ, r: correctR } = parseHexCoords(coordinateString);
-
-          console.log(`🔧 FIXING: ${garrison.tribe.tribeName} garrison`);
-          console.log(`   From: q=${garrison.hexQ}, r=${garrison.hexR} (string coordinates stored as integers)`);
-          console.log(`   To: q=${correctQ}, r=${correctR} (proper map coordinates)`);
-          console.log(`   String: "${coordinateString}" -> parseHexCoords -> q=${correctQ}, r=${correctR}`);
-
-          // Update the garrison with correct coordinates
-          await this.prisma.garrison.update({
-            where: { id: garrison.id },
-            data: {
-              hexQ: correctQ,
-              hexR: correctR
-            }
-          });
-
-          fixedCount++;
-        } catch (error) {
-          console.error(`❌ Error fixing garrison ${garrison.id}:`, error);
-          errorCount++;
-        }
-      }
-
-      console.log(`✅ GARRISON COORDINATE FIX COMPLETE:`);
-      console.log(`   Fixed: ${fixedCount} garrisons`);
-      console.log(`   Errors: ${errorCount} garrisons`);
-      console.log(`   Backup created for safe restoration if needed`);
-
-      console.log('='.repeat(80));
-      console.log('🔧 GARRISON COORDINATE FIX END');
-      console.log('='.repeat(80));
-      console.log('');
-
-    } catch (error) {
-      console.error('❌ Failed to fix garrison coordinates:', error);
-      console.log('='.repeat(80));
-      console.log('🔧 GARRISON COORDINATE FIX END (ERROR)');
-      console.log('='.repeat(80));
-      console.log('');
-    }
+    console.log('✅ Coordinate fix no longer needed - Game Editor corruption has been fixed at the source');
+    console.log('🎯 All garrison coordinates are now properly maintained during database sync');
+    return;
   }
 
   private mockHash(data: string): string {

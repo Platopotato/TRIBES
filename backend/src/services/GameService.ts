@@ -30,6 +30,11 @@ export class GameService {
     await this.databaseService.disconnect();
   }
 
+  // DIAGNOSTIC: Analyze coordinate system
+  async diagnoseCoordinateSystem(): Promise<void> {
+    await this.databaseService.diagnoseCoordinateSystem();
+  }
+
   // CRITICAL: Fix garrison coordinates in database
   async fixGarrisonCoordinates(): Promise<void> {
     await this.databaseService.fixGarrisonCoordinates();

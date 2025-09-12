@@ -487,6 +487,7 @@ export const processTurn = () => {
 };
 export const updateTribe = createEmitter<Tribe>('admin:updateTribe');
 export const removePlayer = createEmitter<string>('admin:removePlayer');
+export const diagnoseCoordinateSystem = () => socket.emit('admin:diagnoseCoordinateSystem');
 export const fixGarrisonCoordinates = () => socket.emit('admin:fixGarrisonCoordinates');
 export const removeJourney = createEmitter<string>('admin:removeJourney');
 export const testTribeTurn = createEmitter<{ tribeId: string }>('admin:test_tribe_turn');

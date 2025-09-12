@@ -921,6 +921,19 @@ export class SocketHandler {
       }
     });
 
+    // DIAGNOSTIC: Admin handler to diagnose coordinate system
+    socket.on('admin:diagnoseCoordinateSystem', async () => {
+      console.log(`🔍 ADMIN: Diagnosing coordinate system`);
+      try {
+        await this.gameService.diagnoseCoordinateSystem();
+        socket.emit('admin:coordinateDiagnosisComplete', { success: true });
+        console.log(`✅ ADMIN: Coordinate diagnosis complete`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to diagnose coordinate system:`, error);
+        socket.emit('admin:coordinateDiagnosisComplete', { success: false, error: (error as Error).message });
+      }
+    });
+
     // CRITICAL: Admin handler to fix garrison coordinates
     socket.on('admin:fixGarrisonCoordinates', async () => {
       console.log(`🔧 ADMIN: Fixing garrison coordinates in database`);

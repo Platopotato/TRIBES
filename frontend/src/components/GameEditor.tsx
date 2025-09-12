@@ -26,6 +26,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [showJourneyManager, setShowJourneyManager] = useState(false);
   const [garrisonToDelete, setGarrisonToDelete] = useState<{ location: string; tribeName: string } | null>(null);
   const [isFixingCoordinates, setIsFixingCoordinates] = useState(false);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
 
   const playerTribes = useMemo(() => {
     return gameState.tribes.filter(tribe => !tribe.isAI);
@@ -232,6 +233,39 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     alert(`Journey "${journeyToRemove.type}" has been removed from the game.`);
   };
 
+  const handleDiagnoseCoordinateSystem = async () => {
+    setIsDiagnosing(true);
+
+    try {
+      // Listen for the response
+      const handleResponse = (response: { success: boolean; error?: string }) => {
+        setIsDiagnosing(false);
+        if (response.success) {
+          alert('✅ Coordinate system diagnosis complete! Check server logs for detailed analysis.');
+        } else {
+          alert(`❌ Failed to diagnose coordinate system: ${response.error || 'Unknown error'}`);
+        }
+        const socket = client.getSocket();
+        if (socket) {
+          socket.off('admin:coordinateDiagnosisComplete', handleResponse);
+        }
+      };
+
+      const socket = client.getSocket();
+      if (socket) {
+        socket.on('admin:coordinateDiagnosisComplete', handleResponse);
+        client.diagnoseCoordinateSystem();
+      } else {
+        setIsDiagnosing(false);
+        alert('❌ Socket not connected');
+      }
+
+    } catch (error) {
+      setIsDiagnosing(false);
+      alert(`❌ Error: ${(error as Error).message}`);
+    }
+  };
+
   const handleFixGarrisonCoordinates = async () => {
     if (!confirm('Fix garrison coordinates in database? This will correct coordinate mismatches that prevent Game Editor from working properly. This is safe to run.')) {
       return;
@@ -327,6 +361,13 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             variant={showJourneyManager ? "primary" : "secondary"}
           >
             🚶 Journey Manager
+          </Button>
+          <Button
+            onClick={handleDiagnoseCoordinateSystem}
+            variant="secondary"
+            disabled={isDiagnosing}
+          >
+            {isDiagnosing ? '🔍 Analyzing...' : '🔍 Diagnose Coords'}
           </Button>
           <Button
             onClick={handleFixGarrisonCoordinates}

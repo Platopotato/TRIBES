@@ -106,6 +106,87 @@ export class DatabaseService {
     }
   }
 
+  // DIAGNOSTIC: Analyze coordinate system in database
+  async diagnoseCoordinateSystem(): Promise<void> {
+    if (!this.prisma) {
+      console.log('❌ Database not available for coordinate diagnosis');
+      return;
+    }
+
+    console.log('🔍 COORDINATE SYSTEM DIAGNOSIS...');
+
+    try {
+      // Check hex coordinate ranges
+      const hexStats = await this.prisma.hex.aggregate({
+        _min: { q: true, r: true },
+        _max: { q: true, r: true },
+        _count: true
+      });
+
+      console.log('📊 HEX COORDINATE RANGES:');
+      console.log(`   Total hexes: ${hexStats._count}`);
+      console.log(`   Q range: ${hexStats._min.q} to ${hexStats._max.q}`);
+      console.log(`   R range: ${hexStats._min.r} to ${hexStats._max.r}`);
+
+      // Check garrison coordinate ranges
+      const garrisonStats = await this.prisma.garrison.aggregate({
+        _min: { hexQ: true, hexR: true },
+        _max: { hexQ: true, hexR: true },
+        _count: true
+      });
+
+      console.log('🏰 GARRISON COORDINATE RANGES:');
+      console.log(`   Total garrisons: ${garrisonStats._count}`);
+      console.log(`   Q range: ${garrisonStats._min.hexQ} to ${garrisonStats._max.hexQ}`);
+      console.log(`   R range: ${garrisonStats._min.hexR} to ${garrisonStats._max.hexR}`);
+
+      // Sample some garrisons to see coordinate patterns
+      const sampleGarrisons = await this.prisma.garrison.findMany({
+        take: 10,
+        include: { tribe: { select: { tribeName: true, location: true } } }
+      });
+
+      console.log('🔍 SAMPLE GARRISON COORDINATES:');
+      for (const garrison of sampleGarrisons) {
+        const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+        const { q: parsedQ, r: parsedR } = parseHexCoords(coordinateString);
+
+        console.log(`   ${garrison.tribe.tribeName}:`);
+        console.log(`     DB: q=${garrison.hexQ}, r=${garrison.hexR}`);
+        console.log(`     String: "${coordinateString}"`);
+        console.log(`     Parsed: q=${parsedQ}, r=${parsedR}`);
+        console.log(`     Tribe location: ${garrison.tribe.location}`);
+        console.log(`     Match: ${coordinateString === garrison.tribe.location ? '✅' : '❌'}`);
+        console.log('');
+      }
+
+      // Check if coordinates are consistent
+      const coordinateIssues = await this.prisma.garrison.findMany({
+        where: {
+          OR: [
+            { hexQ: { gt: 100 } },  // Suspiciously high
+            { hexR: { gt: 100 } },
+            { hexQ: { lt: -100 } }, // Suspiciously low
+            { hexR: { lt: -100 } }
+          ]
+        },
+        include: { tribe: { select: { tribeName: true, location: true } } }
+      });
+
+      if (coordinateIssues.length > 0) {
+        console.log('🚨 SUSPICIOUS COORDINATES FOUND:');
+        for (const issue of coordinateIssues) {
+          console.log(`   ${issue.tribe.tribeName}: DB(q=${issue.hexQ}, r=${issue.hexR}) vs Location(${issue.tribe.location})`);
+        }
+      } else {
+        console.log('✅ No obviously suspicious coordinates found');
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to diagnose coordinate system:', error);
+    }
+  }
+
   // CRITICAL: Fix existing garrison coordinates in database
   async fixGarrisonCoordinates(): Promise<void> {
     if (!this.prisma) {

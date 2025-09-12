@@ -113,7 +113,10 @@ export class DatabaseService {
       return;
     }
 
-    console.log('🔍 COORDINATE SYSTEM DIAGNOSIS...');
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🔍 COORDINATE SYSTEM DIAGNOSIS START');
+    console.log('='.repeat(80));
 
     try {
       // Check hex coordinate ranges
@@ -147,16 +150,25 @@ export class DatabaseService {
       });
 
       console.log('🔍 SAMPLE GARRISON COORDINATES:');
+      console.log('   (Showing coordinate conversion logic)');
+      console.log('');
       for (const garrison of sampleGarrisons) {
         const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
         const { q: parsedQ, r: parsedR } = parseHexCoords(coordinateString);
 
         console.log(`   ${garrison.tribe.tribeName}:`);
-        console.log(`     DB: q=${garrison.hexQ}, r=${garrison.hexR}`);
-        console.log(`     String: "${coordinateString}"`);
-        console.log(`     Parsed: q=${parsedQ}, r=${parsedR}`);
+        console.log(`     Database stored: q=${garrison.hexQ}, r=${garrison.hexR}`);
+        console.log(`     As string: "${coordinateString}"`);
+        console.log(`     parseHexCoords("${coordinateString}") = q=${parsedQ}, r=${parsedR}`);
         console.log(`     Tribe location: ${garrison.tribe.location}`);
-        console.log(`     Match: ${coordinateString === garrison.tribe.location ? '✅' : '❌'}`);
+        console.log(`     String matches tribe location: ${coordinateString === garrison.tribe.location ? '✅' : '❌'}`);
+
+        // Show what the coordinates SHOULD be if stored correctly
+        if (garrison.tribe.location) {
+          const { q: correctQ, r: correctR } = parseHexCoords(garrison.tribe.location);
+          console.log(`     Tribe location parsed: parseHexCoords("${garrison.tribe.location}") = q=${correctQ}, r=${correctR}`);
+          console.log(`     Database should store: q=${correctQ}, r=${correctR} (not q=${garrison.hexQ}, r=${garrison.hexR})`);
+        }
         console.log('');
       }
 
@@ -182,8 +194,19 @@ export class DatabaseService {
         console.log('✅ No obviously suspicious coordinates found');
       }
 
+      console.log('');
+      console.log('='.repeat(80));
+      console.log('🔍 COORDINATE SYSTEM DIAGNOSIS END');
+      console.log('='.repeat(80));
+      console.log('');
+
     } catch (error) {
       console.error('❌ Failed to diagnose coordinate system:', error);
+      console.log('');
+      console.log('='.repeat(80));
+      console.log('🔍 COORDINATE SYSTEM DIAGNOSIS END (ERROR)');
+      console.log('='.repeat(80));
+      console.log('');
     }
   }
 

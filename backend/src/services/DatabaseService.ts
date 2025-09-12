@@ -106,6 +106,66 @@ export class DatabaseService {
     }
   }
 
+  // CRITICAL: Fix existing garrison coordinates in database
+  async fixGarrisonCoordinates(): Promise<void> {
+    if (!this.prisma) {
+      console.log('❌ Database not available for garrison coordinate fix');
+      return;
+    }
+
+    console.log('🔧 STARTING GARRISON COORDINATE FIX...');
+
+    try {
+      // Get all garrisons with their current coordinates
+      const allGarrisons = await this.prisma.garrison.findMany({
+        include: {
+          tribe: true
+        }
+      });
+
+      console.log(`🔍 Found ${allGarrisons.length} garrisons to check`);
+
+      let fixedCount = 0;
+      let skippedCount = 0;
+
+      for (const garrison of allGarrisons) {
+        try {
+          // Check if coordinates look like they need fixing (> 50 indicates raw parsing)
+          if (garrison.hexQ > 50 || garrison.hexR > 50) {
+            // These coordinates were stored with raw parsing, need to convert
+            const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+            const { q: correctQ, r: correctR } = parseHexCoords(coordinateString);
+
+            console.log(`🔧 FIXING: ${garrison.tribe.tribeName} garrison "${coordinateString}" (DB: q=${garrison.hexQ}, r=${garrison.hexR}) -> (q=${correctQ}, r=${correctR})`);
+
+            // Update the garrison with correct coordinates
+            await this.prisma.garrison.update({
+              where: { id: garrison.id },
+              data: {
+                hexQ: correctQ,
+                hexR: correctR
+              }
+            });
+
+            fixedCount++;
+          } else {
+            // Coordinates look correct already
+            skippedCount++;
+          }
+        } catch (error) {
+          console.error(`❌ Error fixing garrison ${garrison.id}:`, error);
+        }
+      }
+
+      console.log(`✅ GARRISON COORDINATE FIX COMPLETE:`);
+      console.log(`   Fixed: ${fixedCount} garrisons`);
+      console.log(`   Skipped: ${skippedCount} garrisons (already correct)`);
+
+    } catch (error) {
+      console.error('❌ Failed to fix garrison coordinates:', error);
+    }
+  }
+
   private mockHash(data: string): string {
     return `hashed_${data}_salted_v1`;
   }

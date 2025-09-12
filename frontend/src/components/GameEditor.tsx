@@ -3,6 +3,7 @@ import { GameState, User, Tribe, GlobalResources, Garrison, Chief, ALL_CHIEFS, g
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
+import * as client from '../lib/client';
 
 interface GameEditorProps {
   gameState: GameState;
@@ -24,6 +25,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [journeyToRemove, setJourneyToRemove] = useState<Journey | null>(null);
   const [showJourneyManager, setShowJourneyManager] = useState(false);
   const [garrisonToDelete, setGarrisonToDelete] = useState<{ location: string; tribeName: string } | null>(null);
+  const [isFixingCoordinates, setIsFixingCoordinates] = useState(false);
 
   const playerTribes = useMemo(() => {
     return gameState.tribes.filter(tribe => !tribe.isAI);
@@ -230,6 +232,43 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     alert(`Journey "${journeyToRemove.type}" has been removed from the game.`);
   };
 
+  const handleFixGarrisonCoordinates = async () => {
+    if (!confirm('Fix garrison coordinates in database? This will correct coordinate mismatches that prevent Game Editor from working properly. This is safe to run.')) {
+      return;
+    }
+
+    setIsFixingCoordinates(true);
+
+    try {
+      // Listen for the response
+      const handleResponse = (response: { success: boolean; error?: string }) => {
+        setIsFixingCoordinates(false);
+        if (response.success) {
+          alert('✅ Garrison coordinates fixed successfully! Game Editor should now work properly.');
+        } else {
+          alert(`❌ Failed to fix garrison coordinates: ${response.error || 'Unknown error'}`);
+        }
+        const socket = client.getSocket();
+        if (socket) {
+          socket.off('admin:garrisonCoordinatesFixed', handleResponse);
+        }
+      };
+
+      const socket = client.getSocket();
+      if (socket) {
+        socket.on('admin:garrisonCoordinatesFixed', handleResponse);
+        client.fixGarrisonCoordinates();
+      } else {
+        setIsFixingCoordinates(false);
+        alert('❌ Socket not connected');
+      }
+
+    } catch (error) {
+      setIsFixingCoordinates(false);
+      alert(`❌ Error: ${(error as Error).message}`);
+    }
+  };
+
   const handleDeleteGarrison = () => {
     if (!garrisonToDelete || !editingGarrisons) return;
 
@@ -288,6 +327,13 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             variant={showJourneyManager ? "primary" : "secondary"}
           >
             🚶 Journey Manager
+          </Button>
+          <Button
+            onClick={handleFixGarrisonCoordinates}
+            variant="secondary"
+            disabled={isFixingCoordinates}
+          >
+            {isFixingCoordinates ? '🔧 Fixing...' : '🔧 Fix Coordinates'}
           </Button>
           <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
         </div>

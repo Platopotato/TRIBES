@@ -30,6 +30,11 @@ export class GameService {
     await this.databaseService.disconnect();
   }
 
+  // CRITICAL: Fix garrison coordinates in database
+  async fixGarrisonCoordinates(): Promise<void> {
+    await this.databaseService.fixGarrisonCoordinates();
+  }
+
   get database(): DatabaseService {
     return this.databaseService;
   }

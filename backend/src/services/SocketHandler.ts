@@ -921,6 +921,19 @@ export class SocketHandler {
       }
     });
 
+    // CRITICAL: Admin handler to fix garrison coordinates
+    socket.on('admin:fixGarrisonCoordinates', async () => {
+      console.log(`🔧 ADMIN: Fixing garrison coordinates in database`);
+      try {
+        await this.gameService.fixGarrisonCoordinates();
+        socket.emit('admin:garrisonCoordinatesFixed', { success: true });
+        console.log(`✅ ADMIN: Garrison coordinates fixed successfully`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to fix garrison coordinates:`, error);
+        socket.emit('admin:garrisonCoordinatesFixed', { success: false, error: (error as Error).message });
+      }
+    });
+
     // Admin-specific handlers
     socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
       console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);

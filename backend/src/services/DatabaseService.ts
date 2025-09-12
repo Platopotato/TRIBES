@@ -821,11 +821,17 @@ export class DatabaseService {
                   console.log(`   Strategy: ${strategyUsed}`);
                 }
 
+                // CRITICAL FIX: Store string coordinate values, not map coordinate values
+                // This ensures garrison coordinates match the string format used in game state
+                const { q: stringQ, r: stringR } = parseHexCoords(hexCoord);
+                const coordinateQ = parseInt(hexCoord.split('.')[0]); // Extract "026" from "026.056"
+                const coordinateR = parseInt(hexCoord.split('.')[1]); // Extract "056" from "026.056"
+
                 const createdGarrison = await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
-                    hexQ: hexRecord.q, // Use the actual hex coordinates from database
-                    hexR: hexRecord.r, // Use the actual hex coordinates from database
+                    hexQ: coordinateQ, // Store string coordinate values (26, 56) not map coordinates (-24, 6)
+                    hexR: coordinateR, // This ensures proper round-trip conversion
                     troops: garrisonData.troops || 0,
                     weapons: garrisonData.weapons || 0,
                     chiefs: garrisonData.chiefs as any || [],
@@ -1631,10 +1637,14 @@ export class DatabaseService {
                   });
 
                   if (!existingGarrison) {
+                    // CRITICAL FIX: Store string coordinate values for proper round-trip conversion
+                    const coordinateQ = parseInt(hexCoord.split('.')[0]); // Extract "026" from "026.056"
+                    const coordinateR = parseInt(hexCoord.split('.')[1]); // Extract "056" from "026.056"
+
                     await tx.garrison.create({
                       data: {
-                        hexQ: q,
-                        hexR: r,
+                        hexQ: coordinateQ, // Store string coordinate values (26, 56) not map coordinates (-24, 6)
+                        hexR: coordinateR, // This ensures proper round-trip conversion
                         troops: garrison.troops || 0,
                         weapons: garrison.weapons || 0,
                         chiefs: garrison.chiefs || [],

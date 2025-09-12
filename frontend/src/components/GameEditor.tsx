@@ -27,6 +27,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [garrisonToDelete, setGarrisonToDelete] = useState<{ location: string; tribeName: string } | null>(null);
   const [isFixingCoordinates, setIsFixingCoordinates] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const playerTribes = useMemo(() => {
     return gameState.tribes.filter(tribe => !tribe.isAI);
@@ -267,7 +268,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   };
 
   const handleFixGarrisonCoordinates = async () => {
-    if (!confirm('Fix garrison coordinates in database? This will correct coordinate mismatches that prevent Game Editor from working properly. This is safe to run.')) {
+    if (!confirm('Fix garrison coordinates in database? This will:\n\n✅ Create a backup first\n✅ Only fix coordinates outside valid range\n✅ Convert string coordinates to proper map coordinates\n✅ Make Game Editor work properly\n\nThis is safe to run and can be undone.')) {
       return;
     }
 
@@ -278,7 +279,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       const handleResponse = (response: { success: boolean; error?: string }) => {
         setIsFixingCoordinates(false);
         if (response.success) {
-          alert('✅ Garrison coordinates fixed successfully! Game Editor should now work properly.');
+          alert('✅ Garrison coordinates fixed successfully!\n\n🎯 Game Editor should now work properly\n💾 Backup created for safe restoration\n🔄 Use "Undo Fix" if you need to restore');
         } else {
           alert(`❌ Failed to fix garrison coordinates: ${response.error || 'Unknown error'}`);
         }
@@ -299,6 +300,43 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
     } catch (error) {
       setIsFixingCoordinates(false);
+      alert(`❌ Error: ${(error as Error).message}`);
+    }
+  };
+
+  const handleRestoreGarrisonCoordinates = async () => {
+    if (!confirm('Restore garrison coordinates from backup? This will:\n\n🔄 Undo the coordinate fix\n📅 Restore coordinates to their previous state\n⚠️ Game Editor issues will return\n\nAre you sure you want to restore?')) {
+      return;
+    }
+
+    setIsRestoring(true);
+
+    try {
+      // Listen for the response
+      const handleResponse = (response: { success: boolean; error?: string }) => {
+        setIsRestoring(false);
+        if (response.success) {
+          alert('✅ Garrison coordinates restored successfully!\n\n🔄 Coordinates reverted to backup state\n⚠️ Game Editor issues may have returned');
+        } else {
+          alert(`❌ Failed to restore garrison coordinates: ${response.error || 'Unknown error'}`);
+        }
+        const socket = client.getSocket();
+        if (socket) {
+          socket.off('admin:garrisonCoordinatesRestored', handleResponse);
+        }
+      };
+
+      const socket = client.getSocket();
+      if (socket) {
+        socket.on('admin:garrisonCoordinatesRestored', handleResponse);
+        client.restoreGarrisonCoordinates();
+      } else {
+        setIsRestoring(false);
+        alert('❌ Socket not connected');
+      }
+
+    } catch (error) {
+      setIsRestoring(false);
       alert(`❌ Error: ${(error as Error).message}`);
     }
   };
@@ -372,9 +410,16 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           <Button
             onClick={handleFixGarrisonCoordinates}
             variant="secondary"
-            disabled={isFixingCoordinates}
+            disabled={isFixingCoordinates || isRestoring}
           >
             {isFixingCoordinates ? '🔧 Fixing...' : '🔧 Fix Coordinates'}
+          </Button>
+          <Button
+            onClick={handleRestoreGarrisonCoordinates}
+            variant="secondary"
+            disabled={isFixingCoordinates || isRestoring}
+          >
+            {isRestoring ? '🔄 Restoring...' : '🔄 Undo Fix'}
           </Button>
           <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
         </div>

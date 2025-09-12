@@ -210,63 +210,207 @@ export class DatabaseService {
     }
   }
 
-  // CRITICAL: Fix existing garrison coordinates in database
+  // BACKUP: Create backup of garrison coordinates before fixing
+  async backupGarrisonCoordinates(): Promise<void> {
+    if (!this.prisma) {
+      console.log('❌ Database not available for garrison coordinate backup');
+      return;
+    }
+
+    console.log('💾 CREATING GARRISON COORDINATE BACKUP...');
+
+    try {
+      // Get all current garrison coordinates
+      const allGarrisons = await this.prisma.garrison.findMany({
+        select: { id: true, hexQ: true, hexR: true }
+      });
+
+      // Store backup in a JSON format that can be easily restored
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        garrisons: allGarrisons.map(g => ({
+          id: g.id,
+          originalQ: g.hexQ,
+          originalR: g.hexR
+        }))
+      };
+
+      // Store backup in a simple way using existing tables
+      // We'll use the game state to store backup data temporarily
+      const currentGameState = await this.prisma.gameState.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (currentGameState) {
+        // Store backup in the game state's metadata (we'll add a backup field)
+        await this.prisma.gameState.update({
+          where: { id: currentGameState.id },
+          data: {
+            // Store backup in a custom field - we'll use the existing JSON fields
+            mapSettings: {
+              ...((currentGameState.mapSettings as any) || {}),
+              garrisonCoordinateBackup: backupData
+            }
+          }
+        });
+      }
+
+      console.log(`✅ BACKUP CREATED: ${allGarrisons.length} garrison coordinates backed up`);
+
+    } catch (error) {
+      console.error('❌ Failed to create garrison coordinate backup:', error);
+      throw error; // Don't proceed with fix if backup fails
+    }
+  }
+
+  // RESTORE: Restore garrison coordinates from backup
+  async restoreGarrisonCoordinates(): Promise<void> {
+    if (!this.prisma) {
+      console.log('❌ Database not available for garrison coordinate restore');
+      return;
+    }
+
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🔄 GARRISON COORDINATE RESTORE START');
+    console.log('='.repeat(80));
+
+    try {
+      // Get the backup from game state
+      const currentGameState = await this.prisma.gameState.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!currentGameState || !currentGameState.mapSettings) {
+        console.log('❌ No backup found to restore from');
+        return;
+      }
+
+      const mapSettings = currentGameState.mapSettings as any;
+      const backupData = mapSettings.garrisonCoordinateBackup;
+
+      if (!backupData) {
+        console.log('❌ No garrison coordinate backup found in game state');
+        return;
+      }
+
+      console.log(`📅 Restoring from backup created: ${backupData.timestamp}`);
+
+      let restoredCount = 0;
+      let errorCount = 0;
+
+      for (const garrisonBackup of backupData.garrisons) {
+        try {
+          await this.prisma.garrison.update({
+            where: { id: garrisonBackup.id },
+            data: {
+              hexQ: garrisonBackup.originalQ,
+              hexR: garrisonBackup.originalR
+            }
+          });
+          restoredCount++;
+        } catch (error) {
+          console.error(`❌ Error restoring garrison ${garrisonBackup.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ GARRISON COORDINATE RESTORE COMPLETE:`);
+      console.log(`   Restored: ${restoredCount} garrisons`);
+      console.log(`   Errors: ${errorCount} garrisons`);
+
+      console.log('='.repeat(80));
+      console.log('🔄 GARRISON COORDINATE RESTORE END');
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error('❌ Failed to restore garrison coordinates:', error);
+      console.log('='.repeat(80));
+      console.log('🔄 GARRISON COORDINATE RESTORE END (ERROR)');
+      console.log('='.repeat(80));
+      console.log('');
+    }
+  }
+
+  // CRITICAL: Fix existing garrison coordinates in database (SAFE VERSION)
   async fixGarrisonCoordinates(): Promise<void> {
     if (!this.prisma) {
       console.log('❌ Database not available for garrison coordinate fix');
       return;
     }
 
-    console.log('🔧 STARTING GARRISON COORDINATE FIX...');
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🔧 GARRISON COORDINATE FIX START');
+    console.log('='.repeat(80));
 
     try {
-      // Get all garrisons with their current coordinates
-      const allGarrisons = await this.prisma.garrison.findMany({
-        include: {
-          tribe: true
-        }
+      // STEP 1: Create backup first
+      await this.backupGarrisonCoordinates();
+
+      // STEP 2: Get all garrisons that need coordinate fixes
+      // SAFE LOGIC: Only fix coordinates outside valid map range (-40 to +40)
+      const problematicGarrisons = await this.prisma.garrison.findMany({
+        where: {
+          OR: [
+            { hexQ: { gt: 40 } },   // Outside valid map range
+            { hexR: { gt: 40 } },
+            { hexQ: { lt: -40 } },
+            { hexR: { lt: -40 } }
+          ]
+        },
+        include: { tribe: { select: { tribeName: true } } }
       });
 
-      console.log(`🔍 Found ${allGarrisons.length} garrisons to check`);
+      console.log(`🎯 FOUND ${problematicGarrisons.length} garrisons with coordinates outside valid map range (-40 to +40)`);
 
       let fixedCount = 0;
-      let skippedCount = 0;
+      let errorCount = 0;
 
-      for (const garrison of allGarrisons) {
+      for (const garrison of problematicGarrisons) {
         try {
-          // Check if coordinates look like they need fixing (> 50 indicates raw parsing)
-          if (garrison.hexQ > 50 || garrison.hexR > 50) {
-            // These coordinates were stored with raw parsing, need to convert
-            const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
-            const { q: correctQ, r: correctR } = parseHexCoords(coordinateString);
+          // Convert string coordinates to proper map coordinates
+          const coordinateString = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+          const { q: correctQ, r: correctR } = parseHexCoords(coordinateString);
 
-            console.log(`🔧 FIXING: ${garrison.tribe.tribeName} garrison "${coordinateString}" (DB: q=${garrison.hexQ}, r=${garrison.hexR}) -> (q=${correctQ}, r=${correctR})`);
+          console.log(`🔧 FIXING: ${garrison.tribe.tribeName} garrison`);
+          console.log(`   From: q=${garrison.hexQ}, r=${garrison.hexR} (string coordinates stored as integers)`);
+          console.log(`   To: q=${correctQ}, r=${correctR} (proper map coordinates)`);
+          console.log(`   String: "${coordinateString}" -> parseHexCoords -> q=${correctQ}, r=${correctR}`);
 
-            // Update the garrison with correct coordinates
-            await this.prisma.garrison.update({
-              where: { id: garrison.id },
-              data: {
-                hexQ: correctQ,
-                hexR: correctR
-              }
-            });
+          // Update the garrison with correct coordinates
+          await this.prisma.garrison.update({
+            where: { id: garrison.id },
+            data: {
+              hexQ: correctQ,
+              hexR: correctR
+            }
+          });
 
-            fixedCount++;
-          } else {
-            // Coordinates look correct already
-            skippedCount++;
-          }
+          fixedCount++;
         } catch (error) {
           console.error(`❌ Error fixing garrison ${garrison.id}:`, error);
+          errorCount++;
         }
       }
 
       console.log(`✅ GARRISON COORDINATE FIX COMPLETE:`);
       console.log(`   Fixed: ${fixedCount} garrisons`);
-      console.log(`   Skipped: ${skippedCount} garrisons (already correct)`);
+      console.log(`   Errors: ${errorCount} garrisons`);
+      console.log(`   Backup created for safe restoration if needed`);
+
+      console.log('='.repeat(80));
+      console.log('🔧 GARRISON COORDINATE FIX END');
+      console.log('='.repeat(80));
+      console.log('');
 
     } catch (error) {
       console.error('❌ Failed to fix garrison coordinates:', error);
+      console.log('='.repeat(80));
+      console.log('🔧 GARRISON COORDINATE FIX END (ERROR)');
+      console.log('='.repeat(80));
+      console.log('');
     }
   }
 

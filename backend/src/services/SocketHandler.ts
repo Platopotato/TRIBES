@@ -947,6 +947,19 @@ export class SocketHandler {
       }
     });
 
+    // RESTORE: Admin handler to restore garrison coordinates from backup
+    socket.on('admin:restoreGarrisonCoordinates', async () => {
+      console.log(`🔄 ADMIN: Restoring garrison coordinates from backup`);
+      try {
+        await this.gameService.restoreGarrisonCoordinates();
+        socket.emit('admin:garrisonCoordinatesRestored', { success: true });
+        console.log(`✅ ADMIN: Garrison coordinates restored successfully`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to restore garrison coordinates:`, error);
+        socket.emit('admin:garrisonCoordinatesRestored', { success: false, error: (error as Error).message });
+      }
+    });
+
     // Admin-specific handlers
     socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
       console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);

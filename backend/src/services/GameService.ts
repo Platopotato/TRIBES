@@ -40,6 +40,11 @@ export class GameService {
     await this.databaseService.fixGarrisonCoordinates();
   }
 
+  // RESTORE: Restore garrison coordinates from backup
+  async restoreGarrisonCoordinates(): Promise<void> {
+    await this.databaseService.restoreGarrisonCoordinates();
+  }
+
   get database(): DatabaseService {
     return this.databaseService;
   }

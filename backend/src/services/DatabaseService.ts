@@ -550,6 +550,96 @@ export class DatabaseService {
     console.log('');
   }
 
+  // BULK FIX: Automatically fix all outpost ownership mismatches
+  async fixAllOutpostOwnership(): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🔧 BULK OUTPOST OWNERSHIP FIX START');
+    console.log('='.repeat(80));
+
+    try {
+      // Load current game state
+      const gameState = await this.getGameState();
+      if (!gameState) {
+        console.log('❌ No game state found');
+        return;
+      }
+
+      let totalChecked = 0;
+      let totalFixed = 0;
+      let totalErrors = 0;
+
+      // Check all hexes with fortified POIs
+      for (const hex of gameState.mapData) {
+        if (!hex.poi || !hex.poi.fortified) continue;
+
+        totalChecked++;
+        const hexCoord = `${String(hex.q + 50).padStart(3, '0')}.${String(hex.r + 50).padStart(3, '0')}`;
+
+        try {
+          // Find which tribe has a garrison at this hex
+          let garrisonOwner: any = null;
+          for (const tribe of gameState.tribes) {
+            if (tribe.garrisons && tribe.garrisons[hexCoord]) {
+              garrisonOwner = tribe;
+              break;
+            }
+          }
+
+          // Skip if no garrison (abandoned outpost)
+          if (!garrisonOwner) {
+            console.log(`⚪ ${hexCoord}: No garrison - skipping`);
+            continue;
+          }
+
+          // Check if ownership matches
+          if (hex.poi.outpostOwner === garrisonOwner.id) {
+            console.log(`✅ ${hexCoord}: Ownership correct (${garrisonOwner.tribeName})`);
+            continue;
+          }
+
+          // Fix ownership mismatch
+          const oldOwner = hex.poi.outpostOwner;
+          const oldOwnerTribe = gameState.tribes.find((t: any) => t.id === oldOwner);
+
+          console.log(`🔧 ${hexCoord}: FIXING OWNERSHIP`);
+          console.log(`   POI Type: ${hex.poi.type}`);
+          console.log(`   From: ${oldOwnerTribe?.tribeName || oldOwner} (${oldOwner})`);
+          console.log(`   To: ${garrisonOwner.tribeName} (${garrisonOwner.id})`);
+
+          // Update ownership
+          hex.poi.outpostOwner = garrisonOwner.id;
+          hex.poi.id = `poi-fortified-${hex.poi.type}-${garrisonOwner.id}-${hexCoord}`;
+
+          totalFixed++;
+
+        } catch (error) {
+          console.error(`❌ Error fixing ${hexCoord}:`, error);
+          totalErrors++;
+        }
+      }
+
+      // Save the updated game state if any fixes were made
+      if (totalFixed > 0) {
+        console.log(`💾 Saving game state with ${totalFixed} ownership fixes...`);
+        await this.updateGameStateInDb(gameState);
+      }
+
+      console.log(`✅ BULK OUTPOST OWNERSHIP FIX COMPLETE:`);
+      console.log(`   Checked: ${totalChecked} fortified outposts`);
+      console.log(`   Fixed: ${totalFixed} ownership mismatches`);
+      console.log(`   Errors: ${totalErrors} failed fixes`);
+
+    } catch (error) {
+      console.error('❌ Error in bulk outpost ownership fix:', error);
+    }
+
+    console.log('='.repeat(80));
+    console.log('🔧 BULK OUTPOST OWNERSHIP FIX END');
+    console.log('='.repeat(80));
+    console.log('');
+  }
+
   private mockHash(data: string): string {
     return `hashed_${data}_salted_v1`;
   }

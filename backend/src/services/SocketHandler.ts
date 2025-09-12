@@ -986,6 +986,19 @@ export class SocketHandler {
       }
     });
 
+    // BULK FIX: Admin handler to fix all outpost ownership mismatches
+    socket.on('admin:fixAllOutpostOwnership', async () => {
+      console.log(`🔧 ADMIN: Fixing all outpost ownership mismatches`);
+      try {
+        await this.gameService.fixAllOutpostOwnership();
+        socket.emit('admin:allOutpostOwnershipFixed', { success: true });
+        console.log(`✅ ADMIN: All outpost ownership mismatches fixed`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Error fixing all outpost ownership:`, error);
+        socket.emit('admin:allOutpostOwnershipFixed', { success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
+
     // Admin-specific handlers
     socket.on('admin:updateTribe', async (updatedTribe: Tribe) => {
       console.log(`🔧 ADMIN: Updating tribe ${updatedTribe.tribeName} (ID: ${updatedTribe.id})`);

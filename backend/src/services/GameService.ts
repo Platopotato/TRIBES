@@ -55,6 +55,11 @@ export class GameService {
     await this.databaseService.fixOutpostOwnership(hexCoord);
   }
 
+  // BULK FIX: Automatically fix all outpost ownership mismatches
+  async fixAllOutpostOwnership(): Promise<void> {
+    await this.databaseService.fixAllOutpostOwnership();
+  }
+
   get database(): DatabaseService {
     return this.databaseService;
   }

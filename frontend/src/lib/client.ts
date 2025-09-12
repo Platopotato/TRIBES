@@ -492,6 +492,7 @@ export const fixGarrisonCoordinates = () => socket.emit('admin:fixGarrisonCoordi
 export const restoreGarrisonCoordinates = () => socket.emit('admin:restoreGarrisonCoordinates');
 export const diagnoseOutpost = (hexCoord: string) => socket.emit('admin:diagnoseOutpost', hexCoord);
 export const fixOutpostOwnership = (hexCoord: string) => socket.emit('admin:fixOutpostOwnership', hexCoord);
+export const fixAllOutpostOwnership = () => socket.emit('admin:fixAllOutpostOwnership');
 export const removeJourney = createEmitter<string>('admin:removeJourney');
 export const testTribeTurn = createEmitter<{ tribeId: string }>('admin:test_tribe_turn');
 export const debugTribeGarrison = createEmitter<{ tribeName: string }>('admin:debug_tribe_garrison');

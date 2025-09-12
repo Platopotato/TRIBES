@@ -457,6 +457,19 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
             </Button>
           </div>
 
+          <Button
+            onClick={() => {
+              if (confirm(`Fix ALL outpost ownership mismatches across the entire game?\n\nThis will:\n• Check all fortified outposts\n• Transfer ownership to tribes with garrisons\n• Fix movement blocking issues\n\nThis is safe but affects the entire game.`)) {
+                client.fixAllOutpostOwnership();
+                alert(`Fixing all outpost ownership mismatches - check server logs for progress`);
+              }
+            }}
+            variant="secondary"
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            🔧 Fix ALL Outpost Ownership
+          </Button>
+
           <Button onClick={onBack} variant="secondary">← Back to Admin</Button>
         </div>
       </div>

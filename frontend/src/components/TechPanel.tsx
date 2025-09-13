@@ -35,6 +35,11 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
 
             const progressPercent = (project.progress / tech.researchPoints) * 100;
 
+            // Calculate remaining turns
+            const remainingPoints = tech.researchPoints - project.progress;
+            const progressPerTurn = project.assignedTroops * 1; // 1 point per troop per turn
+            const remainingTurns = Math.ceil(remainingPoints / progressPerTurn);
+
             return (
               <div key={project.techId} className="space-y-2 p-3 bg-slate-800/50 rounded-lg">
                 <div className="flex justify-between items-baseline">
@@ -51,9 +56,12 @@ const TechPanel: React.FC<TechPanelProps> = ({ tribe, plannedActions, onOpenTech
                     style={{ width: `${progressPercent}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-slate-500 text-center">
-                  {project.assignedTroops} troops assigned at Hex {project.location}.
-                </p>
+                <div className="flex justify-between items-center text-xs text-slate-500">
+                  <span>{project.assignedTroops} troops assigned at Hex {project.location}</span>
+                  <span className="text-amber-400 font-semibold">
+                    {remainingTurns} turn{remainingTurns !== 1 ? 's' : ''} remaining
+                  </span>
+                </div>
               </div>
             );
           })}

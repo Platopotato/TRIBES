@@ -684,16 +684,28 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
         >
           <option value="">Select a technology...</option>
-          {availableTechs.map(tech => (
-            <option key={tech.id} value={tech.id}>
-              {tech.icon} {tech.name} (Cost: {tech.cost.scrap} scrap, {tech.researchPoints} points)
-            </option>
-          ))}
+          {availableTechs.map(tech => {
+            // Calculate estimated turns for dropdown display
+            const requiredTroops = tech.requiredTroops || 5;
+            const baseProgressPerTurn = requiredTroops * 1;
+            const estimatedTurns = Math.ceil(tech.researchPoints / baseProgressPerTurn);
+
+            return (
+              <option key={tech.id} value={tech.id}>
+                {tech.icon} {tech.name} (Cost: {tech.cost.scrap} scrap, ~{estimatedTurns} turn{estimatedTurns !== 1 ? 's' : ''})
+              </option>
+            );
+          })}
         </select>
 
         {value && (() => {
           const selectedTech = getTechnology(value);
           if (!selectedTech) return null;
+
+          // Calculate estimated turns based on assigned troops
+          const assignedTroops = draftAction?.actionData?.assignedTroops || selectedTech.requiredTroops || 5;
+          const baseProgressPerTurn = assignedTroops * 1; // 1 point per troop per turn
+          const estimatedTurns = Math.ceil(selectedTech.researchPoints / baseProgressPerTurn);
 
           return (
             <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600">
@@ -703,6 +715,12 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
                 <div>Cost: {selectedTech.cost.scrap} scrap</div>
                 <div>Research Points: {selectedTech.researchPoints}</div>
                 <div>Required Troops: {selectedTech.requiredTroops}</div>
+                <div className="text-amber-400 font-semibold">
+                  Estimated Duration: {estimatedTurns} turn{estimatedTurns !== 1 ? 's' : ''}
+                  {assignedTroops !== selectedTech.requiredTroops && (
+                    <span className="text-slate-400 font-normal"> (with {assignedTroops} researchers)</span>
+                  )}
+                </div>
                 {selectedTech.prerequisites && selectedTech.prerequisites.length > 0 && (
                   <div>Prerequisites: {selectedTech.prerequisites.join(', ')}</div>
                 )}

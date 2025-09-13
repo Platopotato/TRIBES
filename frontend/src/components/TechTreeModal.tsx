@@ -38,7 +38,7 @@ const TechNode: React.FC<{
         <div className="flex-grow min-w-0">
           <div className="font-bold text-sm truncate">{tech.name}</div>
           <div className="text-xs text-slate-400 mt-1">
-            {tech.cost.scrap}🔧 • {tech.requiredTroops}👥
+            {tech.cost.scrap}🔧 • {tech.requiredTroops}👥 • {Math.ceil(tech.researchPoints / tech.requiredTroops)}⏱️
           </div>
           <div className="flex items-center justify-between mt-1">
             {status === 'completed' && <div className="text-xs text-green-400">✅ Done</div>}
@@ -61,7 +61,7 @@ const TechNode: React.FC<{
       <div className="text-3xl mb-2">{tech.icon}</div>
       <div className="font-bold text-sm mb-1 leading-tight">{tech.name}</div>
       <div className="text-xs text-slate-400 mb-2">
-        {tech.cost.scrap}🔧 • {tech.requiredTroops}👥
+        {tech.cost.scrap}🔧 • {tech.requiredTroops}👥 • {Math.ceil(tech.researchPoints / tech.requiredTroops)}⏱️
       </div>
       {status === 'completed' && <div className="text-xs text-green-400">✅ Completed</div>}
       {status === 'researching' && <div className="text-xs text-blue-400">🔬 Researching</div>}

@@ -7,6 +7,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import SmartNumberInput from '../ui/SmartNumberInput';
 import { findPath, parseHexCoords, formatHexCoords } from '../../lib/mapUtils';
+import { TECHNOLOGY_TREE, getTechnology } from '@radix-tribes/shared';
 // Helper that tolerates both "051.044" and "q,r" style coords
 const parseAnyCoords = (coords: string): { q: number, r: number } => {
   if (!coords || typeof coords !== 'string') return { q: NaN as any, r: NaN as any };
@@ -643,6 +644,76 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     );
   };
 
+  const renderTechSelect = (field: ActionField, value: string) => {
+    // Get all available technologies
+    const allTechs = Object.values(TECHNOLOGY_TREE).flat();
+
+    // Filter technologies based on prerequisites and current research
+    const availableTechs = allTechs.filter(tech => {
+      // Check if already completed
+      if (tribe.completedTechs?.includes(tech.id)) {
+        return false;
+      }
+
+      // Check if already being researched
+      const currentResearch = Array.isArray(tribe.currentResearch) ? tribe.currentResearch : (tribe.currentResearch ? [tribe.currentResearch] : []);
+      if (currentResearch.some((project: any) => project.techId === tech.id)) {
+        return false;
+      }
+
+      // Check prerequisites
+      if (tech.prerequisites && tech.prerequisites.length > 0) {
+        const hasAllPrereqs = tech.prerequisites.every(prereq => tribe.completedTechs?.includes(prereq));
+        if (!hasAllPrereqs) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (availableTechs.length === 0) {
+      return <p className="text-sm text-slate-400 italic bg-slate-800/50 p-2 rounded-md">No technologies available for research. Complete prerequisites or finish current research.</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        <select
+          value={value}
+          onChange={e => handleFieldChange(field.name, e.target.value)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+        >
+          <option value="">Select a technology...</option>
+          {availableTechs.map(tech => (
+            <option key={tech.id} value={tech.id}>
+              {tech.icon} {tech.name} (Cost: {tech.cost.scrap} scrap, {tech.researchPoints} points)
+            </option>
+          ))}
+        </select>
+
+        {value && (() => {
+          const selectedTech = getTechnology(value);
+          if (!selectedTech) return null;
+
+          return (
+            <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600">
+              <h4 className="font-semibold text-purple-400 mb-2">{selectedTech.icon} {selectedTech.name}</h4>
+              <p className="text-sm text-slate-300 mb-2">{selectedTech.description}</p>
+              <div className="text-xs text-slate-400 space-y-1">
+                <div>Cost: {selectedTech.cost.scrap} scrap</div>
+                <div>Research Points: {selectedTech.researchPoints}</div>
+                <div>Required Troops: {selectedTech.requiredTroops}</div>
+                {selectedTech.prerequisites && selectedTech.prerequisites.length > 0 && (
+                  <div>Prerequisites: {selectedTech.prerequisites.join(', ')}</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    );
+  };
+
   const renderField = (field: ActionField) => {
     const value = draftAction?.actionData?.[field.name] ?? '';
     const startLocation = draftAction?.actionData?.start_location;
@@ -797,6 +868,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             )
         case 'sabotage_select':
             return renderSabotageSelect(field, value);
+        case 'tech_select':
+            return renderTechSelect(field, value);
         case 'info':
             return <p className="text-xs text-slate-400 italic p-2 bg-slate-800/50 rounded-md">{field.info}</p>;
         default: return null;

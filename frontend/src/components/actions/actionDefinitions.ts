@@ -8,7 +8,7 @@ import { Tribe, Garrison, ActionType, Chief } from '../../types';
 export interface ActionField {
   name: string;
   label: string;
-  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select' | 'sabotage_select';
+  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select' | 'sabotage_select' | 'tech_select';
   options?: string[]; // for select type
   defaultValue?: string | number;
   placeholder?: string;
@@ -25,7 +25,7 @@ export interface ActionDefinition {
   isPlaceholder?: boolean;
 }
 
-export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.StartResearch | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners | ActionType.RespondToPrisonerExchange | ActionType.RandomEvent>]: ActionDefinition } = {
+export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners | ActionType.RespondToPrisonerExchange | ActionType.RandomEvent>]: ActionDefinition } = {
   [ActionType.Move]: {
     name: 'Move',
     description: 'Relocate troops, chiefs, and equipment between garrisons.',
@@ -174,6 +174,16 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
       { name: 'location', label: 'Garrison Location', type: 'garrison_select' },
       { name: 'troops', label: 'Troops to Remove', type: 'number', defaultValue: 1, max: 'troops' },
       { name: 'info', label: 'Info', type: 'info', info: 'Troops are permanently removed. No resources returned.' }
+    ],
+  },
+  [ActionType.StartResearch]: {
+    name: 'Start Research',
+    description: 'Begin researching new technologies to advance your tribe.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.611L5 14.5' }),
+    fields: [
+      { name: 'location', label: 'Research Location', type: 'garrison_select' },
+      { name: 'techId', label: 'Technology', type: 'tech_select' },
+      { name: 'assignedTroops', label: 'Researchers', type: 'number', defaultValue: 5, max: 'troops' }
     ],
   },
 };

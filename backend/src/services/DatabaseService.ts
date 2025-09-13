@@ -577,20 +577,60 @@ export class DatabaseService {
         const hexCoord = `${String(hex.q + 50).padStart(3, '0')}.${String(hex.r + 50).padStart(3, '0')}`;
 
         try {
-          // Find which tribe has a garrison at this hex
-          let garrisonOwner: any = null;
+          // Find ALL tribes with garrisons at this hex
+          const garrisonTribes: any[] = [];
           for (const tribe of gameState.tribes) {
             if (tribe.garrisons && tribe.garrisons[hexCoord]) {
-              garrisonOwner = tribe;
-              break;
+              garrisonTribes.push(tribe);
             }
           }
 
-          // Skip if no garrison (abandoned outpost)
-          if (!garrisonOwner) {
-            console.log(`⚪ ${hexCoord}: No garrison - skipping`);
+          // Skip if no garrisons (abandoned outpost)
+          if (garrisonTribes.length === 0) {
+            console.log(`⚪ ${hexCoord}: No garrisons - skipping`);
             continue;
           }
+
+          // Handle multiple garrisons
+          if (garrisonTribes.length > 1) {
+            const tribeNames = garrisonTribes.map(t => t.tribeName).join(', ');
+            console.log(`⚠️ ${hexCoord}: MULTIPLE GARRISONS (${tribeNames})`);
+
+            // Check if current owner is one of the garrison holders
+            const currentOwnerHasGarrison = garrisonTribes.some(t => t.id === hex.poi?.outpostOwner);
+
+            if (currentOwnerHasGarrison) {
+              const currentOwnerTribe = garrisonTribes.find(t => t.id === hex.poi?.outpostOwner);
+              console.log(`✅ ${hexCoord}: Current owner ${currentOwnerTribe.tribeName} has garrison - keeping ownership`);
+              continue;
+            } else {
+              // Current owner doesn't have garrison - transfer to strongest garrison
+              const strongestTribe = garrisonTribes.reduce((strongest, current) => {
+                const strongestTroops = strongest.garrisons[hexCoord].troops || 0;
+                const currentTroops = current.garrisons[hexCoord].troops || 0;
+                return currentTroops > strongestTroops ? current : strongest;
+              });
+
+              console.log(`🔧 ${hexCoord}: CONTESTED OUTPOST - transferring to strongest garrison`);
+              console.log(`   Garrisons: ${garrisonTribes.map(t => `${t.tribeName}(${t.garrisons[hexCoord].troops || 0})`).join(', ')}`);
+              console.log(`   Winner: ${strongestTribe.tribeName} (${strongestTribe.garrisons[hexCoord].troops || 0} troops)`);
+
+              const oldOwner = hex.poi.outpostOwner;
+              const oldOwnerTribe = gameState.tribes.find((t: any) => t.id === oldOwner);
+
+              console.log(`   From: ${oldOwnerTribe?.tribeName || oldOwner} (${oldOwner})`);
+              console.log(`   To: ${strongestTribe.tribeName} (${strongestTribe.id})`);
+
+              // Update ownership to strongest garrison
+              hex.poi.outpostOwner = strongestTribe.id;
+              hex.poi.id = `poi-fortified-${hex.poi.type}-${strongestTribe.id}-${hexCoord}`;
+              totalFixed++;
+              continue;
+            }
+          }
+
+          // Single garrison case
+          const garrisonOwner = garrisonTribes[0];
 
           // Check if ownership matches
           if (hex.poi.outpostOwner === garrisonOwner.id) {

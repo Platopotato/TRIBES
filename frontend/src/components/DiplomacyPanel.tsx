@@ -3,7 +3,7 @@
 
 /** @jsxImportSource react */
 import React, { useState } from 'react';
-import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticActionType } from '@radix-tribes/shared';
+import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticActionType, NonAggressionPact } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
@@ -15,6 +15,7 @@ interface DiplomacyPanelProps {
   playerTribe: Tribe;
   allTribes: Tribe[];
   diplomaticProposals: DiplomaticProposal[];
+  nonAggressionPacts?: NonAggressionPact[];
   turn: number;
   onProposeAlliance: (toTribeId: string) => void;
   onSueForPeace: (toTribeId: string, reparations: { food: number, scrap: number, weapons: number }) => void;
@@ -28,6 +29,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     playerTribe,
     allTribes,
     diplomaticProposals,
+    nonAggressionPacts = [],
     turn,
     onProposeAlliance,
     onSueForPeace,
@@ -47,6 +49,13 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
 
   const incomingProposals = diplomaticProposals.filter(p => p.toTribeId === playerTribe.id);
   const outgoingProposals = diplomaticProposals.filter(p => p.fromTribeId === playerTribe.id);
+
+  // Filter non-aggression pacts involving this player
+  const playerPacts = nonAggressionPacts.filter(pact =>
+    pact.tribe1Id === playerTribe.id || pact.tribe2Id === playerTribe.id
+  );
+  const activePacts = playerPacts.filter(pact => pact.status === 'active');
+  const proposedPacts = playerPacts.filter(pact => pact.status === 'proposed');
 
   const handleConfirmDeclareWar = () => {
     if (warTarget) {
@@ -139,6 +148,75 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
       .map(([key, value]) => `${value} ${key}`);
 
     return parts.length > 0 ? `They offer: ${parts.join(', ')}.` : 'no reparations.';
+  };
+
+  const renderNonAggressionPacts = () => {
+    if (activePacts.length === 0 && proposedPacts.length === 0) {
+      return (
+        <p className="text-sm text-slate-400 italic">
+          No active or proposed non-aggression pacts.
+        </p>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {/* Active Pacts */}
+        {activePacts.map(pact => {
+          const otherTribeId = pact.tribe1Id === playerTribe.id ? pact.tribe2Id : pact.tribe1Id;
+          const otherTribe = allTribes.find(t => t.id === otherTribeId);
+          const turnsRemaining = pact.expiresOnTurn - turn;
+
+          return (
+            <div key={pact.id} className="bg-green-900/30 border border-green-700 rounded-md p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-green-400">🕊️</span>
+                  <span className="text-sm font-medium text-slate-200">
+                    {otherTribe?.tribeName || 'Unknown Tribe'}
+                  </span>
+                </div>
+                <div className="text-xs text-green-300">
+                  {turnsRemaining} turns remaining
+                </div>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Active non-aggression pact • No attacks allowed
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Proposed Pacts */}
+        {proposedPacts.map(pact => {
+          const otherTribeId = pact.tribe1Id === playerTribe.id ? pact.tribe2Id : pact.tribe1Id;
+          const otherTribe = allTribes.find(t => t.id === otherTribeId);
+          const isProposedByPlayer = pact.proposedBy === playerTribe.id;
+
+          return (
+            <div key={pact.id} className="bg-yellow-900/30 border border-yellow-700 rounded-md p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-yellow-400">⏳</span>
+                  <span className="text-sm font-medium text-slate-200">
+                    {otherTribe?.tribeName || 'Unknown Tribe'}
+                  </span>
+                </div>
+                <div className="text-xs text-yellow-300">
+                  {pact.duration} turns
+                </div>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {isProposedByPlayer
+                  ? 'Awaiting their response to your proposal'
+                  : 'Proposed non-aggression pact • Respond via actions'
+                }
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const renderTribeList = (tribesToList: Tribe[]) => (
@@ -300,6 +378,12 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
               })}
             </div>
           )}
+
+          {/* Non-Aggression Pacts Section */}
+          <div className="pt-3 border-t border-slate-700">
+            <h4 className="font-semibold text-slate-300 mb-2">🕊️ Non-Aggression Pacts</h4>
+            {renderNonAggressionPacts()}
+          </div>
 
           <div>
             <h4 className="font-semibold text-slate-300 mb-2">Player Tribes</h4>

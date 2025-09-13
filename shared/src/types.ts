@@ -363,6 +363,8 @@ export enum ActionType {
   ReleasePrisoner = 'Release Prisoner',
   ExchangePrisoners = 'Exchange Prisoners',
   RespondToPrisonerExchange = 'Respond to Prisoner Exchange',
+  ProposeNonAggressionPact = 'Propose Non-Aggression Pact',
+  RespondToNonAggressionPact = 'Respond to Non-Aggression Pact',
   ReduceTroops = 'Reduce Troops',
 }
 
@@ -382,6 +384,17 @@ export enum SabotageType {
   DestroyResearch = 'Destroy Research',
   SabotageOutpost = 'Sabotage Outpost',
   PoisonSupplies = 'Poison Supplies',
+}
+
+export interface NonAggressionPact {
+  id: string;
+  tribe1Id: string;
+  tribe2Id: string;
+  startTurn: number;
+  duration: number; // turns
+  proposedBy: string; // tribe ID
+  status: 'proposed' | 'active' | 'expired' | 'violated';
+  expiresOnTurn: number; // calculated field for convenience
 }
 
 export interface SabotageOperation {
@@ -596,6 +609,7 @@ export interface GameState {
     diplomaticProposals: DiplomaticProposal[];
     diplomaticMessages?: DiplomaticMessage[]; // New unified message system
     prisonerExchangeProposals?: PrisonerExchangeProposal[];
+    nonAggressionPacts?: NonAggressionPact[]; // Non-aggression pacts between tribes
     tradeAgreements?: TradeAgreement[]; // Active trade agreements
     history?: TurnHistoryRecord[];
     detailedHistory?: DetailedTurnHistoryRecord[];

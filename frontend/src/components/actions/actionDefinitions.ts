@@ -8,7 +8,7 @@ import { Tribe, Garrison, ActionType, Chief } from '../../types';
 export interface ActionField {
   name: string;
   label: string;
-  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select' | 'sabotage_select' | 'tech_select';
+  type: 'location' | 'targetLocation' | 'number' | 'select' | 'info' | 'text' | 'garrison_select' | 'chief_select' | 'troops_weapons_select' | 'sabotage_select' | 'tech_select' | 'tribe_select' | 'pact_duration_select';
   options?: string[]; // for select type
   defaultValue?: string | number;
   placeholder?: string;
@@ -25,7 +25,7 @@ export interface ActionDefinition {
   isPlaceholder?: boolean;
 }
 
-export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners | ActionType.RespondToPrisonerExchange | ActionType.RandomEvent>]: ActionDefinition } = {
+export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep | ActionType.Technology | ActionType.Explore | ActionType.SupplyOutpost | ActionType.RespondToTrade | ActionType.Return | ActionType.ReleasePrisoner | ActionType.ExchangePrisoners | ActionType.RespondToPrisonerExchange | ActionType.RespondToNonAggressionPact | ActionType.RandomEvent>]: ActionDefinition } = {
   [ActionType.Move]: {
     name: 'Move',
     description: 'Relocate troops, chiefs, and equipment between garrisons.',
@@ -184,6 +184,15 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
       { name: 'location', label: 'Research Location', type: 'garrison_select' },
       { name: 'techId', label: 'Technology', type: 'tech_select' },
       { name: 'assignedTroops', label: 'Researchers', type: 'number', defaultValue: 5, max: 'troops' }
+    ],
+  },
+  [ActionType.ProposeNonAggressionPact]: {
+    name: 'Propose Non-Aggression Pact',
+    description: 'Propose a temporary peace agreement with another tribe.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z' }),
+    fields: [
+      { name: 'target_tribe', label: 'Target Tribe', type: 'tribe_select' },
+      { name: 'duration', label: 'Duration', type: 'pact_duration_select', defaultValue: 5 }
     ],
   },
 };

@@ -709,6 +709,12 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.Sabotage:
                     result = processSabotageAction(tribe, action, state);
                     break;
+                case ActionType.ProposeNonAggressionPact:
+                    result = processProposeNonAggressionPactAction(tribe, action, state);
+                    break;
+                case ActionType.RespondToNonAggressionPact:
+                    result = processRespondToNonAggressionPactAction(tribe, action, state);
+                    break;
                 case ActionType.ReduceTroops:
                     result = processReduceTroopsAction(tribe, action);
                     break;
@@ -768,6 +774,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
 
     // SABOTAGE EFFECTS PROCESSING: Process ongoing sabotage effects
     processSabotageEffects(state);
+
+    // NON-AGGRESSION PACTS PROCESSING: Handle pact expiration and cleanup
+    processNonAggressionPacts(state);
 
     // BONUS TURN PROCESSING: Handle bonus turns from bandit conquests
     processBonusTurns(state);
@@ -4041,6 +4050,11 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         return `No enemy garrison found at ${targetLocation} to attack.`;
     }
 
+    // Check for active non-aggression pact
+    if (hasActiveNonAggressionPact(state, tribe.id, defendingTribe.id)) {
+        return `❌ **ATTACK BLOCKED** You have an active non-aggression pact with ${defendingTribe.tribeName}. You cannot attack them while the pact is in effect.`;
+    }
+
     const defenderGarrison = defendingTribe.garrisons[targetLocation] || defendingTribe.garrisons[convertToStandardFormat(targetLocation)];
 
     // Simple combat resolution
@@ -6613,6 +6627,204 @@ function extractResourcesFromText(text: string, type: 'spent' | 'gained'): Recor
     });
 
     return resources;
+}
+
+// --- NON-AGGRESSION PACT PROCESSORS ---
+function processProposeNonAggressionPactAction(tribe: any, action: any, state: any): string {
+    const { target_tribe, duration } = action.actionData;
+
+    if (!target_tribe || !duration) {
+        return `❌ Non-aggression pact proposal failed: Missing target tribe or duration.`;
+    }
+
+    const targetTribe = state.tribes.find((t: any) => t.id === target_tribe);
+    if (!targetTribe) {
+        return `❌ Non-aggression pact proposal failed: Target tribe not found.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Cannot propose non-aggression pact with yourself.`;
+    }
+
+    // Initialize non-aggression pacts array if it doesn't exist
+    if (!state.nonAggressionPacts) {
+        state.nonAggressionPacts = [];
+    }
+
+    // Check if there's already an active or proposed pact between these tribes
+    const existingPact = state.nonAggressionPacts.find((pact: any) =>
+        (pact.tribe1Id === tribe.id && pact.tribe2Id === targetTribe.id) ||
+        (pact.tribe1Id === targetTribe.id && pact.tribe2Id === tribe.id)
+    );
+
+    if (existingPact && (existingPact.status === 'active' || existingPact.status === 'proposed')) {
+        return `❌ There is already an ${existingPact.status} non-aggression pact with ${targetTribe.tribeName}.`;
+    }
+
+    // Create new pact proposal
+    const pactId = `pact-${Date.now()}-${tribe.id}-${targetTribe.id}`;
+    const newPact = {
+        id: pactId,
+        tribe1Id: tribe.id,
+        tribe2Id: targetTribe.id,
+        startTurn: state.turn,
+        duration: parseInt(duration),
+        proposedBy: tribe.id,
+        status: 'proposed' as const,
+        expiresOnTurn: state.turn + parseInt(duration)
+    };
+
+    state.nonAggressionPacts.push(newPact);
+
+    // Add notification to target tribe
+    targetTribe.lastTurnResults.push({
+        id: `pact-proposal-${Date.now()}`,
+        actionType: action.actionType,
+        actionData: {},
+        result: `🕊️ **NON-AGGRESSION PACT PROPOSED** ${tribe.tribeName} has proposed a ${duration}-turn non-aggression pact. You can accept or reject this proposal.`
+    });
+
+    return `🕊️ **NON-AGGRESSION PACT PROPOSED** You have proposed a ${duration}-turn non-aggression pact to ${targetTribe.tribeName}. Awaiting their response.`;
+}
+
+function processRespondToNonAggressionPactAction(tribe: any, action: any, state: any): string {
+    const { pact_id, response } = action.actionData;
+
+    if (!pact_id || !response) {
+        return `❌ Non-aggression pact response failed: Missing pact ID or response.`;
+    }
+
+    if (!state.nonAggressionPacts) {
+        return `❌ Non-aggression pact response failed: No pacts found.`;
+    }
+
+    const pact = state.nonAggressionPacts.find((p: any) => p.id === pact_id);
+    if (!pact) {
+        return `❌ Non-aggression pact response failed: Pact not found.`;
+    }
+
+    if (pact.status !== 'proposed') {
+        return `❌ Non-aggression pact response failed: Pact is not in proposed status.`;
+    }
+
+    // Verify this tribe is the target of the proposal
+    if (pact.tribe1Id !== tribe.id && pact.tribe2Id !== tribe.id) {
+        return `❌ Non-aggression pact response failed: You are not involved in this pact.`;
+    }
+
+    if (pact.proposedBy === tribe.id) {
+        return `❌ Non-aggression pact response failed: You cannot respond to your own proposal.`;
+    }
+
+    const proposingTribe = state.tribes.find((t: any) => t.id === pact.proposedBy);
+    if (!proposingTribe) {
+        return `❌ Non-aggression pact response failed: Proposing tribe not found.`;
+    }
+
+    if (response === 'accept') {
+        // Accept the pact
+        pact.status = 'active';
+        pact.startTurn = state.turn;
+        pact.expiresOnTurn = state.turn + pact.duration;
+
+        // Notify proposing tribe
+        proposingTribe.lastTurnResults.push({
+            id: `pact-accepted-${Date.now()}`,
+            actionType: action.actionType,
+            actionData: {},
+            result: `🕊️ **NON-AGGRESSION PACT ACCEPTED** ${tribe.tribeName} has accepted your non-aggression pact proposal. The pact is now active for ${pact.duration} turns.`
+        });
+
+        return `🕊️ **NON-AGGRESSION PACT ACCEPTED** You have accepted the non-aggression pact with ${proposingTribe.tribeName}. The pact is now active for ${pact.duration} turns.`;
+    } else {
+        // Reject the pact
+        pact.status = 'expired'; // Mark as expired to remove from active proposals
+
+        // Notify proposing tribe
+        proposingTribe.lastTurnResults.push({
+            id: `pact-rejected-${Date.now()}`,
+            actionType: action.actionType,
+            actionData: {},
+            result: `🕊️ **NON-AGGRESSION PACT REJECTED** ${tribe.tribeName} has rejected your non-aggression pact proposal.`
+        });
+
+        return `🕊️ **NON-AGGRESSION PACT REJECTED** You have rejected the non-aggression pact proposal from ${proposingTribe.tribeName}.`;
+    }
+}
+
+// Process non-aggression pacts each turn
+function processNonAggressionPacts(state: any): void {
+    if (!state.nonAggressionPacts) {
+        state.nonAggressionPacts = [];
+        return;
+    }
+
+    const currentTurn = state.turn;
+    const expiredPacts: string[] = [];
+
+    state.nonAggressionPacts.forEach((pact: any) => {
+        if (pact.status === 'active' && currentTurn >= pact.expiresOnTurn) {
+            // Pact has expired
+            pact.status = 'expired';
+            expiredPacts.push(pact.id);
+
+            // Notify both tribes
+            const tribe1 = state.tribes.find((t: any) => t.id === pact.tribe1Id);
+            const tribe2 = state.tribes.find((t: any) => t.id === pact.tribe2Id);
+
+            if (tribe1) {
+                tribe1.lastTurnResults.push({
+                    id: `pact-expired-${Date.now()}-${tribe1.id}`,
+                    actionType: 'Upkeep' as any,
+                    actionData: {},
+                    result: `🕊️ **NON-AGGRESSION PACT EXPIRED** Your non-aggression pact with ${tribe2?.tribeName || 'Unknown Tribe'} has expired. You are now free to attack each other.`
+                });
+            }
+
+            if (tribe2) {
+                tribe2.lastTurnResults.push({
+                    id: `pact-expired-${Date.now()}-${tribe2.id}`,
+                    actionType: 'Upkeep' as any,
+                    actionData: {},
+                    result: `🕊️ **NON-AGGRESSION PACT EXPIRED** Your non-aggression pact with ${tribe1?.tribeName || 'Unknown Tribe'} has expired. You are now free to attack each other.`
+                });
+            }
+        } else if (pact.status === 'proposed' && currentTurn >= pact.startTurn + 2) {
+            // Proposal has expired (2 turns to respond)
+            pact.status = 'expired';
+            expiredPacts.push(pact.id);
+
+            const proposingTribe = state.tribes.find((t: any) => t.id === pact.proposedBy);
+            if (proposingTribe) {
+                proposingTribe.lastTurnResults.push({
+                    id: `pact-proposal-expired-${Date.now()}`,
+                    actionType: 'Upkeep' as any,
+                    actionData: {},
+                    result: `🕊️ **NON-AGGRESSION PACT PROPOSAL EXPIRED** Your non-aggression pact proposal has expired without a response.`
+                });
+            }
+        }
+    });
+
+    // Clean up expired pacts (keep them for a few turns for reference, then remove)
+    state.nonAggressionPacts = state.nonAggressionPacts.filter((pact: any) => {
+        if (pact.status === 'expired') {
+            // Keep expired pacts for 3 turns, then remove completely
+            return currentTurn < pact.expiresOnTurn + 3;
+        }
+        return true;
+    });
+}
+
+// Helper function to check if two tribes have an active non-aggression pact
+function hasActiveNonAggressionPact(state: any, tribe1Id: string, tribe2Id: string): boolean {
+    if (!state.nonAggressionPacts) return false;
+
+    return state.nonAggressionPacts.some((pact: any) =>
+        pact.status === 'active' &&
+        ((pact.tribe1Id === tribe1Id && pact.tribe2Id === tribe2Id) ||
+         (pact.tribe1Id === tribe2Id && pact.tribe2Id === tribe1Id))
+    );
 }
 
 function extractTroopsFromText(text: string): number {

@@ -726,6 +726,57 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     );
   };
 
+  const renderTribeSelect = (field: ActionField, value: string) => {
+    // Get all tribes except the current player's tribe
+    const otherTribes = allTribes.filter(otherTribe => otherTribe.id !== tribe.id);
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-300">{field.label}</label>
+        <select
+          value={value}
+          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+        >
+          <option value="">Select a tribe...</option>
+          {otherTribes.map(tribe => (
+            <option key={tribe.id} value={tribe.id}>
+              {tribe.tribeName}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  const renderPactDurationSelect = (field: ActionField, value: string) => {
+    const durations = [
+      { value: '3', label: '3 turns (Short-term)' },
+      { value: '5', label: '5 turns (Medium-term)' },
+      { value: '10', label: '10 turns (Long-term)' }
+    ];
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-300">{field.label}</label>
+        <select
+          value={value}
+          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+        >
+          {durations.map(duration => (
+            <option key={duration.value} value={duration.value}>
+              {duration.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-slate-400">
+          Longer pacts provide more security but less flexibility.
+        </p>
+      </div>
+    );
+  };
+
   const renderField = (field: ActionField) => {
     const value = draftAction?.actionData?.[field.name] ?? '';
     const startLocation = draftAction?.actionData?.start_location;
@@ -882,6 +933,10 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             return renderSabotageSelect(field, value);
         case 'tech_select':
             return renderTechSelect(field, value);
+        case 'tribe_select':
+            return renderTribeSelect(field, value);
+        case 'pact_duration_select':
+            return renderPactDurationSelect(field, value);
         case 'info':
             return <p className="text-xs text-slate-400 italic p-2 bg-slate-800/50 rounded-md">{field.info}</p>;
         default: return null;

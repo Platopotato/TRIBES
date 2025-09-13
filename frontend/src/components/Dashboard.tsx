@@ -191,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const [showCancelResearchConfirm, setShowCancelResearchConfirm] = useState(false);
   const [view, setView] = useState<DashboardView>('planning');
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'diplomacy' | 'leaderboard' | 'results' | 'trades'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'actions' | 'chiefs' | 'assets' | 'research' | 'diplomacy' | 'leaderboard' | 'results' | 'trades'>('home');
   const [selectedHexInfo, setSelectedHexInfo] = useState<{q: number, r: number, terrain: string} | null>(null);
   const [showMapInModal, setShowMapInModal] = useState(false);
   const [actionModalWithMap, setActionModalWithMap] = useState(false);
@@ -662,17 +662,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             {/* Desktop-only buttons - clean and simple */}
             {!shouldUseMobileUI && (
               <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => {
-                    console.log('🔬 TECH TREE DEBUG: Research button clicked');
-                    console.log('🔬 TECH TREE DEBUG: Player tribe:', playerTribe?.tribeName);
-                    console.log('🔬 TECH TREE DEBUG: Available garrisons:', Object.keys(playerTribe?.garrisons || {}));
-                    setIsTechTreeOpen(true);
-                  }}
-                  className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm transition-colors"
-                >
-                  🔬 Research
-                </button>
+
                 <button
                   onClick={() => setIsDiplomacyModalOpen(true)}
                   className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
@@ -786,6 +776,12 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     tribe={playerTribe}
                     onManagePrisoners={() => setIsPrisonerModalOpen(true)}
                   />
+                  <TechPanel
+                    tribe={playerTribe}
+                    plannedActions={plannedActions}
+                    onOpenTechTree={() => setIsTechTreeOpen(true)}
+                    onCancelResearch={() => setShowCancelResearchConfirm(true)}
+                  />
                   <ActionPanel
                     actions={turnSubmitted ? (playerTribe?.actions || []) : plannedActions}
                     maxActions={maxActions}
@@ -856,6 +852,13 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <span className="text-xs md:text-sm">Assets</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab('research')}
+                  className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'research' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
+                >
+                  <span className="text-sm">🔬</span>
+                  <span className="text-xs md:text-sm">Research</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('diplomacy')}
                   className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeTab === 'diplomacy' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
                 >
@@ -887,20 +890,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   <span className="text-sm">🏆</span>
                   <span className="text-xs md:text-sm">Standings</span>
                 </button>
-                <button
-                  onClick={() => {
-                    console.log('🔬 TECH TREE DEBUG: Mobile research button clicked');
-                    console.log('🔬 TECH TREE DEBUG: Player tribe:', playerTribe?.tribeName);
-                    console.log('🔬 TECH TREE DEBUG: Available garrisons:', Object.keys(playerTribe?.garrisons || {}));
-                    setIsHelpModalOpen(false);
-                    setIsCodexOpen(false);
-                    setIsTechTreeOpen(true);
-                  }}
-                  className={`mobile-touch-target touch-feedback haptic-light flex flex-col md:flex-row items-center p-2 rounded-lg transition-colors flex-1 min-w-0 md:space-x-2 ${activeModal === 'research' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:text-slate-300'}`}
-                >
-                  <span className="text-sm">🔬</span>
-                  <span className="text-xs md:text-sm">Research</span>
-                </button>
+
                 <button
                   onClick={() => {
                     setIsTechTreeOpen(false);
@@ -1360,6 +1350,22 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   allAssetRequests={allAssetRequests}
                   allTribes={allTribes}
                   onRequestAsset={onRequestAsset}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'research' && (
+          <div className="space-y-4">
+            <div className="bg-slate-800 rounded-lg p-4">
+              <h2 className="text-lg font-bold text-white mb-4">🔬 Research & Technology</h2>
+              {playerTribe && (
+                <TechPanel
+                  tribe={playerTribe}
+                  plannedActions={plannedActions}
+                  onOpenTechTree={() => setIsTechTreeOpen(true)}
+                  onCancelResearch={() => setShowCancelResearchConfirm(true)}
                 />
               )}
             </div>

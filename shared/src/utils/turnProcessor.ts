@@ -715,6 +715,15 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.RespondToNonAggressionPact:
                     result = processRespondToNonAggressionPactAction(tribe, action, state);
                     break;
+                case ActionType.ProposeAlliance:
+                    result = processProposeAllianceAction(tribe, action, state);
+                    break;
+                case ActionType.DeclareWar:
+                    result = processDeclareWarAction(tribe, action, state);
+                    break;
+                case ActionType.SueForPeace:
+                    result = processSueForPeaceAction(tribe, action, state);
+                    break;
                 case ActionType.ReduceTroops:
                     result = processReduceTroopsAction(tribe, action);
                     break;
@@ -6825,6 +6834,200 @@ function hasActiveNonAggressionPact(state: any, tribe1Id: string, tribe2Id: stri
         ((pact.tribe1Id === tribe1Id && pact.tribe2Id === tribe2Id) ||
          (pact.tribe1Id === tribe2Id && pact.tribe2Id === tribe1Id))
     );
+}
+
+// --- TRADITIONAL DIPLOMACY PROCESSORS ---
+function processProposeAllianceAction(tribe: any, action: any, state: any): string {
+    const { target_tribe } = action.actionData;
+
+    if (!target_tribe) {
+        return `❌ Alliance proposal failed: No target tribe specified.`;
+    }
+
+    const targetTribe = state.tribes.find((t: any) => t.id === target_tribe);
+    if (!targetTribe) {
+        return `❌ Alliance proposal failed: Target tribe not found.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Cannot propose alliance with yourself.`;
+    }
+
+    // Check current diplomatic status
+    const currentRelation = tribe.diplomacy[targetTribe.id];
+    if (currentRelation?.status === DiplomaticStatus.Alliance) {
+        return `❌ You are already allied with ${targetTribe.tribeName}.`;
+    }
+
+    // Initialize diplomatic proposals array if it doesn't exist
+    if (!state.diplomaticProposals) {
+        state.diplomaticProposals = [];
+    }
+
+    // Check for existing proposal
+    const existingProposal = state.diplomaticProposals.find((p: any) =>
+        p.fromTribeId === tribe.id && p.toTribeId === targetTribe.id && p.actionType === 'ProposeAlliance'
+    );
+
+    if (existingProposal) {
+        return `❌ You already have a pending alliance proposal with ${targetTribe.tribeName}.`;
+    }
+
+    // Create alliance proposal
+    const proposalId = `alliance-${Date.now()}-${tribe.id}-${targetTribe.id}`;
+    const newProposal = {
+        id: proposalId,
+        fromTribeId: tribe.id,
+        toTribeId: targetTribe.id,
+        actionType: 'ProposeAlliance',
+        turn: state.turn,
+        data: {}
+    };
+
+    state.diplomaticProposals.push(newProposal);
+
+    // Add notification to target tribe
+    targetTribe.lastTurnResults.push({
+        id: `alliance-proposal-${Date.now()}`,
+        actionType: action.actionType,
+        actionData: {},
+        result: `🤝 **ALLIANCE PROPOSED** ${tribe.tribeName} has proposed a formal alliance. You can accept or reject this proposal in the diplomacy panel.`
+    });
+
+    return `🤝 **ALLIANCE PROPOSED** You have proposed a formal alliance to ${targetTribe.tribeName}. Awaiting their response.`;
+}
+
+function processDeclareWarAction(tribe: any, action: any, state: any): string {
+    const { target_tribe } = action.actionData;
+
+    if (!target_tribe) {
+        return `❌ War declaration failed: No target tribe specified.`;
+    }
+
+    const targetTribe = state.tribes.find((t: any) => t.id === target_tribe);
+    if (!targetTribe) {
+        return `❌ War declaration failed: Target tribe not found.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Cannot declare war on yourself.`;
+    }
+
+    // Check for active non-aggression pact
+    if (hasActiveNonAggressionPact(state, tribe.id, targetTribe.id)) {
+        return `❌ **WAR DECLARATION BLOCKED** You have an active non-aggression pact with ${targetTribe.tribeName}. You cannot declare war while the pact is in effect.`;
+    }
+
+    // Check current diplomatic status
+    const currentRelation = tribe.diplomacy[targetTribe.id];
+    if (currentRelation?.status === DiplomaticStatus.War) {
+        return `❌ You are already at war with ${targetTribe.tribeName}.`;
+    }
+
+    // Update diplomatic status for both tribes
+    if (!tribe.diplomacy) tribe.diplomacy = {};
+    if (!targetTribe.diplomacy) targetTribe.diplomacy = {};
+
+    tribe.diplomacy[targetTribe.id] = { status: DiplomaticStatus.War };
+    targetTribe.diplomacy[tribe.id] = { status: DiplomaticStatus.War };
+
+    // Notify target tribe
+    targetTribe.lastTurnResults.push({
+        id: `war-declared-${Date.now()}`,
+        actionType: action.actionType,
+        actionData: {},
+        result: `⚔️ **WAR DECLARED** ${tribe.tribeName} has declared war on your tribe! Your diplomatic status is now War.`
+    });
+
+    return `⚔️ **WAR DECLARED** You have declared war on ${targetTribe.tribeName}. Your diplomatic status is now War.`;
+}
+
+function processSueForPeaceAction(tribe: any, action: any, state: any): string {
+    const { target_tribe, reparations_food = 0, reparations_scrap = 0, reparations_weapons = 0 } = action.actionData;
+
+    if (!target_tribe) {
+        return `❌ Peace proposal failed: No target tribe specified.`;
+    }
+
+    const targetTribe = state.tribes.find((t: any) => t.id === target_tribe);
+    if (!targetTribe) {
+        return `❌ Peace proposal failed: Target tribe not found.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Cannot sue for peace with yourself.`;
+    }
+
+    // Check current diplomatic status
+    const currentRelation = tribe.diplomacy[targetTribe.id];
+    if (currentRelation?.status !== DiplomaticStatus.War) {
+        return `❌ You are not at war with ${targetTribe.tribeName}.`;
+    }
+
+    // Validate reparations against available resources
+    const totalFood = tribe.globalResources?.food || 0;
+    const totalScrap = tribe.globalResources?.scrap || 0;
+    const totalWeapons = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) => sum + (garrison.weapons || 0), 0);
+
+    if (reparations_food > totalFood) {
+        return `❌ Peace proposal failed: You don't have ${reparations_food} food (you have ${totalFood}).`;
+    }
+    if (reparations_scrap > totalScrap) {
+        return `❌ Peace proposal failed: You don't have ${reparations_scrap} scrap (you have ${totalScrap}).`;
+    }
+    if (reparations_weapons > totalWeapons) {
+        return `❌ Peace proposal failed: You don't have ${reparations_weapons} weapons (you have ${totalWeapons}).`;
+    }
+
+    // Initialize diplomatic proposals array if it doesn't exist
+    if (!state.diplomaticProposals) {
+        state.diplomaticProposals = [];
+    }
+
+    // Check for existing proposal
+    const existingProposal = state.diplomaticProposals.find((p: any) =>
+        p.fromTribeId === tribe.id && p.toTribeId === targetTribe.id && p.actionType === 'SueForPeace'
+    );
+
+    if (existingProposal) {
+        return `❌ You already have a pending peace proposal with ${targetTribe.tribeName}.`;
+    }
+
+    // Create peace proposal
+    const proposalId = `peace-${Date.now()}-${tribe.id}-${targetTribe.id}`;
+    const newProposal = {
+        id: proposalId,
+        fromTribeId: tribe.id,
+        toTribeId: targetTribe.id,
+        actionType: 'SueForPeace',
+        turn: state.turn,
+        data: {
+            reparations: {
+                food: reparations_food,
+                scrap: reparations_scrap,
+                weapons: reparations_weapons
+            }
+        }
+    };
+
+    state.diplomaticProposals.push(newProposal);
+
+    // Create reparations summary
+    const reparationsList = [];
+    if (reparations_food > 0) reparationsList.push(`${reparations_food} food`);
+    if (reparations_scrap > 0) reparationsList.push(`${reparations_scrap} scrap`);
+    if (reparations_weapons > 0) reparationsList.push(`${reparations_weapons} weapons`);
+    const reparationsText = reparationsList.length > 0 ? ` offering ${reparationsList.join(', ')} as reparations` : ' with no reparations';
+
+    // Add notification to target tribe
+    targetTribe.lastTurnResults.push({
+        id: `peace-proposal-${Date.now()}`,
+        actionType: action.actionType,
+        actionData: {},
+        result: `🕊️ **PEACE PROPOSED** ${tribe.tribeName} has sued for peace${reparationsText}. You can accept or reject this proposal in the diplomacy panel.`
+    });
+
+    return `🕊️ **PEACE PROPOSED** You have sued for peace with ${targetTribe.tribeName}${reparationsText}. Awaiting their response.`;
 }
 
 function extractTroopsFromText(text: string): number {

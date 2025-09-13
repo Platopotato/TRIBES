@@ -365,6 +365,9 @@ export enum ActionType {
   RespondToPrisonerExchange = 'Respond to Prisoner Exchange',
   ProposeNonAggressionPact = 'Propose Non-Aggression Pact',
   RespondToNonAggressionPact = 'Respond to Non-Aggression Pact',
+  ProposeAlliance = 'Propose Alliance',
+  DeclareWar = 'Declare War',
+  SueForPeace = 'Sue for Peace',
   ReduceTroops = 'Reduce Troops',
 }
 

@@ -7,8 +7,7 @@ import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, Diplom
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
-import ConfirmationModal from './ui/ConfirmationModal';
-import SueForPeaceModal from './SueForPeaceModal';
+
 // import DiplomaticInbox from './DiplomaticInbox'; // Removed for simplicity
 
 interface DiplomacyPanelProps {
@@ -17,9 +16,6 @@ interface DiplomacyPanelProps {
   diplomaticProposals: DiplomaticProposal[];
   nonAggressionPacts?: NonAggressionPact[];
   turn: number;
-  onProposeAlliance: (toTribeId: string) => void;
-  onSueForPeace: (toTribeId: string, reparations: { food: number, scrap: number, weapons: number }) => void;
-  onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
 }
@@ -31,18 +27,11 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     diplomaticProposals,
     nonAggressionPacts = [],
     turn,
-    onProposeAlliance,
-    onSueForPeace,
-    onDeclareWar,
     onAcceptProposal,
     onRejectProposal
   } = props;
 
-  // Simplified - no tabs, just overview
-  const [warTarget, setWarTarget] = useState<Tribe | null>(null);
-  const [peaceTarget, setPeaceTarget] = useState<Tribe | null>(null);
-  const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
-  const [recentActions, setRecentActions] = useState<Set<string>>(new Set());
+  // Simplified status display only
 
   const otherTribes = allTribes.filter(t => t.id !== playerTribe.id && !t.isAI);
   const aiTribes = allTribes.filter(t => t.id !== playerTribe.id && t.isAI);
@@ -57,79 +46,9 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   const activePacts = playerPacts.filter(pact => pact.status === 'active');
   const proposedPacts = playerPacts.filter(pact => pact.status === 'proposed');
 
-  const handleConfirmDeclareWar = () => {
-    if (warTarget) {
-      onDeclareWar(warTarget.id);
-    }
-    setWarTarget(null);
-  };
 
-  const handleSueForPeaceSubmit = (reparations: { food: number, scrap: number, weapons: number }) => {
-    if (peaceTarget) {
-      onSueForPeace(peaceTarget.id, reparations);
-    }
-    setPeaceTarget(null);
-  };
 
-  // Debounced action handlers with loading states
-  const handleProposeAlliance = (toTribeId: string) => {
-    const actionKey = `alliance-${toTribeId}`;
 
-    // Prevent duplicate actions
-    if (pendingActions.has(actionKey) || recentActions.has(actionKey)) {
-      console.log(`🚫 Alliance proposal to ${toTribeId} already in progress or recently sent`);
-      return;
-    }
-
-    // Set pending state
-    setPendingActions(prev => new Set(prev).add(actionKey));
-
-    // Call the actual handler
-    onProposeAlliance(toTribeId);
-
-    // Add to recent actions to prevent immediate re-sending
-    setRecentActions(prev => new Set(prev).add(actionKey));
-
-    // Clear pending state after delay
-    setTimeout(() => {
-      setPendingActions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(actionKey);
-        return newSet;
-      });
-    }, 2000);
-
-    // Clear recent actions after longer delay
-    setTimeout(() => {
-      setRecentActions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(actionKey);
-        return newSet;
-      });
-    }, 10000); // 10 seconds cooldown
-  };
-
-  const handleDeclareWar = (toTribeId: string) => {
-    const actionKey = `war-${toTribeId}`;
-
-    if (pendingActions.has(actionKey) || recentActions.has(actionKey)) {
-      console.log(`🚫 War declaration to ${toTribeId} already in progress or recently sent`);
-      return;
-    }
-
-    // Set pending and call handler
-    setPendingActions(prev => new Set(prev).add(actionKey));
-    setWarTarget(allTribes.find(t => t.id === toTribeId) || null);
-
-    // Clear pending after delay
-    setTimeout(() => {
-      setPendingActions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(actionKey);
-        return newSet;
-      });
-    }, 2000);
-  };
 
   const getStatusPill = (relation: DiplomaticRelation) => {
     const status = relation?.status || DiplomaticStatus.Neutral;
@@ -230,70 +149,22 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         return (
           <div key={tribe.id} className="p-3 bg-slate-900/50 rounded-lg">
             {/* Tribe Info */}
-            <div className="flex items-center space-x-3 mb-2">
+            <div className="flex items-center space-x-3">
               <span className="text-lg">{TRIBE_ICONS[tribe.icon] ? '🏛️' : '🏛️'}</span>
               <div className="flex-1">
                 <p className="font-semibold text-slate-200">{tribe.tribeName}</p>
                 <div className="text-xs">{getStatusPill(relation)}</div>
+                {isTruceActive && (
+                  <div className="text-xs italic text-green-400 mt-1">
+                    Truce: {truceTurnsLeft} turn(s) remaining
+                  </div>
+                )}
+                {isProposalPending && (
+                  <div className="text-xs italic text-yellow-400 mt-1">
+                    Proposal pending
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-2">
-              {isTruceActive && (
-                <span className="text-xs italic text-green-400 px-2 py-1 bg-green-900/30 rounded" title={`Truce active from a recent peace treaty.`}>
-                  Truce: {truceTurnsLeft} turn(s)
-                </span>
-              )}
-              {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
-                <Button
-                  onClick={() => handleProposeAlliance(tribe.id)}
-                  disabled={pendingActions.has(`alliance-${tribe.id}`) || recentActions.has(`alliance-${tribe.id}`)}
-                  className={`text-xs px-3 py-1 transition-all ${
-                    pendingActions.has(`alliance-${tribe.id}`)
-                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                      : recentActions.has(`alliance-${tribe.id}`)
-                        ? 'bg-green-600 cursor-not-allowed opacity-75'
-                        : 'bg-green-800 hover:bg-green-700'
-                  }`}
-                >
-                  {pendingActions.has(`alliance-${tribe.id}`) ? (
-                    <>⏳ Sending...</>
-                  ) : recentActions.has(`alliance-${tribe.id}`) ? (
-                    <>✅ Sent</>
-                  ) : (
-                    <>🤝 Alliance</>
-                  )}
-                </Button>
-              )}
-               {relation.status === DiplomaticStatus.War && !isProposalPending && (
-                <Button onClick={() => setPeaceTarget(tribe)} className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700">
-                  🕊️ Peace
-                </Button>
-              )}
-              {isProposalPending && (
-                <span className="text-xs italic text-yellow-400 px-2 py-1 bg-yellow-900/30 rounded">
-                  ⏳ Pending
-                </span>
-              )}
-              {relation.status !== DiplomaticStatus.War && (
-                 <Button
-                    onClick={() => handleDeclareWar(tribe.id)}
-                    className={`text-xs px-3 py-1 transition-all ${
-                      pendingActions.has(`war-${tribe.id}`)
-                        ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                        : 'bg-red-900 hover:bg-red-800'
-                    }`}
-                    disabled={isTruceActive || pendingActions.has(`war-${tribe.id}`)}
-                    title={isTruceActive ? `Cannot declare war due to truce.` : `Declare war on ${tribe.tribeName}`}
-                  >
-                    {pendingActions.has(`war-${tribe.id}`) ? (
-                      <>⏳ Processing...</>
-                    ) : (
-                      <>⚔️ War</>
-                    )}
-                </Button>
-              )}
             </div>
           </div>
         )
@@ -401,23 +272,6 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
           )}
         </div>
       </Card>
-      {warTarget && (
-        <ConfirmationModal
-          title={`Declare War on ${warTarget.tribeName}?`}
-          message="This will immediately set your diplomatic status to 'War'. This action cannot be undone."
-          onConfirm={handleConfirmDeclareWar}
-          onCancel={() => setWarTarget(null)}
-        />
-      )}
-      {peaceTarget && (
-        <SueForPeaceModal
-          isOpen={!!peaceTarget}
-          onClose={() => setPeaceTarget(null)}
-          onSubmit={handleSueForPeaceSubmit}
-          playerTribe={playerTribe}
-          targetTribe={peaceTarget}
-        />
-      )}
     </>
   );
 };

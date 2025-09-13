@@ -1383,9 +1383,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   diplomaticProposals={diplomaticProposals}
                   nonAggressionPacts={[]}
                   turn={turn}
-                  onProposeAlliance={onProposeAlliance}
-                  onSueForPeace={onSueForPeace}
-                  onDeclareWar={onDeclareWar}
+
                   onAcceptProposal={onAcceptProposal}
                   onRejectProposal={onRejectProposal}
                 />
@@ -1842,9 +1840,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     diplomaticProposals={diplomaticProposals}
                     nonAggressionPacts={[]}
                     turn={turn}
-                    onProposeAlliance={onProposeAlliance}
-                    onSueForPeace={onSueForPeace}
-                    onDeclareWar={onDeclareWar}
+
                     onAcceptProposal={onAcceptProposal}
                     onRejectProposal={onRejectProposal}
                   />

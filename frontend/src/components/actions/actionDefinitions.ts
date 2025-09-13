@@ -195,6 +195,33 @@ export const ACTION_DEFINITIONS: { [key in Exclude<ActionType, ActionType.Upkeep
       { name: 'duration', label: 'Duration', type: 'pact_duration_select', defaultValue: 5 }
     ],
   },
+  [ActionType.ProposeAlliance]: {
+    name: 'Propose Alliance',
+    description: 'Propose a formal alliance with another tribe.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z' }),
+    fields: [
+      { name: 'target_tribe', label: 'Target Tribe', type: 'tribe_select' }
+    ],
+  },
+  [ActionType.DeclareWar]: {
+    name: 'Declare War',
+    description: 'Formally declare war on another tribe.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z' }),
+    fields: [
+      { name: 'target_tribe', label: 'Target Tribe', type: 'tribe_select' }
+    ],
+  },
+  [ActionType.SueForPeace]: {
+    name: 'Sue for Peace',
+    description: 'Offer peace terms to end a war with another tribe.',
+    icon: React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.09z' }),
+    fields: [
+      { name: 'target_tribe', label: 'Target Tribe', type: 'tribe_select' },
+      { name: 'reparations_food', label: 'Food Reparations', type: 'number', defaultValue: 0 },
+      { name: 'reparations_scrap', label: 'Scrap Reparations', type: 'number', defaultValue: 0 },
+      { name: 'reparations_weapons', label: 'Weapon Reparations', type: 'number', defaultValue: 0 }
+    ],
+  },
 };
 
   // Non-plannable diplomacy actions are intentionally omitted from the action grid.

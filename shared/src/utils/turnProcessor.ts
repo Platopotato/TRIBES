@@ -724,6 +724,9 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 case ActionType.SueForPeace:
                     result = processSueForPeaceAction(tribe, action, state);
                     break;
+                case ActionType.Diplomacy:
+                    result = processDiplomacyAction(tribe, action, state);
+                    break;
                 case ActionType.ReduceTroops:
                     result = processReduceTroopsAction(tribe, action);
                     break;
@@ -7028,6 +7031,41 @@ function processSueForPeaceAction(tribe: any, action: any, state: any): string {
     });
 
     return `🕊️ **PEACE PROPOSED** You have sued for peace with ${targetTribe.tribeName}${reparationsText}. Awaiting their response.`;
+}
+
+// Unified diplomacy action processor
+function processDiplomacyAction(tribe: any, action: any, state: any): string {
+    const { diplomatic_action, target_tribe, duration, reparations_food, reparations_scrap, reparations_weapons } = action.actionData;
+
+    if (!diplomatic_action) {
+        return `❌ Diplomacy action failed: No diplomatic action specified.`;
+    }
+
+    // Create a sub-action based on the diplomatic action type
+    const subAction = {
+        actionType: diplomatic_action,
+        actionData: {
+            target_tribe,
+            duration,
+            reparations_food,
+            reparations_scrap,
+            reparations_weapons
+        }
+    };
+
+    // Route to the appropriate processor
+    switch (diplomatic_action) {
+        case 'propose_alliance':
+            return processProposeAllianceAction(tribe, subAction, state);
+        case 'declare_war':
+            return processDeclareWarAction(tribe, subAction, state);
+        case 'sue_for_peace':
+            return processSueForPeaceAction(tribe, subAction, state);
+        case 'propose_non_aggression_pact':
+            return processProposeNonAggressionPactAction(tribe, subAction, state);
+        default:
+            return `❌ Unknown diplomatic action: ${diplomatic_action}`;
+    }
 }
 
 function extractTroopsFromText(text: string): number {

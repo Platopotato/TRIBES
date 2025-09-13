@@ -368,6 +368,7 @@ export enum ActionType {
   ProposeAlliance = 'Propose Alliance',
   DeclareWar = 'Declare War',
   SueForPeace = 'Sue for Peace',
+  Diplomacy = 'Diplomacy',
   ReduceTroops = 'Reduce Troops',
 }
 

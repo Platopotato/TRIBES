@@ -730,6 +730,9 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     // Get all tribes except the current player's tribe
     const otherTribes = allTribes.filter(otherTribe => otherTribe.id !== tribe.id);
 
+    // Find the selected tribe to show its name
+    const selectedTribe = otherTribes.find(t => t.id === value);
+
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-300">{field.label}</label>
@@ -739,12 +742,29 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
           className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
         >
           <option value="">Select a tribe...</option>
-          {otherTribes.map(tribe => (
-            <option key={tribe.id} value={tribe.id}>
-              {tribe.tribeName}
+          {otherTribes.map(otherTribe => (
+            <option key={otherTribe.id} value={otherTribe.id}>
+              {otherTribe.tribeName} {otherTribe.isAI ? '(AI)' : '(Player)'}
             </option>
           ))}
         </select>
+        {selectedTribe && (
+          <div className="text-xs text-slate-400 bg-slate-800/50 rounded p-2">
+            <div className="flex items-center space-x-2">
+              <span>🏛️</span>
+              <span className="font-medium text-slate-300">{selectedTribe.tribeName}</span>
+              <span className="text-slate-500">
+                {selectedTribe.isAI ? '(AI Tribe)' : '(Player Tribe)'}
+              </span>
+            </div>
+            {/* Show current diplomatic status if available */}
+            {tribe.diplomacy && tribe.diplomacy[selectedTribe.id] && (
+              <div className="mt-1 text-xs">
+                Current status: <span className="text-yellow-400">{tribe.diplomacy[selectedTribe.id].status}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -777,10 +797,64 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
     );
   };
 
+  const renderDiplomaticActionSelect = (field: ActionField, value: string) => {
+    const diplomaticActions = [
+      { value: 'propose_alliance', label: '🤝 Propose Alliance', description: 'Formal alliance proposal' },
+      { value: 'declare_war', label: '⚔️ Declare War', description: 'Immediate war declaration' },
+      { value: 'sue_for_peace', label: '🕊️ Sue for Peace', description: 'Peace proposal with reparations' },
+      { value: 'propose_non_aggression_pact', label: '🕊️ Propose Non-Aggression Pact', description: 'Temporary peace agreement' }
+    ];
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-300">{field.label}</label>
+        <select
+          value={value}
+          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+          className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200"
+        >
+          <option value="">Select diplomatic action...</option>
+          {diplomaticActions.map(action => (
+            <option key={action.value} value={action.value}>
+              {action.label}
+            </option>
+          ))}
+        </select>
+        {value && (
+          <p className="text-xs text-slate-400">
+            {diplomaticActions.find(a => a.value === value)?.description}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderField = (field: ActionField) => {
     const value = draftAction?.actionData?.[field.name] ?? '';
     const startLocation = draftAction?.actionData?.start_location;
     const currentGarrison = startLocation ? availableGarrisons[startLocation] : null;
+
+    // Handle conditional field visibility for Diplomacy action
+    if (draftAction?.actionType === ActionType.Diplomacy) {
+      const selectedDiplomaticAction = draftAction?.actionData?.diplomatic_action;
+
+      // Always show diplomatic action selector
+      if (field.name === 'diplomatic_action') {
+        // Show this field
+      }
+      // Show target tribe for all diplomatic actions
+      else if (field.name === 'target_tribe') {
+        if (!selectedDiplomaticAction) return null; // Hide until action is selected
+      }
+      // Show duration only for non-aggression pacts
+      else if (field.name === 'duration') {
+        if (selectedDiplomaticAction !== 'propose_non_aggression_pact') return null;
+      }
+      // Show reparations only for sue for peace
+      else if (field.name.startsWith('reparations_')) {
+        if (selectedDiplomaticAction !== 'sue_for_peace') return null;
+      }
+    }
 
     switch (field.type) {
         case 'garrison_select': {
@@ -937,6 +1011,8 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
             return renderTribeSelect(field, value);
         case 'pact_duration_select':
             return renderPactDurationSelect(field, value);
+        case 'diplomatic_action_select':
+            return renderDiplomaticActionSelect(field, value);
         case 'info':
             return <p className="text-xs text-slate-400 italic p-2 bg-slate-800/50 rounded-md">{field.info}</p>;
         default: return null;

@@ -530,12 +530,6 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
   const renderSabotageSelect = (field: ActionField, value: string) => {
     const sabotageTypes = [
       {
-        id: 'Intelligence Gathering',
-        name: '🔍 Intelligence Gathering',
-        description: 'Gather information about enemy forces, resources, and plans',
-        fields: []
-      },
-      {
         id: 'Sabotage Outpost',
         name: '💥 Sabotage Outpost',
         description: 'Disable enemy outpost defenses for 2 turns',

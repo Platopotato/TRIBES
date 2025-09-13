@@ -378,7 +378,6 @@ export interface PrisonerExchangeProposal {
 export enum SabotageType {
   DestroyResources = 'Destroy Resources',
   StealResources = 'Steal Resources',
-  IntelligenceGathering = 'Intelligence Gathering',
   StealResearch = 'Steal Research',
   DestroyResearch = 'Destroy Research',
   SabotageOutpost = 'Sabotage Outpost',

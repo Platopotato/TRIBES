@@ -5722,9 +5722,6 @@ function executeSabotageOperation(
         case 'Steal Resources':
             return executeResourceTheft(attackerTribe, targetTribe, targetGarrison, resourceTarget, amount, targetLocation, detected, operativesCaptured, chiefsCaptured);
 
-        case 'Intelligence Gathering':
-            return executeIntelligenceGathering(attackerTribe, targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
-
         case 'Steal Research':
             return executeResearchTheft(attackerTribe, targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
 
@@ -5832,51 +5829,6 @@ function executeResourceTheft(attackerTribe: any, targetTribe: any, targetGarris
     }
 
     return `🎯 **SABOTAGE SUCCESSFUL** Stole ${theftDetails.join(', ')} from ${targetLocation}.${captureText}`;
-}
-
-function executeIntelligenceGathering(attackerTribe: any, targetTribe: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
-    const targetGarrison = targetTribe.garrisons[targetLocation];
-    let intelligence: string[] = [];
-
-    // Gather troop information
-    if (targetGarrison) {
-        intelligence.push(`**Garrison at ${targetLocation}:** ${targetGarrison.troops || 0} troops, ${targetGarrison.weapons || 0} weapons`);
-
-        if (targetGarrison.chiefs && targetGarrison.chiefs.length > 0) {
-            const chiefNames = targetGarrison.chiefs.map((c: any) => c.name).join(', ');
-            intelligence.push(`**Chiefs present:** ${chiefNames}`);
-        }
-    }
-
-    // Gather resource information
-    intelligence.push(`**Global Resources:** ${targetTribe.globalResources.food || 0} food, ${targetTribe.globalResources.scrap || 0} scrap`);
-
-    // Gather research information
-    if (targetTribe.currentResearch && targetTribe.currentResearch.length > 0) {
-        const researchInfo = targetTribe.currentResearch.map((project: any) => {
-            const tech = getTechnology(project.techId);
-            return `${tech?.name || 'Unknown'} (${project.progress}/${tech?.researchPoints || 0})`;
-        }).join(', ');
-        intelligence.push(`**Active Research:** ${researchInfo}`);
-    }
-
-    if (targetTribe.completedTechs && targetTribe.completedTechs.length > 0) {
-        const recentTechs = targetTribe.completedTechs.slice(-3); // Last 3 completed techs
-        intelligence.push(`**Recent Technologies:** ${recentTechs.join(', ')}`);
-    }
-
-    // Gather planned actions (partial information)
-    if (targetTribe.actions && targetTribe.actions.length > 0) {
-        const actionTypes = targetTribe.actions.map((a: any) => a.actionType).slice(0, 3); // First 3 action types
-        intelligence.push(`**Planned Actions:** ${actionTypes.join(', ')}`);
-    }
-
-    const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
-        ? ` ${operativesCaptured} operatives captured${chiefsCaptured.length > 0 ? `, Chief ${chiefsCaptured[0]} imprisoned` : ''}.`
-        : detected ? ' Mission detected but operatives escaped.' : '';
-
-    const intelReport = intelligence.join(' | ');
-    return `🔍 **INTELLIGENCE GATHERED** ${intelReport}${captureText}`;
 }
 
 function executeResearchTheft(attackerTribe: any, targetTribe: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {

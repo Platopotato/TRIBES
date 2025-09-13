@@ -4170,6 +4170,35 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             defendersRemain: (defenderGarrison.troops || 0) > 0
         });
 
+        // Generate combat breakdown
+        const combatBreakdown = generateCombatBreakdown({
+            attacker: {
+                tribe: tribe.tribeName,
+                troops: troopsToAttack,
+                weapons: attackerGarrison.weapons || 0,
+                baseStrength: attackerStrength,
+                techBonus: atkMult,
+                rationBonus: attackerRationMod,
+                sabotageBonus: attackerSabotageEffects.strengthMultiplier,
+                finalStrength: finalAttackerStrength
+            },
+            defender: {
+                tribe: defendingTribe.tribeName,
+                troops: defenderGarrison.troops + defLosses,
+                weapons: (defenderGarrison.weapons || 0) + defWeaponsLoss,
+                baseStrength: defenderStrength,
+                techBonus: defMult,
+                rationBonus: defenderRationMod,
+                terrainBonus: terrainDefBonus,
+                outpostBonus: outpostDefBonus,
+                homeBonus: homeDefBonus,
+                sabotageBonus: defenderSabotageEffects.strengthMultiplier,
+                finalStrength: finalDefenderStrength
+            },
+            terrain: defHex?.terrain,
+            location: targetLocation
+        });
+
         // Single comprehensive message for each side
         let attackerResult = battleNarrative.attackerMessage;
         if (banditConquestMessage) {
@@ -4178,6 +4207,8 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         if (vaultDiscoveryMessage) {
             attackerResult += `\n\n${vaultDiscoveryMessage}`;
         }
+        // Add combat breakdown to attacker result
+        attackerResult += `\n\n${combatBreakdown}`;
 
         tribe.lastTurnResults.push({
             id: `battle-victory-${Date.now()}`,
@@ -4235,6 +4266,35 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         attackerGarrison.weapons = (attackerGarrison.weapons || 0) - (atkWeaponsLoss || 0);
         defenderGarrison.weapons = (defenderGarrison.weapons || 0) - (defWeaponsLoss || 0);
 
+        // Generate combat breakdown
+        const combatBreakdown = generateCombatBreakdown({
+            attacker: {
+                tribe: tribe.tribeName,
+                troops: troopsToAttack,
+                weapons: attackerGarrison.weapons || 0,
+                baseStrength: attackerStrength,
+                techBonus: atkMult,
+                rationBonus: attackerRationMod,
+                sabotageBonus: attackerSabotageEffects.strengthMultiplier,
+                finalStrength: finalAttackerStrength
+            },
+            defender: {
+                tribe: defendingTribe.tribeName,
+                troops: defenderGarrison.troops + defenderLosses,
+                weapons: (defenderGarrison.weapons || 0) + defWeaponsLoss,
+                baseStrength: defenderStrength,
+                techBonus: defMult,
+                rationBonus: defenderRationMod,
+                terrainBonus: terrainDefBonus,
+                outpostBonus: outpostDefBonus,
+                homeBonus: homeDefBonus,
+                sabotageBonus: defenderSabotageEffects.strengthMultiplier,
+                finalStrength: finalDefenderStrength
+            },
+            terrain: defHex?.terrain,
+            location: targetLocation
+        });
+
         // Generate epic battle narrative for defender victory
         const battleNarrative = generateEpicBattleNarrative({
             location: targetLocation,
@@ -4256,13 +4316,13 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             id: `battle-defeat-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: action.actionData,
-            result: battleNarrative.attackerMessage
+            result: battleNarrative.attackerMessage + `\n\n${combatBreakdown}`
         });
         defendingTribe.lastTurnResults.push({
             id: `battle-victory-${Date.now()}`,
             actionType: ActionType.Attack,
             actionData: {},
-            result: battleNarrative.defenderMessage
+            result: battleNarrative.defenderMessage + `\n\n${combatBreakdown}`
         });
 
         // CRITICAL FIX: Clean up wiped out defender garrison and handle chiefs
@@ -5268,6 +5328,66 @@ function generateResearchProgressNarrative(tech: any, project: any, newProgress:
     ];
 
     return progressNarratives[Math.floor(Math.random() * progressNarratives.length)];
+}
+
+function generateCombatBreakdown(params: {
+    attacker: {
+        tribe: string;
+        troops: number;
+        weapons: number;
+        baseStrength: number;
+        techBonus: number;
+        rationBonus: number;
+        sabotageBonus: number;
+        finalStrength: number;
+    };
+    defender: {
+        tribe: string;
+        troops: number;
+        weapons: number;
+        baseStrength: number;
+        techBonus: number;
+        rationBonus: number;
+        terrainBonus: number;
+        outpostBonus: number;
+        homeBonus: number;
+        sabotageBonus: number;
+        finalStrength: number;
+    };
+    terrain?: string;
+    location: string;
+}): string {
+    const formatBonus = (value: number) => {
+        if (value === 1) return '';
+        const percent = Math.round((value - 1) * 100);
+        return percent > 0 ? ` (+${percent}%)` : ` (${percent}%)`;
+    };
+
+    const formatStrength = (value: number) => Math.round(value * 10) / 10;
+
+    return `
+📊 **COMBAT BREAKDOWN** at ${params.location}:
+
+**🗡️ ATTACKER (${params.attacker.tribe}):**
+• Base Force: ${params.attacker.troops} troops + ${params.attacker.weapons} weapons = ${formatStrength(params.attacker.baseStrength)} strength
+• Technology Bonus: ×${params.attacker.techBonus}${formatBonus(params.attacker.techBonus)}
+• Ration Effects: ×${params.attacker.rationBonus}${formatBonus(params.attacker.rationBonus)}
+• Sabotage Effects: ×${params.attacker.sabotageBonus}${formatBonus(params.attacker.sabotageBonus)}
+• **Final Strength: ${formatStrength(params.attacker.finalStrength)}**
+
+**🛡️ DEFENDER (${params.defender.tribe}):**
+• Base Force: ${params.defender.troops} troops + ${params.defender.weapons} weapons = ${formatStrength(params.defender.baseStrength)} strength
+• Technology Bonus: ×${params.defender.techBonus}${formatBonus(params.defender.techBonus)}
+• Ration Effects: ×${params.defender.rationBonus}${formatBonus(params.defender.rationBonus)}${params.terrain ? `
+• Terrain Bonus (${params.terrain}): ×${1 + params.defender.terrainBonus}${formatBonus(1 + params.defender.terrainBonus)}` : ''}${params.defender.outpostBonus > 1 ? `
+• Outpost Bonus: ×${params.defender.outpostBonus}${formatBonus(params.defender.outpostBonus)}` : ''}${params.defender.homeBonus > 1 ? `
+• Home Base Bonus: ×${params.defender.homeBonus}${formatBonus(params.defender.homeBonus)}` : ''}
+• Sabotage Effects: ×${params.defender.sabotageBonus}${formatBonus(params.defender.sabotageBonus)}
+• **Final Strength: ${formatStrength(params.defender.finalStrength)}**
+
+**⚖️ RESULT:** ${params.attacker.finalStrength > params.defender.finalStrength ?
+    `Attacker Victory (${formatStrength(params.attacker.finalStrength)} vs ${formatStrength(params.defender.finalStrength)})` :
+    `Defender Victory (${formatStrength(params.defender.finalStrength)} vs ${formatStrength(params.attacker.finalStrength)})`}`;
 }
 
 function generateEpicBattleNarrative(params: {

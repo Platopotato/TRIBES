@@ -434,6 +434,119 @@ export class DatabaseService {
     }
   }
 
+  // DIAGNOSTIC: Get comprehensive tribe data from database
+  async investigateTribeOrigin(tribeName: string): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🕵️ TRIBE ORIGIN INVESTIGATION: ${tribeName}`);
+    console.log('='.repeat(80));
+
+    if (!this.prisma) {
+      console.log('❌ Database not available');
+      return;
+    }
+
+    try {
+      // Get full tribe data
+      const tribe = await this.prisma.tribe.findFirst({
+        where: { tribeName: tribeName },
+        include: {
+          user: true,
+          garrisons: true
+        }
+      });
+
+      if (!tribe) {
+        console.log(`❌ Tribe "${tribeName}" not found in database`);
+        return;
+      }
+
+      console.log(`🏛️ TRIBE DATABASE RECORD:`);
+      console.log(`   ID: ${tribe.id}`);
+      console.log(`   Name: ${tribe.tribeName}`);
+      console.log(`   Location: "${tribe.location}"`);
+      console.log(`   Created: ${tribe.createdAt}`);
+      console.log(`   Updated: ${tribe.updatedAt}`);
+      console.log(`   Player: ${tribe.user?.username || 'Unknown'}`);
+      console.log(`   Player ID: ${tribe.playerId}`);
+      console.log('');
+
+      console.log(`🏰 GARRISON DATABASE RECORDS (${tribe.garrisons.length}):`);
+      tribe.garrisons.forEach((garrison, index) => {
+        const location = `${String(garrison.hexQ).padStart(3, '0')}.${String(garrison.hexR).padStart(3, '0')}`;
+        console.log(`   ${index + 1}. Location: "${location}" (q=${garrison.hexQ}, r=${garrison.hexR})`);
+        console.log(`      Troops: ${garrison.troops}, Weapons: ${garrison.weapons}`);
+        console.log(`      Hex ID: ${garrison.hexId}`);
+        console.log('');
+      });
+
+      // Check if there's a garrison at the tribe's official location
+      // Parse tribe location to get q,r coordinates
+      const tribeCoords = this.parseLocationString(tribe.location);
+      const homeGarrison = tribe.garrisons.find(g =>
+        tribeCoords && g.hexQ === tribeCoords.q && g.hexR === tribeCoords.r
+      );
+      console.log(`🏠 HOME GARRISON CHECK:`);
+      console.log(`   Tribe location: "${tribe.location}" (q=${tribeCoords?.q}, r=${tribeCoords?.r})`);
+      console.log(`   Has garrison at home: ${homeGarrison ? '✅ YES' : '❌ NO'}`);
+      if (homeGarrison) {
+        console.log(`   Home garrison: ${homeGarrison.troops} troops, ${homeGarrison.weapons} weapons`);
+      }
+      console.log('');
+
+      // Check if there's a garrison at 051.044 (expected starting location)
+      const expectedGarrison = tribe.garrisons.find(g => g.hexQ === 51 && g.hexR === 44);
+      console.log(`📍 EXPECTED STARTING LOCATION CHECK (051.044):`);
+      console.log(`   Has garrison at 051.044: ${expectedGarrison ? '✅ YES' : '❌ NO'}`);
+      if (expectedGarrison) {
+        console.log(`   051.044 garrison: ${expectedGarrison.troops} troops, ${expectedGarrison.weapons} weapons`);
+        console.log(`   Hex ID: ${expectedGarrison.hexId}`);
+      }
+      console.log('');
+
+      // Find the largest garrison (likely the real home base)
+      const largestGarrison = tribe.garrisons.reduce((largest, current) => {
+        const currentSize = current.troops + current.weapons;
+        const largestSize = largest.troops + largest.weapons;
+        return currentSize > largestSize ? current : largest;
+      }, tribe.garrisons[0]);
+
+      if (largestGarrison) {
+        const largestLocation = `${String(largestGarrison.hexQ).padStart(3, '0')}.${String(largestGarrison.hexR).padStart(3, '0')}`;
+        console.log(`🏰 LARGEST GARRISON (Likely Real Home):`);
+        console.log(`   Location: "${largestLocation}" (q=${largestGarrison.hexQ}, r=${largestGarrison.hexR})`);
+        console.log(`   Size: ${largestGarrison.troops} troops, ${largestGarrison.weapons} weapons`);
+        console.log(`   Hex ID: ${largestGarrison.hexId}`);
+        console.log(`   Matches tribe location: ${largestLocation === tribe.location ? '✅ YES' : '❌ NO'}`);
+        console.log(`   Matches expected (051.044): ${largestLocation === '051.044' ? '✅ YES' : '❌ NO'}`);
+      }
+
+      console.log('='.repeat(80));
+      console.log(`🕵️ TRIBE ORIGIN INVESTIGATION COMPLETE: ${tribeName}`);
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error(`❌ Error investigating tribe origin for ${tribeName}:`, error);
+    }
+  }
+
+  // Helper method to parse location string into q,r coordinates
+  private parseLocationString(location: string): {q: number, r: number} | null {
+    try {
+      if (location.includes('.')) {
+        const [qStr, rStr] = location.split('.');
+        return {
+          q: parseInt(qStr, 10),
+          r: parseInt(rStr, 10)
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   // DIAGNOSTIC: Get single tribe location from database
   async getRawSingleTribeLocation(tribeName: string): Promise<{id: string, tribeName: string, location: string} | null> {
     if (!this.prisma) {

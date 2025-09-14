@@ -986,6 +986,23 @@ export class SocketHandler {
       }
     });
 
+    // DIAGNOSTIC: Admin handler to investigate tribe origin
+    socket.on('admin:investigateTribeOrigin', async (tribeName: string) => {
+      console.log(`🕵️ ADMIN: Investigating tribe origin for "${tribeName}"`);
+      try {
+        await this.gameService.investigateTribeOrigin(tribeName);
+        socket.emit('admin:tribeOriginInvestigated', { success: true, tribeName });
+        console.log(`✅ ADMIN: Tribe origin investigated successfully for "${tribeName}"`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to investigate tribe origin for "${tribeName}":`, error);
+        socket.emit('admin:tribeOriginInvestigated', {
+          success: false,
+          error: (error as Error).message,
+          tribeName
+        });
+      }
+    });
+
     // DIAGNOSTIC: Admin handler to diagnose single tribe location
     socket.on('admin:diagnoseSingleTribeLocation', async (tribeName: string) => {
       console.log(`🔍 ADMIN: Diagnosing single tribe location for "${tribeName}"`);

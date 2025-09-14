@@ -81,6 +81,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [diagnosingTribeLocations, setDiagnosingTribeLocations] = useState(false);
   const [diagnosingSingleTribe, setDiagnosingSingleTribe] = useState(false);
   const [diagnosingStartingLocations, setDiagnosingStartingLocations] = useState(false);
+  const [investigatingTribeOrigin, setInvestigatingTribeOrigin] = useState(false);
   const [singleTribeName, setSingleTribeName] = useState('');
 
   // Safety features
@@ -604,9 +605,19 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         }
       };
 
+      const handleTribeOriginInvestigated = (result: any) => {
+        setInvestigatingTribeOrigin(false);
+        if (result.success) {
+          alert(`✅ Tribe origin investigated successfully for "${result.tribeName}"!\n\nCheck the server logs for detailed database analysis.`);
+        } else {
+          alert(`❌ Error investigating tribe origin for "${result.tribeName}": ${result.error || 'Unknown error'}`);
+        }
+      };
+
       socket.on('admin:tribeLocationsDiagnosed', handleTribeLocationsDiagnosed);
       socket.on('admin:singleTribeLocationDiagnosed', handleSingleTribeLocationDiagnosed);
       socket.on('admin:startingLocationsDiagnosed', handleStartingLocationsDiagnosed);
+      socket.on('admin:tribeOriginInvestigated', handleTribeOriginInvestigated);
     }
 
     client.getBackupStatus();
@@ -621,6 +632,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         socket.off('admin:tribeLocationsDiagnosed');
         socket.off('admin:singleTribeLocationDiagnosed');
         socket.off('admin:startingLocationsDiagnosed');
+        socket.off('admin:tribeOriginInvestigated');
       }
     };
   }, []);
@@ -647,6 +659,15 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleDiagnoseStartingLocations = () => {
     setDiagnosingStartingLocations(true);
     client.diagnoseStartingLocations();
+  };
+
+  const handleInvestigateTribeOrigin = () => {
+    if (!singleTribeName.trim()) {
+      alert('Please enter a tribe name to investigate');
+      return;
+    }
+    setInvestigatingTribeOrigin(true);
+    client.investigateTribeOrigin(singleTribeName.trim());
   };
 
   const handleLoadBackupClick = () => {
@@ -2132,6 +2153,16 @@ GAME STATISTICS:
                       </svg>
                       {diagnosingSingleTribe ? 'Diagnosing...' : 'Diagnose Single Tribe'}
                     </Button>
+                    <Button
+                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      onClick={handleInvestigateTribeOrigin}
+                      disabled={investigatingTribeOrigin || !singleTribeName.trim()}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {investigatingTribeOrigin ? 'Investigating...' : 'Investigate Database Origin'}
+                    </Button>
                   </div>
                 </div>
 
@@ -2141,6 +2172,7 @@ GAME STATISTICS:
                     <li><strong>All Tribes:</strong> Compares database vs game state for all tribes</li>
                     <li><strong>Starting Locations:</strong> Shows which tribes are displaced from starting locations</li>
                     <li><strong>Single Tribe:</strong> Focused analysis of one specific tribe</li>
+                    <li><strong>Database Origin:</strong> Deep dive into database records, creation dates, and garrison history</li>
                     <li>Identifies coordinate transformation issues and collision problems</li>
                     <li>Results appear in server logs</li>
                   </ul>

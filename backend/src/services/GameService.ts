@@ -174,6 +174,12 @@ export class GameService {
     }
   }
 
+  // DIAGNOSTIC: Investigate tribe origin and database records
+  async investigateTribeOrigin(tribeName: string): Promise<void> {
+    console.log(`🕵️ INVESTIGATING TRIBE ORIGIN: ${tribeName}`);
+    await this.databaseService.investigateTribeOrigin(tribeName);
+  }
+
   // DIAGNOSTIC: Check specific tribe location in database vs game state
   async diagnoseSingleTribeLocation(tribeName: string): Promise<void> {
     console.log('');

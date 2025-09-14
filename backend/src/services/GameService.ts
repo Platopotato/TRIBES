@@ -45,6 +45,64 @@ export class GameService {
     await this.databaseService.restoreGarrisonCoordinates();
   }
 
+  // DIAGNOSTIC: Check tribe home locations in database vs game state
+  async diagnoseTribeLocations(): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🔍 TRIBE LOCATION DIAGNOSTIC');
+    console.log('='.repeat(80));
+
+    try {
+      // Get raw database data
+      const dbTribes = await this.databaseService.getRawTribeLocations();
+
+      // Get processed game state data
+      const gameState = await this.getGameState();
+
+      if (!gameState) {
+        console.log('❌ Could not get game state');
+        return;
+      }
+
+      console.log(`📊 COMPARISON: Database vs Game State`);
+      console.log(`   Database tribes: ${dbTribes.length}`);
+      console.log(`   Game state tribes: ${gameState.tribes.length}`);
+      console.log('');
+
+      // Track location mismatches
+      const locationMismatches: Array<{
+        tribe: string;
+        declaredHome: string;
+        actualGarrisons: string[];
+      }> = [];
+
+      // Compare each tribe
+      for (const dbTribe of dbTribes) {
+        const gameStateTribe = gameState.tribes.find(t => t.id === dbTribe.id);
+
+        console.log(`🏛️ TRIBE: ${dbTribe.tribeName} (${dbTribe.id})`);
+        console.log(`   Database location: "${dbTribe.location}"`);
+        console.log(`   Game state location: "${gameStateTribe?.location || 'NOT FOUND'}"`);
+        console.log(`   Match: ${dbTribe.location === gameStateTribe?.location ? '✅ YES' : '❌ NO'}`);
+
+        if (dbTribe.location !== gameStateTribe?.location) {
+          console.log(`   🚨 MISMATCH DETECTED!`);
+          console.log(`      DB: "${dbTribe.location}" (length: ${dbTribe.location?.length || 0})`);
+          console.log(`      GS: "${gameStateTribe?.location}" (length: ${gameStateTribe?.location?.length || 0})`);
+        }
+        console.log('');
+      }
+
+      console.log('='.repeat(80));
+      console.log('🔍 TRIBE LOCATION DIAGNOSTIC COMPLETE');
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error('❌ Error in tribe location diagnostic:', error);
+    }
+  }
+
   // DIAGNOSTIC: Check outpost ownership at specific hex
   async diagnoseOutpostOwnership(hexCoord: string): Promise<void> {
     await this.databaseService.diagnoseOutpostOwnership(hexCoord);
@@ -296,7 +354,51 @@ export class GameService {
     console.log(`   Total tribes: ${gameState.tribes.length}`);
     console.log(`   Starting locations count: ${gameState.startingLocations.length}`);
 
-    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    // CRITICAL INVESTIGATION: Check for tribe location vs garrison location mismatches
+    console.log(`🔍 INVESTIGATING TRIBE/GARRISON LOCATION CONSISTENCY:`);
+
+    const occupiedLocations = new Set();
+    const locationMismatches: Array<{
+      tribe: string;
+      declaredHome: string;
+      actualGarrisons: string[];
+    }> = [];
+
+    gameState.tribes.forEach(tribe => {
+      const tribeLocation = tribe.location;
+      const garrisonLocations = Object.keys(tribe.garrisons || {});
+
+      // Add tribe's declared location to occupied set
+      occupiedLocations.add(tribeLocation);
+
+      // Check if tribe has garrison at its declared home location
+      const hasHomeGarrison = garrisonLocations.includes(tribeLocation);
+
+      console.log(`   ${tribe.tribeName}:`);
+      console.log(`     Declared home: "${tribeLocation}"`);
+      console.log(`     Garrison count: ${garrisonLocations.length}`);
+      console.log(`     Has home garrison: ${hasHomeGarrison ? '✅' : '❌'}`);
+
+      if (!hasHomeGarrison && garrisonLocations.length > 0) {
+        console.log(`     ⚠️ MISMATCH: No garrison at declared home!`);
+        console.log(`     Garrisons at: ${garrisonLocations.slice(0, 3).join(', ')}${garrisonLocations.length > 3 ? '...' : ''}`);
+        locationMismatches.push({
+          tribe: tribe.tribeName,
+          declaredHome: tribeLocation,
+          actualGarrisons: garrisonLocations
+        });
+      }
+
+      // Also add all garrison locations to occupied set (for collision detection)
+      garrisonLocations.forEach(loc => occupiedLocations.add(loc));
+    });
+
+    if (locationMismatches.length > 0) {
+      console.log(`🚨 FOUND ${locationMismatches.length} TRIBES WITH LOCATION MISMATCHES!`);
+      console.log(`   This explains why collision detection might fail.`);
+    } else {
+      console.log(`✅ All tribes have garrisons at their declared home locations.`);
+    }
     console.log(`   Occupied locations (${occupiedLocations.size}): ${Array.from(occupiedLocations).join(', ')}`);
     console.log(`   Starting locations: ${gameState.startingLocations.join(', ')}`);
 
@@ -315,21 +417,24 @@ export class GameService {
 
     // SAFE CHECK: Look for any format differences
     console.log(`   Format analysis:`);
-    const allLocations = [...gameState.startingLocations, ...Array.from(occupiedLocations)];
-    const formatTypes = new Set(allLocations.map(loc => {
-      if (loc.includes('.')) return 'DOT_FORMAT';
-      if (loc.includes(',')) return 'COMMA_FORMAT';
-      return 'OTHER_FORMAT';
+    const allLocations: string[] = [...gameState.startingLocations, ...Array.from(occupiedLocations) as string[]];
+    const formatTypes = new Set(allLocations.map((loc: string) => {
+      if (typeof loc === 'string') {
+        if (loc.includes('.')) return 'DOT_FORMAT';
+        if (loc.includes(',')) return 'COMMA_FORMAT';
+        return 'OTHER_FORMAT';
+      }
+      return 'INVALID_FORMAT';
     }));
     console.log(`   Location formats found: ${Array.from(formatTypes).join(', ')}`);
 
     // SAFE CHECK: Character-by-character comparison for first few
     if (gameState.startingLocations.length > 0 && occupiedLocations.size > 0) {
       const firstStart = gameState.startingLocations[0];
-      const firstOccupied = Array.from(occupiedLocations)[0];
+      const firstOccupied = Array.from(occupiedLocations)[0] as string;
       console.log(`   Sample comparison:`);
       console.log(`     Starting: "${firstStart}" (length: ${firstStart.length})`);
-      console.log(`     Occupied: "${firstOccupied}" (length: ${firstOccupied.length})`);
+      console.log(`     Occupied: "${firstOccupied}" (length: ${firstOccupied?.length || 0})`);
     }
 
     const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));

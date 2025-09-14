@@ -77,6 +77,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Diagnostic state
+  const [diagnosingTribeLocations, setDiagnosingTribeLocations] = useState(false);
+
   // Safety features
   const [safetyLockEnabled, setSafetyLockEnabled] = useState(true);
   const [dangerousActionConfirmStep, setDangerousActionConfirmStep] = useState<string | null>(null);
@@ -569,6 +572,18 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       socket.on('admin:newsletterExportError', handleNewsletterExportError);
       socket.on('admin:newsletterImportComplete', handleNewsletterImportComplete);
       socket.on('admin:newsletterImportError', handleNewsletterImportError);
+
+      // Diagnostic event handlers
+      const handleTribeLocationsDiagnosed = (result: any) => {
+        setDiagnosingTribeLocations(false);
+        if (result.success) {
+          alert('✅ Tribe locations diagnosed successfully!\n\nCheck the server logs for detailed analysis.');
+        } else {
+          alert(`❌ Error diagnosing tribe locations: ${result.error || 'Unknown error'}`);
+        }
+      };
+
+      socket.on('admin:tribeLocationsDiagnosed', handleTribeLocationsDiagnosed);
     }
 
     client.getBackupStatus();
@@ -580,6 +595,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         socket.off('admin:newsletterExportError', handleNewsletterExportError);
         socket.off('admin:newsletterImportComplete', handleNewsletterImportComplete);
         socket.off('admin:newsletterImportError', handleNewsletterImportError);
+        socket.off('admin:tribeLocationsDiagnosed');
       }
     };
   }, []);
@@ -587,6 +603,11 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const handleSaveBackup = () => {
     // Request enhanced backup with password hashes
     client.requestEnhancedBackup();
+  };
+
+  const handleDiagnoseTribeLocations = () => {
+    setDiagnosingTribeLocations(true);
+    client.diagnoseTribeLocations();
   };
 
   const handleLoadBackupClick = () => {
@@ -2023,6 +2044,31 @@ GAME STATISTICS:
                     Newsletter Summary
                   </Button>
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
+              </div>
+            </Card>
+
+            <Card title="Database Diagnostics" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <p className="text-neutral-400 leading-relaxed">Diagnose database issues and analyze tribe location data to troubleshoot collision problems.</p>
+                <Button
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  onClick={handleDiagnoseTribeLocations}
+                  disabled={diagnosingTribeLocations}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  {diagnosingTribeLocations ? 'Diagnosing...' : 'Diagnose Tribe Locations'}
+                </Button>
+                <div className="text-sm text-neutral-400">
+                  <p><strong>What this does:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 mt-2">
+                    <li>Compares database tribe locations vs game state locations</li>
+                    <li>Identifies any coordinate transformation issues</li>
+                    <li>Helps troubleshoot tribe collision problems</li>
+                    <li>Results appear in server logs</li>
+                  </ul>
+                </div>
               </div>
             </Card>
 

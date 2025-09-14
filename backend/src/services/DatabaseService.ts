@@ -403,6 +403,37 @@ export class DatabaseService {
     return;
   }
 
+  // DIAGNOSTIC: Get raw tribe locations from database
+  async getRawTribeLocations(): Promise<Array<{id: string, tribeName: string, location: string}>> {
+    if (!this.prisma) {
+      console.log('❌ Database not available');
+      return [];
+    }
+
+    try {
+      const tribes = await this.prisma.tribe.findMany({
+        select: {
+          id: true,
+          tribeName: true,
+          location: true
+        },
+        orderBy: {
+          tribeName: 'asc'
+        }
+      });
+
+      console.log(`📊 RAW DATABASE TRIBE LOCATIONS:`);
+      tribes.forEach(tribe => {
+        console.log(`   ${tribe.tribeName}: "${tribe.location}" (ID: ${tribe.id})`);
+      });
+
+      return tribes;
+    } catch (error) {
+      console.error('❌ Error getting raw tribe locations:', error);
+      return [];
+    }
+  }
+
   // DIAGNOSTIC: Check outpost ownership at specific hex
   async diagnoseOutpostOwnership(hexCoord: string): Promise<void> {
     console.log('');

@@ -490,6 +490,7 @@ export const removePlayer = createEmitter<string>('admin:removePlayer');
 export const diagnoseCoordinateSystem = () => socket.emit('admin:diagnoseCoordinateSystem');
 export const fixGarrisonCoordinates = () => socket.emit('admin:fixGarrisonCoordinates');
 export const restoreGarrisonCoordinates = () => socket.emit('admin:restoreGarrisonCoordinates');
+export const diagnoseTribeLocations = () => socket.emit('admin:diagnoseTribeLocations');
 export const diagnoseOutpost = (hexCoord: string) => socket.emit('admin:diagnoseOutpost', hexCoord);
 export const fixOutpostOwnership = (hexCoord: string) => socket.emit('admin:fixOutpostOwnership', hexCoord);
 export const fixAllOutpostOwnership = () => socket.emit('admin:fixAllOutpostOwnership');

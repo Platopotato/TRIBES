@@ -1336,7 +1336,6 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
 
                     return (
                         <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1">{field.label}</label>
                             {renderField(field)}
                         </div>
                     );

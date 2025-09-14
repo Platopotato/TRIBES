@@ -797,6 +797,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     onDeleteAction={handleDeleteAction}
                     onFinalize={() => setIsConfirmationOpen(true)}
                     phase={gamePhase}
+                    allTribes={allTribes}
                   />
                   <JourneysPanel
                     allJourneys={journeys}

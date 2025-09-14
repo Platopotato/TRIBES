@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import React from 'react';
-import { GameAction, GamePhase, ActionType } from '@radix-tribes/shared';
+import { GameAction, GamePhase, ActionType, Tribe } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { ACTION_DEFINITIONS } from './actions/actionDefinitions';
@@ -13,9 +13,10 @@ interface ActionPanelProps {
   onDeleteAction: (actionId: string) => void;
   onFinalize: () => void;
   phase: GamePhase;
+  allTribes: Tribe[];
 }
 
-const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenModal, onDeleteAction, onFinalize, phase }) => {
+const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenModal, onDeleteAction, onFinalize, phase, allTribes }) => {
   const isPlanning = phase === 'planning';
 
   // DEBUGGING: Log what phase we're receiving
@@ -45,6 +46,36 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
       ].filter(Boolean).join(' • ');
     }
 
+    // Special handling for Diplomacy actions
+    if (actionType === ActionType.Diplomacy) {
+      const diplomaticAction = actionData.diplomatic_action;
+      const targetTribeId = actionData.target_tribe;
+      const targetTribe = allTribes.find(t => t.id === targetTribeId);
+      const targetTribeName = targetTribe ? targetTribe.tribeName : targetTribeId;
+
+      let details = [`Diplomatic Action: ${diplomaticAction?.replace(/_/g, ' ')}`];
+
+      if (targetTribeName) {
+        details.push(`Target Tribe: ${targetTribeName}`);
+      }
+
+      if (actionData.duration) {
+        details.push(`Duration: ${actionData.duration}`);
+      }
+
+      // Add reparations if present
+      const reparations = [];
+      if (actionData.reparations_food > 0) reparations.push(`${actionData.reparations_food} food`);
+      if (actionData.reparations_scrap > 0) reparations.push(`${actionData.reparations_scrap} scrap`);
+      if (actionData.reparations_weapons > 0) reparations.push(`${actionData.reparations_weapons} weapons`);
+
+      if (reparations.length > 0) {
+        details.push(`Reparations: ${reparations.join(', ')}`);
+      }
+
+      return details.join(' • ');
+    }
+
     // Generic handling for other actions
     const definition = ACTION_DEFINITIONS[actionType];
     if (!definition) return "Unknown Action";
@@ -53,6 +84,12 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ actions, maxActions, onOpenMo
         .map(field => {
             if (field.type === 'info' || !actionData[field.name]) return null;
             let value = actionData[field.name];
+
+            // Special handling for tribe_select fields
+            if (field.type === 'tribe_select' && typeof value === 'string') {
+              const tribe = allTribes.find(t => t.id === value);
+              value = tribe ? tribe.tribeName : value;
+            }
 
             // Format arrays (like chiefs)
             if (Array.isArray(value)) {

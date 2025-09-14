@@ -38,22 +38,40 @@ async function resolveMigration() {
       console.log('✅ No failed migration found');
     }
     
-    // Check if the column already exists
+    // Check if the maxActionsOverride column already exists
     const columnExists = await prisma.$queryRaw`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'tribes' 
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'tribes'
       AND column_name = 'maxActionsOverride'
     `;
-    
+
     if (columnExists.length === 0) {
       console.log('🔧 Adding maxActionsOverride column...');
       await prisma.$executeRaw`
         ALTER TABLE "tribes" ADD COLUMN "maxActionsOverride" INTEGER
       `;
-      console.log('✅ Column added successfully');
+      console.log('✅ maxActionsOverride column added successfully');
     } else {
-      console.log('✅ Column already exists');
+      console.log('✅ maxActionsOverride column already exists');
+    }
+
+    // Check if the originalStartingLocation column already exists
+    const originalStartingLocationExists = await prisma.$queryRaw`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'tribes'
+      AND column_name = 'originalStartingLocation'
+    `;
+
+    if (originalStartingLocationExists.length === 0) {
+      console.log('🔧 Adding originalStartingLocation column...');
+      await prisma.$executeRaw`
+        ALTER TABLE "tribes" ADD COLUMN "originalStartingLocation" TEXT
+      `;
+      console.log('✅ originalStartingLocation column added successfully');
+    } else {
+      console.log('✅ originalStartingLocation column already exists');
     }
     
     // Only run Prisma resolve if we actually fixed a failed migration

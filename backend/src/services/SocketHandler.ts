@@ -973,6 +973,19 @@ export class SocketHandler {
       }
     });
 
+    // DIAGNOSTIC: Admin handler to diagnose starting locations
+    socket.on('admin:diagnoseStartingLocations', async () => {
+      console.log(`🗺️ ADMIN: Diagnosing starting locations vs actual tribe locations`);
+      try {
+        await this.gameService.diagnoseStartingLocations();
+        socket.emit('admin:startingLocationsDiagnosed', { success: true });
+        console.log(`✅ ADMIN: Starting locations diagnosed successfully`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to diagnose starting locations:`, error);
+        socket.emit('admin:startingLocationsDiagnosed', { success: false, error: (error as Error).message });
+      }
+    });
+
     // DIAGNOSTIC: Admin handler to diagnose single tribe location
     socket.on('admin:diagnoseSingleTribeLocation', async (tribeName: string) => {
       console.log(`🔍 ADMIN: Diagnosing single tribe location for "${tribeName}"`);

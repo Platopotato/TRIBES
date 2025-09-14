@@ -80,6 +80,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   // Diagnostic state
   const [diagnosingTribeLocations, setDiagnosingTribeLocations] = useState(false);
   const [diagnosingSingleTribe, setDiagnosingSingleTribe] = useState(false);
+  const [diagnosingStartingLocations, setDiagnosingStartingLocations] = useState(false);
   const [singleTribeName, setSingleTribeName] = useState('');
 
   // Safety features
@@ -594,8 +595,18 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         }
       };
 
+      const handleStartingLocationsDiagnosed = (result: any) => {
+        setDiagnosingStartingLocations(false);
+        if (result.success) {
+          alert('✅ Starting locations diagnosed successfully!\n\nCheck the server logs for detailed analysis.');
+        } else {
+          alert(`❌ Error diagnosing starting locations: ${result.error || 'Unknown error'}`);
+        }
+      };
+
       socket.on('admin:tribeLocationsDiagnosed', handleTribeLocationsDiagnosed);
       socket.on('admin:singleTribeLocationDiagnosed', handleSingleTribeLocationDiagnosed);
+      socket.on('admin:startingLocationsDiagnosed', handleStartingLocationsDiagnosed);
     }
 
     client.getBackupStatus();
@@ -609,6 +620,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         socket.off('admin:newsletterImportError', handleNewsletterImportError);
         socket.off('admin:tribeLocationsDiagnosed');
         socket.off('admin:singleTribeLocationDiagnosed');
+        socket.off('admin:startingLocationsDiagnosed');
       }
     };
   }, []);
@@ -630,6 +642,11 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     }
     setDiagnosingSingleTribe(true);
     client.diagnoseSingleTribeLocation(singleTribeName.trim());
+  };
+
+  const handleDiagnoseStartingLocations = () => {
+    setDiagnosingStartingLocations(true);
+    client.diagnoseStartingLocations();
   };
 
   const handleLoadBackupClick = () => {
@@ -2083,6 +2100,18 @@ GAME STATISTICS:
                   {diagnosingTribeLocations ? 'Diagnosing...' : 'Diagnose Tribe Locations'}
                 </Button>
 
+                <Button
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  onClick={handleDiagnoseStartingLocations}
+                  disabled={diagnosingStartingLocations}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {diagnosingStartingLocations ? 'Diagnosing...' : 'Diagnose Starting Locations'}
+                </Button>
+
                 <div className="border-t border-neutral-600 pt-4">
                   <p className="text-neutral-400 text-sm mb-3">Or diagnose a specific tribe for focused analysis:</p>
                   <div className="space-y-3">
@@ -2107,11 +2136,12 @@ GAME STATISTICS:
                 </div>
 
                 <div className="text-sm text-neutral-400">
-                  <p><strong>What this does:</strong></p>
+                  <p><strong>What these tools do:</strong></p>
                   <ul className="list-disc list-inside space-y-1 mt-2">
-                    <li>Compares database tribe locations vs game state locations</li>
-                    <li>Identifies any coordinate transformation issues</li>
-                    <li>Helps troubleshoot tribe collision problems</li>
+                    <li><strong>All Tribes:</strong> Compares database vs game state for all tribes</li>
+                    <li><strong>Starting Locations:</strong> Shows which tribes are displaced from starting locations</li>
+                    <li><strong>Single Tribe:</strong> Focused analysis of one specific tribe</li>
+                    <li>Identifies coordinate transformation issues and collision problems</li>
                     <li>Results appear in server logs</li>
                   </ul>
                 </div>

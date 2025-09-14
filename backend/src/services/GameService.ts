@@ -45,6 +45,135 @@ export class GameService {
     await this.databaseService.restoreGarrisonCoordinates();
   }
 
+  // DIAGNOSTIC: Check starting locations vs actual tribe locations
+  async diagnoseStartingLocations(): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🗺️ STARTING LOCATIONS DIAGNOSTIC`);
+    console.log('='.repeat(80));
+
+    try {
+      // Get current game state
+      const gameState = await this.getGameState();
+
+      if (!gameState) {
+        console.log('❌ Could not get game state');
+        return;
+      }
+
+      console.log(`📍 DEFINED STARTING LOCATIONS (${gameState.startingLocations.length}):`);
+      gameState.startingLocations.forEach((loc, index) => {
+        console.log(`   ${index + 1}. "${loc}"`);
+      });
+      console.log('');
+
+      console.log(`🏛️ ACTUAL TRIBE LOCATIONS (${gameState.tribes.length}):`);
+      const tribesAtStartingLocations: string[] = [];
+      const tribesNotAtStartingLocations: Array<{name: string, location: string, distance?: string}> = [];
+
+      gameState.tribes.forEach(tribe => {
+        const isAtStartingLocation = gameState.startingLocations.includes(tribe.location);
+
+        if (isAtStartingLocation) {
+          tribesAtStartingLocations.push(`${tribe.tribeName} at "${tribe.location}"`);
+        } else {
+          // Find closest starting location for analysis
+          let closestDistance = Infinity;
+          let closestStartingLoc = '';
+
+          gameState.startingLocations.forEach(startLoc => {
+            // Simple string distance for now (could enhance with hex distance)
+            const distance = this.calculateStringDistance(tribe.location, startLoc);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestStartingLoc = startLoc;
+            }
+          });
+
+          tribesNotAtStartingLocations.push({
+            name: tribe.tribeName,
+            location: tribe.location,
+            distance: `closest to "${closestStartingLoc}" (diff: ${closestDistance})`
+          });
+        }
+      });
+
+      console.log(`✅ TRIBES AT STARTING LOCATIONS (${tribesAtStartingLocations.length}):`);
+      tribesAtStartingLocations.forEach(info => {
+        console.log(`   ${info}`);
+      });
+      console.log('');
+
+      console.log(`🚨 TRIBES NOT AT STARTING LOCATIONS (${tribesNotAtStartingLocations.length}):`);
+      tribesNotAtStartingLocations.forEach(tribe => {
+        console.log(`   ${tribe.name}: "${tribe.location}" - ${tribe.distance}`);
+      });
+      console.log('');
+
+      // Analyze patterns
+      console.log(`🔍 PATTERN ANALYSIS:`);
+      if (tribesNotAtStartingLocations.length > 0) {
+        console.log(`   ${tribesNotAtStartingLocations.length} tribes are displaced from starting locations`);
+        console.log(`   This suggests a systematic issue with tribe placement`);
+
+        // Look for coordinate transformation patterns
+        const displacements = tribesNotAtStartingLocations.map(tribe => {
+          const coords = this.parseCoordinateString(tribe.location);
+          return coords;
+        }).filter(coords => coords !== null);
+
+        if (displacements.length > 0) {
+          const avgQ = displacements.reduce((sum, coord) => sum + coord!.q, 0) / displacements.length;
+          const avgR = displacements.reduce((sum, coord) => sum + coord!.r, 0) / displacements.length;
+          console.log(`   Average displaced coordinates: q=${avgQ.toFixed(1)}, r=${avgR.toFixed(1)}`);
+        }
+      } else {
+        console.log(`   All tribes are at valid starting locations ✅`);
+      }
+
+      console.log('='.repeat(80));
+      console.log(`🗺️ STARTING LOCATIONS DIAGNOSTIC COMPLETE`);
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error('❌ Error in starting locations diagnostic:', error);
+    }
+  }
+
+  // Helper method to calculate simple string distance
+  private calculateStringDistance(str1: string, str2: string): number {
+    if (str1 === str2) return 0;
+
+    // Simple character-by-character difference count
+    const maxLen = Math.max(str1.length, str2.length);
+    let differences = 0;
+
+    for (let i = 0; i < maxLen; i++) {
+      if (str1[i] !== str2[i]) {
+        differences++;
+      }
+    }
+
+    return differences;
+  }
+
+  // Helper method to parse coordinate string
+  private parseCoordinateString(coordStr: string): {q: number, r: number} | null {
+    try {
+      if (coordStr.includes('.')) {
+        const [qStr, rStr] = coordStr.split('.');
+        return {
+          q: parseInt(qStr, 10),
+          r: parseInt(rStr, 10)
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   // DIAGNOSTIC: Check specific tribe location in database vs game state
   async diagnoseSingleTribeLocation(tribeName: string): Promise<void> {
     console.log('');

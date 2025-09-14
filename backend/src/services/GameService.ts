@@ -292,23 +292,45 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    console.log(`🔍 TRIBE CREATION ANALYSIS:`);
+    console.log(`🔍 SAFE TRIBE CREATION ANALYSIS:`);
     console.log(`   Total tribes: ${gameState.tribes.length}`);
-    console.log(`   Starting locations: ${gameState.startingLocations.length}`);
+    console.log(`   Starting locations count: ${gameState.startingLocations.length}`);
 
     const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
-    console.log(`   Occupied locations: ${Array.from(occupiedLocations).join(', ')}`);
-    console.log(`   Available starting locations: ${gameState.startingLocations.join(', ')}`);
+    console.log(`   Occupied locations (${occupiedLocations.size}): ${Array.from(occupiedLocations).join(', ')}`);
+    console.log(`   Starting locations: ${gameState.startingLocations.join(', ')}`);
 
-    // Check each starting location individually
-    gameState.startingLocations.forEach((loc, index) => {
-      const isOccupied = occupiedLocations.has(loc);
-      console.log(`   ${index + 1}. ${loc} - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
+    // SAFE CHECK: Compare each starting location against occupied locations
+    console.log(`   Detailed availability check:`);
+    gameState.startingLocations.forEach((startLoc, index) => {
+      const isOccupied = occupiedLocations.has(startLoc);
+      console.log(`   ${index + 1}. "${startLoc}" - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
       if (isOccupied) {
-        const occupyingTribe = gameState.tribes.find(t => t.location === loc);
-        console.log(`      Occupied by: ${occupyingTribe?.tribeName || 'Unknown'} (${occupyingTribe?.id})`);
+        const occupyingTribe = gameState.tribes.find(t => t.location === startLoc);
+        console.log(`      Occupied by: ${occupyingTribe?.tribeName || 'Unknown'} (ID: ${occupyingTribe?.id})`);
+        console.log(`      Tribe location: "${occupyingTribe?.location}"`);
+        console.log(`      String match: ${startLoc === occupyingTribe?.location ? 'EXACT' : 'MISMATCH'}`);
       }
     });
+
+    // SAFE CHECK: Look for any format differences
+    console.log(`   Format analysis:`);
+    const allLocations = [...gameState.startingLocations, ...Array.from(occupiedLocations)];
+    const formatTypes = new Set(allLocations.map(loc => {
+      if (loc.includes('.')) return 'DOT_FORMAT';
+      if (loc.includes(',')) return 'COMMA_FORMAT';
+      return 'OTHER_FORMAT';
+    }));
+    console.log(`   Location formats found: ${Array.from(formatTypes).join(', ')}`);
+
+    // SAFE CHECK: Character-by-character comparison for first few
+    if (gameState.startingLocations.length > 0 && occupiedLocations.size > 0) {
+      const firstStart = gameState.startingLocations[0];
+      const firstOccupied = Array.from(occupiedLocations)[0];
+      console.log(`   Sample comparison:`);
+      console.log(`     Starting: "${firstStart}" (length: ${firstStart.length})`);
+      console.log(`     Occupied: "${firstOccupied}" (length: ${firstOccupied.length})`);
+    }
 
     const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
 

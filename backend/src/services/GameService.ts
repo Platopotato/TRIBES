@@ -220,6 +220,62 @@ export class GameService {
     return isStartingLocationExplored ? closestStartingLocation : null;
   }
 
+  // BACKFILL: Populate originalStartingLocation for existing tribes
+  async backfillOriginalStartingLocations(): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🏠 BACKFILLING ORIGINAL STARTING LOCATIONS FOR EXISTING TRIBES');
+    console.log('='.repeat(80));
+
+    const gameState = await this.getGameState();
+    if (!gameState) {
+      console.log('❌ Could not get game state');
+      return;
+    }
+
+    let backfilledCount = 0;
+    let alreadySetCount = 0;
+    let couldNotInferCount = 0;
+
+    for (const tribe of gameState.tribes) {
+      if (tribe.originalStartingLocation) {
+        console.log(`✅ ${tribe.tribeName}: Already has originalStartingLocation = ${tribe.originalStartingLocation}`);
+        alreadySetCount++;
+        continue;
+      }
+
+      // Infer original starting location from exploration patterns
+      const inferredHome = this.inferOriginalStartingLocation(tribe, gameState.startingLocations);
+
+      if (inferredHome) {
+        console.log(`🔍 ${tribe.tribeName}: Inferred originalStartingLocation = ${inferredHome}`);
+        tribe.originalStartingLocation = inferredHome;
+        backfilledCount++;
+      } else {
+        console.log(`❌ ${tribe.tribeName}: Could not infer original starting location`);
+        couldNotInferCount++;
+      }
+    }
+
+    if (backfilledCount > 0) {
+      console.log(`💾 Saving updated game state with ${backfilledCount} backfilled original starting locations...`);
+      await this.updateGameState(gameState);
+      console.log(`✅ Successfully backfilled ${backfilledCount} original starting locations`);
+    }
+
+    console.log('');
+    console.log('📊 BACKFILL SUMMARY:');
+    console.log(`   Already set: ${alreadySetCount}`);
+    console.log(`   Backfilled: ${backfilledCount}`);
+    console.log(`   Could not infer: ${couldNotInferCount}`);
+    console.log(`   Total tribes: ${gameState.tribes.length}`);
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🏠 ORIGINAL STARTING LOCATIONS BACKFILL COMPLETE');
+    console.log('='.repeat(80));
+    console.log('');
+  }
+
   // DIAGNOSTIC: Investigate all location fields in database
   async investigateAllLocationFields(tribeName: string): Promise<void> {
     console.log(`🔍 INVESTIGATING ALL LOCATION FIELDS: ${tribeName}`);

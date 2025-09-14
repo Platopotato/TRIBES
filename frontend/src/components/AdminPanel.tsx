@@ -83,6 +83,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [diagnosingStartingLocations, setDiagnosingStartingLocations] = useState(false);
   const [investigatingTribeOrigin, setInvestigatingTribeOrigin] = useState(false);
   const [investigatingAllLocationFields, setInvestigatingAllLocationFields] = useState(false);
+  const [backfillingOriginalHomes, setBackfillingOriginalHomes] = useState(false);
   const [singleTribeName, setSingleTribeName] = useState('');
 
   // Safety features
@@ -624,11 +625,21 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         }
       };
 
+      const handleOriginalStartingLocationsBackfilled = (result: any) => {
+        setBackfillingOriginalHomes(false);
+        if (result.success) {
+          alert(`✅ Original starting locations backfilled successfully!\n\nCheck the server logs for detailed backfill results.`);
+        } else {
+          alert(`❌ Error backfilling original starting locations: ${result.error || 'Unknown error'}`);
+        }
+      };
+
       socket.on('admin:tribeLocationsDiagnosed', handleTribeLocationsDiagnosed);
       socket.on('admin:singleTribeLocationDiagnosed', handleSingleTribeLocationDiagnosed);
       socket.on('admin:startingLocationsDiagnosed', handleStartingLocationsDiagnosed);
       socket.on('admin:tribeOriginInvestigated', handleTribeOriginInvestigated);
       socket.on('admin:allLocationFieldsInvestigated', handleAllLocationFieldsInvestigated);
+      socket.on('admin:originalStartingLocationsBackfilled', handleOriginalStartingLocationsBackfilled);
     }
 
     client.getBackupStatus();
@@ -645,6 +656,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         socket.off('admin:startingLocationsDiagnosed');
         socket.off('admin:tribeOriginInvestigated');
         socket.off('admin:allLocationFieldsInvestigated');
+        socket.off('admin:originalStartingLocationsBackfilled');
       }
     };
   }, []);
@@ -689,6 +701,14 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     }
     setInvestigatingAllLocationFields(true);
     client.investigateAllLocationFields(singleTribeName.trim());
+  };
+
+  const handleBackfillOriginalStartingLocations = () => {
+    if (!confirm('This will analyze all existing tribes and populate their originalStartingLocation field based on exploration patterns. Continue?')) {
+      return;
+    }
+    setBackfillingOriginalHomes(true);
+    client.backfillOriginalStartingLocations();
   };
 
   const handleLoadBackupClick = () => {
@@ -2197,6 +2217,28 @@ GAME STATISTICS:
                   </div>
                 </div>
 
+                <div className="bg-gradient-to-br from-purple-800 to-purple-900 rounded-xl p-6 border border-purple-700 shadow-lg">
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+                    <svg className="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
+                    </svg>
+                    Home Permanence System
+                  </h3>
+                  <p className="text-purple-200 mb-4 text-sm">
+                    Backfill originalStartingLocation field for existing tribes using exploration pattern analysis.
+                  </p>
+                  <Button
+                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    onClick={handleBackfillOriginalStartingLocations}
+                    disabled={backfillingOriginalHomes}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
+                    </svg>
+                    {backfillingOriginalHomes ? 'Backfilling...' : 'Backfill Original Home Locations'}
+                  </Button>
+                </div>
+
                 <div className="text-sm text-neutral-400">
                   <p><strong>What these tools do:</strong></p>
                   <ul className="list-disc list-inside space-y-1 mt-2">
@@ -2205,6 +2247,7 @@ GAME STATISTICS:
                     <li><strong>Single Tribe:</strong> Focused analysis of one specific tribe</li>
                     <li><strong>Database Origin:</strong> Deep dive into database records, creation dates, and garrison history</li>
                     <li><strong>All Database Fields:</strong> Shows every field in the tribe record to find hidden location data</li>
+                    <li><strong>Backfill Original Homes:</strong> Populates originalStartingLocation field for existing tribes</li>
                     <li>Identifies coordinate transformation issues and collision problems</li>
                     <li>Results appear in server logs</li>
                   </ul>

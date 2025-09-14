@@ -986,6 +986,22 @@ export class SocketHandler {
       }
     });
 
+    // BACKFILL: Admin handler to populate originalStartingLocation for existing tribes
+    socket.on('admin:backfillOriginalStartingLocations', async () => {
+      console.log(`🏠 ADMIN: Backfilling original starting locations for existing tribes`);
+      try {
+        await this.gameService.backfillOriginalStartingLocations();
+        socket.emit('admin:originalStartingLocationsBackfilled', { success: true });
+        console.log(`✅ ADMIN: Original starting locations backfilled successfully`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to backfill original starting locations:`, error);
+        socket.emit('admin:originalStartingLocationsBackfilled', {
+          success: false,
+          error: (error as Error).message
+        });
+      }
+    });
+
     // DIAGNOSTIC: Admin handler to investigate all location fields
     socket.on('admin:investigateAllLocationFields', async (tribeName: string) => {
       console.log(`🔍 ADMIN: Investigating all location fields for "${tribeName}"`);

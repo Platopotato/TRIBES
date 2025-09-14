@@ -292,36 +292,14 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    // CRITICAL FIX: Normalize all coordinates to standard format before comparison
-    const normalizeCoord = (coord: string): string => {
-      if (!coord) return coord;
-      if (coord.includes(',')) {
-        // Convert "14,-4" to "064.046"
-        const [qStr, rStr] = coord.split(',');
-        const q = parseInt(qStr.trim());
-        const r = parseInt(rStr.trim());
-        return `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
-      }
-      return coord; // Already in "051.044" format
-    };
-
-    // Normalize all tribe locations and starting locations
-    const occupiedLocations = new Set(gameState.tribes.map(t => normalizeCoord(t.location)));
-    const normalizedStartingLocations = gameState.startingLocations.map(loc => normalizeCoord(loc));
-
-    console.log(`🔍 TRIBE CREATION DEBUG:`);
-    console.log(`   Occupied locations: ${Array.from(occupiedLocations).join(', ')}`);
-    console.log(`   Starting locations: ${normalizedStartingLocations.join(', ')}`);
-
-    const availableStart = normalizedStartingLocations.find(loc => !occupiedLocations.has(loc));
+    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
 
     if (!availableStart) {
-      console.log(`❌ No starting positions available after normalization.`);
-      console.log(`❌ All ${normalizedStartingLocations.length} starting locations are occupied.`);
+      console.log(`❌ No starting positions available. Occupied: ${Array.from(occupiedLocations).join(', ')}`);
+      console.log(`❌ Starting locations: ${gameState.startingLocations.join(', ')}`);
       return false;
     }
-
-    console.log(`✅ Found available starting location: ${availableStart}`);
 
     const startCoords = parseHexCoords(availableStart);
     const initialExplored = getHexesInRange(startCoords, 2);
@@ -354,62 +332,11 @@ export class GameService {
       existingTribe.diplomacy[newTribe.id] = { status: initialStatus };
     });
 
-    // FINAL SAFETY CHECK: Verify no tribe is already at this exact location
-    const conflictingTribe = gameState.tribes.find(t => normalizeCoord(t.location) === availableStart);
-    if (conflictingTribe) {
-      console.log(`❌ COLLISION DETECTED: ${conflictingTribe.tribeName} already at ${availableStart}`);
-      return false;
-    }
-
     gameState.tribes.push(newTribe);
     await this.updateGameState(gameState);
 
     console.log(`✅ New tribe created: ${newTribe.tribeName} at ${newTribe.location}`);
-    console.log(`✅ Total tribes now: ${gameState.tribes.length}`);
     return true;
-  }
-
-  // Utility function to check for and fix coordinate conflicts
-  async checkCoordinateConflicts(): Promise<void> {
-    const gameState = await this.getGameState();
-    if (!gameState) return;
-
-    const normalizeCoord = (coord: string): string => {
-      if (!coord) return coord;
-      if (coord.includes(',')) {
-        const [qStr, rStr] = coord.split(',');
-        const q = parseInt(qStr.trim());
-        const r = parseInt(rStr.trim());
-        return `${String(50 + q).padStart(3, '0')}.${String(50 + r).padStart(3, '0')}`;
-      }
-      return coord;
-    };
-
-    console.log(`🔍 COORDINATE CONFLICT CHECK:`);
-
-    const locationCounts = new Map<string, string[]>();
-
-    // Check for tribes at the same normalized location
-    gameState.tribes.forEach(tribe => {
-      const normalized = normalizeCoord(tribe.location);
-      if (!locationCounts.has(normalized)) {
-        locationCounts.set(normalized, []);
-      }
-      locationCounts.get(normalized)!.push(tribe.tribeName);
-    });
-
-    // Report conflicts
-    let conflictsFound = false;
-    locationCounts.forEach((tribes, location) => {
-      if (tribes.length > 1) {
-        console.log(`❌ CONFLICT at ${location}: ${tribes.join(', ')}`);
-        conflictsFound = true;
-      }
-    });
-
-    if (!conflictsFound) {
-      console.log(`✅ No coordinate conflicts found.`);
-    }
   }
 
   async addAITribe(aiType?: any, useRandomLocation: boolean = true): Promise<boolean> {

@@ -289,10 +289,54 @@ export class GameService {
   }
 
   async createTribe(tribeData: any): Promise<boolean> {
-    // EMERGENCY: Disable new tribe creation due to coordinate corruption
-    console.log(`🚨 EMERGENCY: New tribe creation disabled due to database coordinate corruption`);
-    console.log(`🚨 Attempted tribe creation: ${tribeData.tribeName} by ${tribeData.playerName}`);
-    return false;
+    const gameState = await this.getGameState();
+    if (!gameState) return false;
+
+    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+
+    if (!availableStart) {
+      console.log(`❌ No starting positions available. Occupied: ${Array.from(occupiedLocations).join(', ')}`);
+      console.log(`❌ Starting locations: ${gameState.startingLocations.join(', ')}`);
+      return false;
+    }
+
+    const startCoords = parseHexCoords(availableStart);
+    const initialExplored = getHexesInRange(startCoords, 2);
+
+    const newTribe: Tribe = {
+      ...tribeData,
+      id: `tribe-${Date.now()}`,
+      location: availableStart,
+      globalResources: { food: 100, scrap: 20, morale: 50 },
+      garrisons: { [availableStart]: { troops: 20, weapons: 10, chiefs: [] } },
+      actions: [],
+      turnSubmitted: false,
+      lastTurnResults: [],
+      exploredHexes: initialExplored,
+      rationLevel: 'Normal',
+      completedTechs: [],
+      assets: [],
+      currentResearch: null,
+      journeyResponses: [],
+      diplomacy: {},
+      stats: { leadership: 0, technology: 0, military: 0, exploration: 0 },
+      chiefsAppearedThisTurn: [],
+      currentActions: []
+    };
+
+    // Set up diplomacy with existing tribes
+    gameState.tribes.forEach(existingTribe => {
+      const initialStatus = existingTribe.isAI ? DiplomaticStatus.War : DiplomaticStatus.Neutral;
+      newTribe.diplomacy[existingTribe.id] = { status: initialStatus };
+      existingTribe.diplomacy[newTribe.id] = { status: initialStatus };
+    });
+
+    gameState.tribes.push(newTribe);
+    await this.updateGameState(gameState);
+
+    console.log(`✅ New tribe created: ${newTribe.tribeName} at ${newTribe.location}`);
+    return true;
   }
 
   async addAITribe(aiType?: any, useRandomLocation: boolean = true): Promise<boolean> {

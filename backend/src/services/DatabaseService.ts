@@ -8,6 +8,7 @@ import {
   Tribe,
   generateMapData,
   parseHexCoords,
+  formatHexCoords,
   SECURITY_QUESTIONS,
   NewsletterState,
   TurnDeadline,
@@ -1026,17 +1027,17 @@ export class DatabaseService {
                   console.log(`   Strategy: ${strategyUsed}`);
                 }
 
-                // CRITICAL FIX: Store string coordinate values, not map coordinate values
-                // This ensures garrison coordinates match the string format used in game state
-                const { q: stringQ, r: stringR } = parseHexCoords(hexCoord);
-                const coordinateQ = parseInt(hexCoord.split('.')[0]); // Extract "026" from "026.056"
-                const coordinateR = parseInt(hexCoord.split('.')[1]); // Extract "056" from "026.056"
+                // CRITICAL FIX: Store the PARSED coordinate values (with offset subtracted)
+                // parseHexCoords("051.044") -> {q: 1, r: -6} - these are the values we store in DB
+                const { q: mapQ, r: mapR } = parseHexCoords(hexCoord);
+
+                console.log(`🔧 COORDINATE STORAGE: "${hexCoord}" -> DB will store q=${mapQ}, r=${mapR}`);
 
                 const createdGarrison = await this.prisma.garrison.create({
                   data: {
                     tribeId: tribe.id,
-                    hexQ: coordinateQ, // Store string coordinate values (26, 56) not map coordinates (-24, 6)
-                    hexR: coordinateR, // This ensures proper round-trip conversion
+                    hexQ: mapQ, // Store parsed coordinate values (with offset subtracted)
+                    hexR: mapR, // Store parsed coordinate values (with offset subtracted)
                     troops: garrisonData.troops || 0,
                     weapons: garrisonData.weapons || 0,
                     chiefs: garrisonData.chiefs as any || [],
@@ -1496,7 +1497,9 @@ export class DatabaseService {
           console.log(`🔍 DB CONVERSION: Processing garrisons for ${tribe.tribeName} - found ${tribe.garrisons?.length || 0} garrison records`);
 
           const garrisons = (tribe.garrisons || []).reduce((acc: any, garrison: any) => {
-            const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+            // CRITICAL FIX: Use formatHexCoords to properly convert DB coordinates back to string format
+            // Database stores parsed coordinates (e.g., q=1, r=-6), formatHexCoords converts back to "051.044"
+            const hexKey = formatHexCoords(garrison.hexQ, garrison.hexR);
             acc[hexKey] = {
               troops: garrison.troops,
               weapons: garrison.weapons,
@@ -1842,14 +1845,14 @@ export class DatabaseService {
                   });
 
                   if (!existingGarrison) {
-                    // CRITICAL FIX: Store string coordinate values for proper round-trip conversion
-                    const coordinateQ = parseInt(hexCoord.split('.')[0]); // Extract "026" from "026.056"
-                    const coordinateR = parseInt(hexCoord.split('.')[1]); // Extract "056" from "026.056"
+                    // CRITICAL FIX: Store parsed coordinate values (with offset subtracted)
+                    // parseHexCoords("051.044") -> {q: 1, r: -6} - these are the values we store in DB
+                    const { q: mapQ, r: mapR } = parseHexCoords(hexCoord);
 
                     await tx.garrison.create({
                       data: {
-                        hexQ: coordinateQ, // Store string coordinate values (26, 56) not map coordinates (-24, 6)
-                        hexR: coordinateR, // This ensures proper round-trip conversion
+                        hexQ: mapQ, // Store parsed coordinate values (with offset subtracted)
+                        hexR: mapR, // Store parsed coordinate values (with offset subtracted)
                         troops: garrison.troops || 0,
                         weapons: garrison.weapons || 0,
                         chiefs: garrison.chiefs || [],

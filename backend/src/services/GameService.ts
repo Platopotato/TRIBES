@@ -174,6 +174,52 @@ export class GameService {
     }
   }
 
+  // HOME PERMANENCE: Infer original starting location from exploration patterns
+  private inferOriginalStartingLocation(tribe: any, startingLocations: string[]): string | null {
+    if (!tribe.exploredHexes || tribe.exploredHexes.length === 0) {
+      return null;
+    }
+
+    // Parse all explored coordinates
+    const exploredCoords = tribe.exploredHexes.map((hex: string) => {
+      const [qStr, rStr] = hex.split('.');
+      return { q: parseInt(qStr), r: parseInt(rStr), hex };
+    });
+
+    // Calculate center of exploration (likely original starting point)
+    const avgQ = exploredCoords.reduce((sum, coord) => sum + coord.q, 0) / exploredCoords.length;
+    const avgR = exploredCoords.reduce((sum, coord) => sum + coord.r, 0) / exploredCoords.length;
+
+    // Find the starting location closest to exploration center
+    let closestStartingLocation: string | null = null;
+    let minDistance = Infinity;
+
+    startingLocations.forEach(startLoc => {
+      const [qStr, rStr] = startLoc.split('.');
+      const startQ = parseInt(qStr);
+      const startR = parseInt(rStr);
+
+      // Calculate distance from exploration center to this starting location
+      const distance = Math.sqrt(Math.pow(avgQ - startQ, 2) + Math.pow(avgR - startR, 2));
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestStartingLocation = startLoc;
+      }
+    });
+
+    // Additional validation: check if the closest starting location is actually explored
+    const isStartingLocationExplored = tribe.exploredHexes.includes(closestStartingLocation);
+
+    console.log(`     🔍 EXPLORATION ANALYSIS for ${tribe.tribeName}:`);
+    console.log(`       Exploration center: (${avgQ.toFixed(1)}, ${avgR.toFixed(1)})`);
+    console.log(`       Closest starting location: ${closestStartingLocation} (distance: ${minDistance.toFixed(1)})`);
+    console.log(`       Starting location explored: ${isStartingLocationExplored ? '✅' : '❌'}`);
+
+    // Only return if the starting location is actually explored (high confidence)
+    return isStartingLocationExplored ? closestStartingLocation : null;
+  }
+
   // DIAGNOSTIC: Investigate all location fields in database
   async investigateAllLocationFields(tribeName: string): Promise<void> {
     console.log(`🔍 INVESTIGATING ALL LOCATION FIELDS: ${tribeName}`);
@@ -574,14 +620,16 @@ export class GameService {
     console.log(`   Total tribes: ${gameState.tribes.length}`);
     console.log(`   Starting locations count: ${gameState.startingLocations.length}`);
 
-    // ENHANCED COLLISION DETECTION: Check actual garrison locations instead of corrupted tribe.location
-    console.log(`🔍 ENHANCED COLLISION DETECTION - CHECKING ACTUAL GARRISON LOCATIONS:`);
+    // VIRGIN HEX + HOME PERMANENCE COLLISION DETECTION
+    console.log(`🔍 VIRGIN HEX COLLISION DETECTION - ENSURING STARTING LOCATIONS ARE NEVER REUSED:`);
 
     const occupiedLocations = new Set();
+    const historicallyUsedStartingLocations = new Set();
     const locationMismatches: Array<{
       tribe: string;
       declaredHome: string;
       actualGarrisons: string[];
+      inferredOriginalHome?: string;
     }> = [];
 
     gameState.tribes.forEach(tribe => {
@@ -589,14 +637,33 @@ export class GameService {
       const garrisonLocations = Object.keys(tribe.garrisons || {});
 
       // CRITICAL FIX: Only add garrison locations with actual troops/weapons to occupied set
-      // This prevents corrupted tribe.location fields from blocking valid starting locations
       const activeGarrisons = garrisonLocations.filter(loc => {
         const garrison = tribe.garrisons![loc];
         return garrison.troops > 0 || garrison.weapons > 0;
       });
 
+      // HOME PERMANENCE: Infer original starting location from exploration patterns
+      let inferredOriginalHome: string | null = null;
+
+      // Check if tribe has originalStartingLocation field (new tribes)
+      if ((tribe as any).originalStartingLocation) {
+        inferredOriginalHome = (tribe as any).originalStartingLocation;
+        console.log(`   ${tribe.tribeName}: Using stored original home: ${inferredOriginalHome}`);
+      } else {
+        // Infer from exploration patterns for existing tribes
+        inferredOriginalHome = this.inferOriginalStartingLocation(tribe, gameState.startingLocations);
+        console.log(`   ${tribe.tribeName}: Inferred original home: ${inferredOriginalHome || 'UNKNOWN'}`);
+      }
+
+      // Add inferred original home to historically used set
+      if (inferredOriginalHome) {
+        historicallyUsedStartingLocations.add(inferredOriginalHome);
+        console.log(`     🏠 PERMANENTLY RESERVING: ${inferredOriginalHome} (${tribe.tribeName}'s original home)`);
+      }
+
       console.log(`   ${tribe.tribeName}:`);
       console.log(`     Declared home: "${tribeLocation}"`);
+      console.log(`     Inferred original home: "${inferredOriginalHome || 'UNKNOWN'}"`);
       console.log(`     Total garrisons: ${garrisonLocations.length}`);
       console.log(`     Active garrisons: ${activeGarrisons.length}`);
       console.log(`     Active locations: ${activeGarrisons.slice(0, 3).join(', ')}${activeGarrisons.length > 3 ? '...' : ''}`);
@@ -604,57 +671,83 @@ export class GameService {
       // Check if tribe has garrison at its declared home location
       const hasHomeGarrison = garrisonLocations.includes(tribeLocation);
       const hasActiveHomeGarrison = activeGarrisons.includes(tribeLocation);
+      const hasGarrisonAtInferredHome = inferredOriginalHome ? activeGarrisons.includes(inferredOriginalHome) : false;
 
       console.log(`     Has garrison at declared home: ${hasHomeGarrison ? '✅' : '❌'}`);
       console.log(`     Has ACTIVE garrison at declared home: ${hasActiveHomeGarrison ? '✅' : '❌'}`);
+      console.log(`     Has garrison at inferred original home: ${hasGarrisonAtInferredHome ? '✅' : '❌'}`);
 
       if (!hasActiveHomeGarrison && activeGarrisons.length > 0) {
-        console.log(`     🚨 LOCATION CORRUPTION: No active garrison at declared home!`);
+        console.log(`     🚨 LOCATION MISMATCH: No active garrison at declared home!`);
         console.log(`     Real active locations: ${activeGarrisons.join(', ')}`);
         locationMismatches.push({
           tribe: tribe.tribeName,
           declaredHome: tribeLocation,
-          actualGarrisons: activeGarrisons
+          actualGarrisons: activeGarrisons,
+          inferredOriginalHome: inferredOriginalHome || undefined
         });
       }
 
       // ENHANCED COLLISION DETECTION: Add only ACTIVE garrison locations to occupied set
-      // This ensures collision detection works based on where tribes actually are, not corrupted data
       activeGarrisons.forEach(loc => {
         occupiedLocations.add(loc);
-        console.log(`     🛡️ PROTECTING: ${loc} (${tribe.tribeName})`);
+        console.log(`     🛡️ PROTECTING CURRENT: ${loc} (${tribe.tribeName})`);
       });
     });
 
     if (locationMismatches.length > 0) {
-      console.log(`🚨 FOUND ${locationMismatches.length} TRIBES WITH LOCATION CORRUPTION!`);
-      console.log(`   These tribes have corrupted location fields but active garrisons elsewhere.`);
-      console.log(`   Enhanced collision detection will use actual garrison locations instead.`);
+      console.log(`🚨 FOUND ${locationMismatches.length} TRIBES WITH LOCATION MISMATCHES!`);
+      console.log(`   These tribes have location fields that don't match their active garrisons.`);
+      locationMismatches.forEach(mismatch => {
+        console.log(`   - ${mismatch.tribe}: declared="${mismatch.declaredHome}", inferred original="${mismatch.inferredOriginalHome}", active garrisons=[${mismatch.actualGarrisons.join(', ')}]`);
+      });
     } else {
-      console.log(`✅ All tribes have active garrisons at their declared home locations.`);
+      console.log(`✅ All tribes have consistent location data.`);
     }
-    console.log(`   🛡️ PROTECTED LOCATIONS (${occupiedLocations.size}): ${Array.from(occupiedLocations).slice(0, 10).join(', ')}${occupiedLocations.size > 10 ? '...' : ''}`);
-    console.log(`   📍 STARTING LOCATIONS (${gameState.startingLocations.length}): ${gameState.startingLocations.slice(0, 10).join(', ')}${gameState.startingLocations.length > 10 ? '...' : ''}`);
 
-    // ENHANCED AVAILABILITY CHECK: Compare each starting location against ACTUAL occupied locations
-    console.log(`   🎯 ENHANCED AVAILABILITY CHECK (based on actual garrisons):`);
+    console.log(`   🛡️ CURRENTLY OCCUPIED (${occupiedLocations.size}): ${Array.from(occupiedLocations).slice(0, 10).join(', ')}${occupiedLocations.size > 10 ? '...' : ''}`);
+    console.log(`   🏠 HISTORICALLY USED HOMES (${historicallyUsedStartingLocations.size}): ${Array.from(historicallyUsedStartingLocations).slice(0, 10).join(', ')}${historicallyUsedStartingLocations.size > 10 ? '...' : ''}`);
+    console.log(`   📍 TOTAL STARTING LOCATIONS (${gameState.startingLocations.length}): ${gameState.startingLocations.slice(0, 10).join(', ')}${gameState.startingLocations.length > 10 ? '...' : ''}`);
+
+    // VIRGIN HEX AVAILABILITY CHECK: Starting locations must be both unoccupied AND never used
+    console.log(`   🎯 VIRGIN HEX AVAILABILITY CHECK:`);
+    let virginCount = 0;
     gameState.startingLocations.forEach((startLoc, index) => {
-      const isOccupied = occupiedLocations.has(startLoc);
-      console.log(`   ${index + 1}. "${startLoc}" - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
-      if (isOccupied) {
-        // Find which tribe actually has a garrison here
-        const occupyingTribe = gameState.tribes.find(t => {
-          const activeGarrisons = Object.keys(t.garrisons || {}).filter(loc => {
-            const garrison = t.garrisons![loc];
-            return garrison.troops > 0 || garrison.weapons > 0;
+      const isCurrentlyOccupied = occupiedLocations.has(startLoc);
+      const isHistoricallyUsed = historicallyUsedStartingLocations.has(startLoc);
+      const isVirgin = !isCurrentlyOccupied && !isHistoricallyUsed;
+
+      if (isVirgin) virginCount++;
+
+      console.log(`   ${index + 1}. "${startLoc}" - ${isVirgin ? '✅ VIRGIN' : '❌ USED'}`);
+
+      if (!isVirgin) {
+        if (isCurrentlyOccupied) {
+          const occupyingTribe = gameState.tribes.find(t => {
+            const activeGarrisons = Object.keys(t.garrisons || {}).filter(loc => {
+              const garrison = t.garrisons![loc];
+              return garrison.troops > 0 || garrison.weapons > 0;
+            });
+            return activeGarrisons.includes(startLoc);
           });
-          return activeGarrisons.includes(startLoc);
-        });
-        console.log(`      🏰 OCCUPIED BY: ${occupyingTribe?.tribeName || 'Unknown'} (actual garrison)`);
-        console.log(`      Tribe declared location: "${occupyingTribe?.location}"`);
-        console.log(`      Garrison at starting location: ${startLoc === occupyingTribe?.location ? 'MATCHES' : 'DIFFERENT (location corruption)'}`);
+          console.log(`      🏰 CURRENTLY OCCUPIED BY: ${occupyingTribe?.tribeName || 'Unknown'}`);
+        }
+
+        if (isHistoricallyUsed) {
+          const historicalTribe = gameState.tribes.find(t => {
+            const inferredHome = this.inferOriginalStartingLocation(t, gameState.startingLocations);
+            return inferredHome === startLoc || (t as any).originalStartingLocation === startLoc;
+          });
+          console.log(`      🏠 HISTORICALLY USED BY: ${historicalTribe?.tribeName || 'Unknown'} (original home)`);
+        }
       }
     });
+
+    console.log(`   📊 VIRGIN LOCATIONS AVAILABLE: ${virginCount}/${gameState.startingLocations.length}`);
+
+    if (virginCount === 0) {
+      console.log(`   🚨 WARNING: NO VIRGIN STARTING LOCATIONS REMAINING!`);
+    }
 
     // SAFE CHECK: Look for any format differences
     console.log(`   Format analysis:`);
@@ -678,10 +771,16 @@ export class GameService {
       console.log(`     Occupied: "${firstOccupied}" (length: ${firstOccupied?.length || 0})`);
     }
 
-    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+    // VIRGIN HEX REQUIREMENT: Find starting location that is both unoccupied AND never used
+    const availableStart = gameState.startingLocations.find(loc =>
+      !occupiedLocations.has(loc) && !historicallyUsedStartingLocations.has(loc)
+    );
 
     if (!availableStart) {
-      console.log(`❌ No starting positions available after detailed analysis.`);
+      console.log(`❌ No virgin starting positions available!`);
+      console.log(`   Currently occupied: ${Array.from(occupiedLocations).length}`);
+      console.log(`   Historically used: ${Array.from(historicallyUsedStartingLocations).length}`);
+      console.log(`   Total starting locations: ${gameState.startingLocations.length}`);
       return false;
     }
 
@@ -694,6 +793,7 @@ export class GameService {
       ...tribeData,
       id: `tribe-${Date.now()}`,
       location: availableStart,
+      originalStartingLocation: availableStart, // HOME PERMANENCE: Track original starting location
       globalResources: { food: 100, scrap: 20, morale: 50 },
       garrisons: { [availableStart]: { troops: 20, weapons: 10, chiefs: [] } },
       actions: [],
@@ -756,7 +856,22 @@ export class GameService {
 
     // Fallback to starting locations if random spawn failed
     if (!spawnLocation) {
-      spawnLocation = gameState.startingLocations.find(loc => !occupied.has(loc)) || null;
+      // VIRGIN HEX REQUIREMENT: For AI tribes using starting locations, also check historical usage
+      const historicallyUsedStartingLocations = new Set();
+      gameState.tribes.forEach(tribe => {
+        if ((tribe as any).originalStartingLocation) {
+          historicallyUsedStartingLocations.add((tribe as any).originalStartingLocation);
+        } else {
+          const inferredHome = this.inferOriginalStartingLocation(tribe, gameState.startingLocations);
+          if (inferredHome) {
+            historicallyUsedStartingLocations.add(inferredHome);
+          }
+        }
+      });
+
+      spawnLocation = gameState.startingLocations.find(loc =>
+        !occupied.has(loc) && !historicallyUsedStartingLocations.has(loc)
+      ) || null;
     }
 
     if (!spawnLocation) return false;
@@ -767,6 +882,9 @@ export class GameService {
       aiType,
       gameState.mapData
     );
+
+    // HOME PERMANENCE: Track original starting location for AI tribes
+    (aiTribe as any).originalStartingLocation = spawnLocation;
 
     // Set up diplomacy based on AI type
     gameState.tribes.forEach(t => {

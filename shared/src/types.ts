@@ -293,6 +293,7 @@ export interface Tribe {
   globalResources: GlobalResources;
   garrisons: Record<string, Garrison>; // Key is hex coordinate string
   location: string; // Home base location, e.g., "050.050"
+  originalStartingLocation?: string; // HOME PERMANENCE: Track original starting location for virgin hex system
   turnSubmitted: boolean;
   actions: GameAction[];
   lastTurnResults: GameAction[];

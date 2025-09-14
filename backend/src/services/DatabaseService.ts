@@ -1216,6 +1216,7 @@ export class DatabaseService {
             rationLevel: tribe.rationLevel,
             exploredHexes: tribe.exploredHexes,
             maxActionsOverride: tribe.maxActionsOverride,
+            originalStartingLocation: tribe.originalStartingLocation, // HOME PERMANENCE: Save original starting location
           }
         });
         console.log(`✅ Updated tribe basic data: ${tribe.tribeName}`);
@@ -1984,6 +1985,7 @@ export class DatabaseService {
                 color: tribe.color,
                 stats: tribe.stats as any,
                 location: tribe.location,
+                originalStartingLocation: tribe.originalStartingLocation, // HOME PERMANENCE: Save original starting location
                 globalResources: tribe.globalResources as any,
                 turnSubmitted: tribe.turnSubmitted,
                 actions: tribe.actions as any,
@@ -2007,6 +2009,7 @@ export class DatabaseService {
                 color: tribe.color,
                 stats: tribe.stats as any,
                 location: tribe.location,
+                originalStartingLocation: tribe.originalStartingLocation, // HOME PERMANENCE: Save original starting location
                 globalResources: tribe.globalResources as any,
                 turnSubmitted: tribe.turnSubmitted,
                 actions: tribe.actions as any,

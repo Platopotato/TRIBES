@@ -646,8 +646,8 @@ export class GameService {
       let inferredOriginalHome: string | null = null;
 
       // Check if tribe has originalStartingLocation field (new tribes)
-      if ((tribe as any).originalStartingLocation) {
-        inferredOriginalHome = (tribe as any).originalStartingLocation;
+      if (tribe.originalStartingLocation) {
+        inferredOriginalHome = tribe.originalStartingLocation;
         console.log(`   ${tribe.tribeName}: Using stored original home: ${inferredOriginalHome}`);
       } else {
         // Infer from exploration patterns for existing tribes
@@ -736,7 +736,7 @@ export class GameService {
         if (isHistoricallyUsed) {
           const historicalTribe = gameState.tribes.find(t => {
             const inferredHome = this.inferOriginalStartingLocation(t, gameState.startingLocations);
-            return inferredHome === startLoc || (t as any).originalStartingLocation === startLoc;
+            return inferredHome === startLoc || t.originalStartingLocation === startLoc;
           });
           console.log(`      🏠 HISTORICALLY USED BY: ${historicalTribe?.tribeName || 'Unknown'} (original home)`);
         }
@@ -859,8 +859,8 @@ export class GameService {
       // VIRGIN HEX REQUIREMENT: For AI tribes using starting locations, also check historical usage
       const historicallyUsedStartingLocations = new Set();
       gameState.tribes.forEach(tribe => {
-        if ((tribe as any).originalStartingLocation) {
-          historicallyUsedStartingLocations.add((tribe as any).originalStartingLocation);
+        if (tribe.originalStartingLocation) {
+          historicallyUsedStartingLocations.add(tribe.originalStartingLocation);
         } else {
           const inferredHome = this.inferOriginalStartingLocation(tribe, gameState.startingLocations);
           if (inferredHome) {
@@ -884,7 +884,7 @@ export class GameService {
     );
 
     // HOME PERMANENCE: Track original starting location for AI tribes
-    (aiTribe as any).originalStartingLocation = spawnLocation;
+    aiTribe.originalStartingLocation = spawnLocation;
 
     // Set up diplomacy based on AI type
     gameState.tribes.forEach(t => {

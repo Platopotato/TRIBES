@@ -84,6 +84,7 @@ model Tribe {
   color             String
   stats             Json    // TribeStats object
   location          String  // Hex coordinate string
+  originalStartingLocation String? // HOME PERMANENCE: Track original starting location for virgin hex system
   globalResources   Json    // GlobalResources object
   turnSubmitted     Boolean @default(false)
   actions           Json    // Array of GameAction objects

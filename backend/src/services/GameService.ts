@@ -574,8 +574,8 @@ export class GameService {
     console.log(`   Total tribes: ${gameState.tribes.length}`);
     console.log(`   Starting locations count: ${gameState.startingLocations.length}`);
 
-    // CRITICAL INVESTIGATION: Check for tribe location vs garrison location mismatches
-    console.log(`🔍 INVESTIGATING TRIBE/GARRISON LOCATION CONSISTENCY:`);
+    // ENHANCED COLLISION DETECTION: Check actual garrison locations instead of corrupted tribe.location
+    console.log(`🔍 ENHANCED COLLISION DETECTION - CHECKING ACTUAL GARRISON LOCATIONS:`);
 
     const occupiedLocations = new Set();
     const locationMismatches: Array<{
@@ -588,50 +588,71 @@ export class GameService {
       const tribeLocation = tribe.location;
       const garrisonLocations = Object.keys(tribe.garrisons || {});
 
-      // Add tribe's declared location to occupied set
-      occupiedLocations.add(tribeLocation);
-
-      // Check if tribe has garrison at its declared home location
-      const hasHomeGarrison = garrisonLocations.includes(tribeLocation);
+      // CRITICAL FIX: Only add garrison locations with actual troops/weapons to occupied set
+      // This prevents corrupted tribe.location fields from blocking valid starting locations
+      const activeGarrisons = garrisonLocations.filter(loc => {
+        const garrison = tribe.garrisons![loc];
+        return garrison.troops > 0 || garrison.weapons > 0;
+      });
 
       console.log(`   ${tribe.tribeName}:`);
       console.log(`     Declared home: "${tribeLocation}"`);
-      console.log(`     Garrison count: ${garrisonLocations.length}`);
-      console.log(`     Has home garrison: ${hasHomeGarrison ? '✅' : '❌'}`);
+      console.log(`     Total garrisons: ${garrisonLocations.length}`);
+      console.log(`     Active garrisons: ${activeGarrisons.length}`);
+      console.log(`     Active locations: ${activeGarrisons.slice(0, 3).join(', ')}${activeGarrisons.length > 3 ? '...' : ''}`);
 
-      if (!hasHomeGarrison && garrisonLocations.length > 0) {
-        console.log(`     ⚠️ MISMATCH: No garrison at declared home!`);
-        console.log(`     Garrisons at: ${garrisonLocations.slice(0, 3).join(', ')}${garrisonLocations.length > 3 ? '...' : ''}`);
+      // Check if tribe has garrison at its declared home location
+      const hasHomeGarrison = garrisonLocations.includes(tribeLocation);
+      const hasActiveHomeGarrison = activeGarrisons.includes(tribeLocation);
+
+      console.log(`     Has garrison at declared home: ${hasHomeGarrison ? '✅' : '❌'}`);
+      console.log(`     Has ACTIVE garrison at declared home: ${hasActiveHomeGarrison ? '✅' : '❌'}`);
+
+      if (!hasActiveHomeGarrison && activeGarrisons.length > 0) {
+        console.log(`     🚨 LOCATION CORRUPTION: No active garrison at declared home!`);
+        console.log(`     Real active locations: ${activeGarrisons.join(', ')}`);
         locationMismatches.push({
           tribe: tribe.tribeName,
           declaredHome: tribeLocation,
-          actualGarrisons: garrisonLocations
+          actualGarrisons: activeGarrisons
         });
       }
 
-      // Also add all garrison locations to occupied set (for collision detection)
-      garrisonLocations.forEach(loc => occupiedLocations.add(loc));
+      // ENHANCED COLLISION DETECTION: Add only ACTIVE garrison locations to occupied set
+      // This ensures collision detection works based on where tribes actually are, not corrupted data
+      activeGarrisons.forEach(loc => {
+        occupiedLocations.add(loc);
+        console.log(`     🛡️ PROTECTING: ${loc} (${tribe.tribeName})`);
+      });
     });
 
     if (locationMismatches.length > 0) {
-      console.log(`🚨 FOUND ${locationMismatches.length} TRIBES WITH LOCATION MISMATCHES!`);
-      console.log(`   This explains why collision detection might fail.`);
+      console.log(`🚨 FOUND ${locationMismatches.length} TRIBES WITH LOCATION CORRUPTION!`);
+      console.log(`   These tribes have corrupted location fields but active garrisons elsewhere.`);
+      console.log(`   Enhanced collision detection will use actual garrison locations instead.`);
     } else {
-      console.log(`✅ All tribes have garrisons at their declared home locations.`);
+      console.log(`✅ All tribes have active garrisons at their declared home locations.`);
     }
-    console.log(`   Occupied locations (${occupiedLocations.size}): ${Array.from(occupiedLocations).join(', ')}`);
-    console.log(`   Starting locations: ${gameState.startingLocations.join(', ')}`);
+    console.log(`   🛡️ PROTECTED LOCATIONS (${occupiedLocations.size}): ${Array.from(occupiedLocations).slice(0, 10).join(', ')}${occupiedLocations.size > 10 ? '...' : ''}`);
+    console.log(`   📍 STARTING LOCATIONS (${gameState.startingLocations.length}): ${gameState.startingLocations.slice(0, 10).join(', ')}${gameState.startingLocations.length > 10 ? '...' : ''}`);
 
-    // SAFE CHECK: Compare each starting location against occupied locations
-    console.log(`   Detailed availability check:`);
+    // ENHANCED AVAILABILITY CHECK: Compare each starting location against ACTUAL occupied locations
+    console.log(`   🎯 ENHANCED AVAILABILITY CHECK (based on actual garrisons):`);
     gameState.startingLocations.forEach((startLoc, index) => {
       const isOccupied = occupiedLocations.has(startLoc);
       console.log(`   ${index + 1}. "${startLoc}" - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
       if (isOccupied) {
-        const occupyingTribe = gameState.tribes.find(t => t.location === startLoc);
-        console.log(`      Occupied by: ${occupyingTribe?.tribeName || 'Unknown'} (ID: ${occupyingTribe?.id})`);
-        console.log(`      Tribe location: "${occupyingTribe?.location}"`);
-        console.log(`      String match: ${startLoc === occupyingTribe?.location ? 'EXACT' : 'MISMATCH'}`);
+        // Find which tribe actually has a garrison here
+        const occupyingTribe = gameState.tribes.find(t => {
+          const activeGarrisons = Object.keys(t.garrisons || {}).filter(loc => {
+            const garrison = t.garrisons![loc];
+            return garrison.troops > 0 || garrison.weapons > 0;
+          });
+          return activeGarrisons.includes(startLoc);
+        });
+        console.log(`      🏰 OCCUPIED BY: ${occupyingTribe?.tribeName || 'Unknown'} (actual garrison)`);
+        console.log(`      Tribe declared location: "${occupyingTribe?.location}"`);
+        console.log(`      Garrison at starting location: ${startLoc === occupyingTribe?.location ? 'MATCHES' : 'DIFFERENT (location corruption)'}`);
       }
     });
 
@@ -708,7 +729,15 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    const occupied = new Set(gameState.tribes.map(t => t.location));
+    // ENHANCED COLLISION DETECTION: Use actual garrison locations instead of corrupted tribe.location
+    const occupied = new Set();
+    gameState.tribes.forEach(tribe => {
+      const activeGarrisons = Object.keys(tribe.garrisons || {}).filter(loc => {
+        const garrison = tribe.garrisons![loc];
+        return garrison.troops > 0 || garrison.weapons > 0;
+      });
+      activeGarrisons.forEach(loc => occupied.add(loc));
+    });
     let spawnLocation: string | null = null;
 
     if (useRandomLocation) {
@@ -813,8 +842,15 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    // Validate spawn location is not occupied
-    const occupied = new Set(gameState.tribes.map(t => t.location));
+    // ENHANCED COLLISION DETECTION: Validate spawn location using actual garrison locations
+    const occupied = new Set();
+    gameState.tribes.forEach(tribe => {
+      const activeGarrisons = Object.keys(tribe.garrisons || {}).filter(loc => {
+        const garrison = tribe.garrisons![loc];
+        return garrison.troops > 0 || garrison.weapons > 0;
+      });
+      activeGarrisons.forEach(loc => occupied.add(loc));
+    });
     if (occupied.has(aiData.spawnLocation)) {
       console.log(`❌ Spawn location ${aiData.spawnLocation} is already occupied`);
       return false;
@@ -921,8 +957,15 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
-    // Validate location is not occupied
-    const occupied = new Set(gameState.tribes.map(t => t.location));
+    // ENHANCED COLLISION DETECTION: Validate location using actual garrison locations
+    const occupied = new Set();
+    gameState.tribes.forEach(tribe => {
+      const activeGarrisons = Object.keys(tribe.garrisons || {}).filter(loc => {
+        const garrison = tribe.garrisons![loc];
+        return garrison.troops > 0 || garrison.weapons > 0;
+      });
+      activeGarrisons.forEach(loc => occupied.add(loc));
+    });
     if (occupied.has(location)) {
       console.log(`❌ Location ${location} is already occupied`);
       return false;

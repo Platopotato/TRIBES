@@ -292,14 +292,32 @@ export class GameService {
     const gameState = await this.getGameState();
     if (!gameState) return false;
 
+    console.log(`🔍 TRIBE CREATION ANALYSIS:`);
+    console.log(`   Total tribes: ${gameState.tribes.length}`);
+    console.log(`   Starting locations: ${gameState.startingLocations.length}`);
+
     const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    console.log(`   Occupied locations: ${Array.from(occupiedLocations).join(', ')}`);
+    console.log(`   Available starting locations: ${gameState.startingLocations.join(', ')}`);
+
+    // Check each starting location individually
+    gameState.startingLocations.forEach((loc, index) => {
+      const isOccupied = occupiedLocations.has(loc);
+      console.log(`   ${index + 1}. ${loc} - ${isOccupied ? '❌ OCCUPIED' : '✅ AVAILABLE'}`);
+      if (isOccupied) {
+        const occupyingTribe = gameState.tribes.find(t => t.location === loc);
+        console.log(`      Occupied by: ${occupyingTribe?.tribeName || 'Unknown'} (${occupyingTribe?.id})`);
+      }
+    });
+
     const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
 
     if (!availableStart) {
-      console.log(`❌ No starting positions available. Occupied: ${Array.from(occupiedLocations).join(', ')}`);
-      console.log(`❌ Starting locations: ${gameState.startingLocations.join(', ')}`);
+      console.log(`❌ No starting positions available after detailed analysis.`);
       return false;
     }
+
+    console.log(`✅ Selected starting location: ${availableStart}`);
 
     const startCoords = parseHexCoords(availableStart);
     const initialExplored = getHexesInRange(startCoords, 2);

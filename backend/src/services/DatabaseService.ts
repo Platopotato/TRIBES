@@ -434,6 +434,73 @@ export class DatabaseService {
     }
   }
 
+  // DIAGNOSTIC: Investigate all location-related fields in database
+  async investigateAllLocationFields(tribeName: string): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🔍 ALL LOCATION FIELDS INVESTIGATION: ${tribeName}`);
+    console.log('='.repeat(80));
+
+    if (!this.prisma) {
+      console.log('❌ Database not available');
+      return;
+    }
+
+    try {
+      // Get ALL fields from the tribe record
+      const tribe = await this.prisma.tribe.findFirst({
+        where: { tribeName: tribeName }
+      });
+
+      if (!tribe) {
+        console.log(`❌ Tribe "${tribeName}" not found in database`);
+        return;
+      }
+
+      console.log(`🏛️ ALL TRIBE DATABASE FIELDS:`);
+      console.log(`   ID: ${tribe.id}`);
+      console.log(`   Name: ${tribe.tribeName}`);
+      console.log(`   Player Name: ${tribe.playerName}`);
+      console.log(`   Player ID: ${tribe.playerId}`);
+      console.log('');
+
+      console.log(`📍 LOCATION-RELATED FIELDS:`);
+      // Check all possible location fields
+      Object.entries(tribe).forEach(([key, value]) => {
+        if (key.toLowerCase().includes('location') ||
+            key.toLowerCase().includes('home') ||
+            key.toLowerCase().includes('spawn') ||
+            key.toLowerCase().includes('start') ||
+            key.toLowerCase().includes('base') ||
+            key.toLowerCase().includes('coord') ||
+            key.toLowerCase().includes('hex') ||
+            key.toLowerCase().includes('pos')) {
+          console.log(`   ${key}: ${JSON.stringify(value)}`);
+        }
+      });
+      console.log('');
+
+      console.log(`🗂️ ALL FIELDS (for complete analysis):`);
+      Object.entries(tribe).forEach(([key, value]) => {
+        if (typeof value === 'string' || typeof value === 'number') {
+          console.log(`   ${key}: ${JSON.stringify(value)}`);
+        } else if (value && typeof value === 'object') {
+          console.log(`   ${key}: ${JSON.stringify(value).substring(0, 100)}...`);
+        } else {
+          console.log(`   ${key}: ${value}`);
+        }
+      });
+
+      console.log('='.repeat(80));
+      console.log(`🔍 ALL LOCATION FIELDS INVESTIGATION COMPLETE: ${tribeName}`);
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error(`❌ Error investigating all location fields for ${tribeName}:`, error);
+    }
+  }
+
   // DIAGNOSTIC: Get comprehensive tribe data from database
   async investigateTribeOrigin(tribeName: string): Promise<void> {
     console.log('');

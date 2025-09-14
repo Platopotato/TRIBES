@@ -493,6 +493,7 @@ export const restoreGarrisonCoordinates = () => socket.emit('admin:restoreGarris
 export const diagnoseTribeLocations = () => socket.emit('admin:diagnoseTribeLocations');
 export const diagnoseSingleTribeLocation = (tribeName: string) => socket.emit('admin:diagnoseSingleTribeLocation', tribeName);
 export const investigateTribeOrigin = (tribeName: string) => socket.emit('admin:investigateTribeOrigin', tribeName);
+export const investigateAllLocationFields = (tribeName: string) => socket.emit('admin:investigateAllLocationFields', tribeName);
 export const diagnoseStartingLocations = () => socket.emit('admin:diagnoseStartingLocations');
 export const diagnoseOutpost = (hexCoord: string) => socket.emit('admin:diagnoseOutpost', hexCoord);
 export const fixOutpostOwnership = (hexCoord: string) => socket.emit('admin:fixOutpostOwnership', hexCoord);

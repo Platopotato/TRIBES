@@ -174,6 +174,12 @@ export class GameService {
     }
   }
 
+  // DIAGNOSTIC: Investigate all location fields in database
+  async investigateAllLocationFields(tribeName: string): Promise<void> {
+    console.log(`🔍 INVESTIGATING ALL LOCATION FIELDS: ${tribeName}`);
+    await this.databaseService.investigateAllLocationFields(tribeName);
+  }
+
   // DIAGNOSTIC: Investigate tribe origin and database records
   async investigateTribeOrigin(tribeName: string): Promise<void> {
     console.log(`🕵️ INVESTIGATING TRIBE ORIGIN: ${tribeName}`);

@@ -82,6 +82,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [diagnosingSingleTribe, setDiagnosingSingleTribe] = useState(false);
   const [diagnosingStartingLocations, setDiagnosingStartingLocations] = useState(false);
   const [investigatingTribeOrigin, setInvestigatingTribeOrigin] = useState(false);
+  const [investigatingAllLocationFields, setInvestigatingAllLocationFields] = useState(false);
   const [singleTribeName, setSingleTribeName] = useState('');
 
   // Safety features
@@ -614,10 +615,20 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         }
       };
 
+      const handleAllLocationFieldsInvestigated = (result: any) => {
+        setInvestigatingAllLocationFields(false);
+        if (result.success) {
+          alert(`✅ All location fields investigated successfully for "${result.tribeName}"!\n\nCheck the server logs for complete field analysis.`);
+        } else {
+          alert(`❌ Error investigating all location fields for "${result.tribeName}": ${result.error || 'Unknown error'}`);
+        }
+      };
+
       socket.on('admin:tribeLocationsDiagnosed', handleTribeLocationsDiagnosed);
       socket.on('admin:singleTribeLocationDiagnosed', handleSingleTribeLocationDiagnosed);
       socket.on('admin:startingLocationsDiagnosed', handleStartingLocationsDiagnosed);
       socket.on('admin:tribeOriginInvestigated', handleTribeOriginInvestigated);
+      socket.on('admin:allLocationFieldsInvestigated', handleAllLocationFieldsInvestigated);
     }
 
     client.getBackupStatus();
@@ -633,6 +644,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         socket.off('admin:singleTribeLocationDiagnosed');
         socket.off('admin:startingLocationsDiagnosed');
         socket.off('admin:tribeOriginInvestigated');
+        socket.off('admin:allLocationFieldsInvestigated');
       }
     };
   }, []);
@@ -668,6 +680,15 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     }
     setInvestigatingTribeOrigin(true);
     client.investigateTribeOrigin(singleTribeName.trim());
+  };
+
+  const handleInvestigateAllLocationFields = () => {
+    if (!singleTribeName.trim()) {
+      alert('Please enter a tribe name to investigate');
+      return;
+    }
+    setInvestigatingAllLocationFields(true);
+    client.investigateAllLocationFields(singleTribeName.trim());
   };
 
   const handleLoadBackupClick = () => {
@@ -2163,6 +2184,16 @@ GAME STATISTICS:
                       </svg>
                       {investigatingTribeOrigin ? 'Investigating...' : 'Investigate Database Origin'}
                     </Button>
+                    <Button
+                      className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      onClick={handleInvestigateAllLocationFields}
+                      disabled={investigatingAllLocationFields || !singleTribeName.trim()}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      {investigatingAllLocationFields ? 'Investigating...' : 'Show All Database Fields'}
+                    </Button>
                   </div>
                 </div>
 
@@ -2173,6 +2204,7 @@ GAME STATISTICS:
                     <li><strong>Starting Locations:</strong> Shows which tribes are displaced from starting locations</li>
                     <li><strong>Single Tribe:</strong> Focused analysis of one specific tribe</li>
                     <li><strong>Database Origin:</strong> Deep dive into database records, creation dates, and garrison history</li>
+                    <li><strong>All Database Fields:</strong> Shows every field in the tribe record to find hidden location data</li>
                     <li>Identifies coordinate transformation issues and collision problems</li>
                     <li>Results appear in server logs</li>
                   </ul>

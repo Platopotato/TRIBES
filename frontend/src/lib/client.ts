@@ -491,6 +491,7 @@ export const diagnoseCoordinateSystem = () => socket.emit('admin:diagnoseCoordin
 export const fixGarrisonCoordinates = () => socket.emit('admin:fixGarrisonCoordinates');
 export const restoreGarrisonCoordinates = () => socket.emit('admin:restoreGarrisonCoordinates');
 export const diagnoseTribeLocations = () => socket.emit('admin:diagnoseTribeLocations');
+export const diagnoseSingleTribeLocation = (tribeName: string) => socket.emit('admin:diagnoseSingleTribeLocation', tribeName);
 export const diagnoseOutpost = (hexCoord: string) => socket.emit('admin:diagnoseOutpost', hexCoord);
 export const fixOutpostOwnership = (hexCoord: string) => socket.emit('admin:fixOutpostOwnership', hexCoord);
 export const fixAllOutpostOwnership = () => socket.emit('admin:fixAllOutpostOwnership');

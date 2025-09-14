@@ -973,6 +973,23 @@ export class SocketHandler {
       }
     });
 
+    // DIAGNOSTIC: Admin handler to diagnose single tribe location
+    socket.on('admin:diagnoseSingleTribeLocation', async (tribeName: string) => {
+      console.log(`🔍 ADMIN: Diagnosing single tribe location for "${tribeName}"`);
+      try {
+        await this.gameService.diagnoseSingleTribeLocation(tribeName);
+        socket.emit('admin:singleTribeLocationDiagnosed', { success: true, tribeName });
+        console.log(`✅ ADMIN: Single tribe location diagnosed successfully for "${tribeName}"`);
+      } catch (error) {
+        console.error(`❌ ADMIN: Failed to diagnose single tribe location for "${tribeName}":`, error);
+        socket.emit('admin:singleTribeLocationDiagnosed', {
+          success: false,
+          error: (error as Error).message,
+          tribeName
+        });
+      }
+    });
+
     // DIAGNOSTIC: Admin handler to diagnose outpost ownership
     socket.on('admin:diagnoseOutpost', async (hexCoord: string) => {
       console.log(`🔍 ADMIN: Diagnosing outpost ownership at ${hexCoord}`);

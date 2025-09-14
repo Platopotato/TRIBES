@@ -434,6 +434,39 @@ export class DatabaseService {
     }
   }
 
+  // DIAGNOSTIC: Get single tribe location from database
+  async getRawSingleTribeLocation(tribeName: string): Promise<{id: string, tribeName: string, location: string} | null> {
+    if (!this.prisma) {
+      console.log('❌ Database not available');
+      return null;
+    }
+
+    try {
+      const tribe = await this.prisma.tribe.findFirst({
+        where: {
+          tribeName: tribeName
+        },
+        select: {
+          id: true,
+          tribeName: true,
+          location: true
+        }
+      });
+
+      if (tribe) {
+        console.log(`📊 RAW DATABASE TRIBE LOCATION:`);
+        console.log(`   ${tribe.tribeName}: "${tribe.location}" (ID: ${tribe.id})`);
+      } else {
+        console.log(`❌ Tribe "${tribeName}" not found in database`);
+      }
+
+      return tribe;
+    } catch (error) {
+      console.error(`❌ Error getting raw tribe location for ${tribeName}:`, error);
+      return null;
+    }
+  }
+
   // DIAGNOSTIC: Check outpost ownership at specific hex
   async diagnoseOutpostOwnership(hexCoord: string): Promise<void> {
     console.log('');

@@ -45,6 +45,85 @@ export class GameService {
     await this.databaseService.restoreGarrisonCoordinates();
   }
 
+  // DIAGNOSTIC: Check specific tribe location in database vs game state
+  async diagnoseSingleTribeLocation(tribeName: string): Promise<void> {
+    console.log('');
+    console.log('='.repeat(80));
+    console.log(`🔍 SINGLE TRIBE LOCATION DIAGNOSTIC: ${tribeName}`);
+    console.log('='.repeat(80));
+
+    try {
+      // Get raw database data for specific tribe
+      const dbTribe = await this.databaseService.getRawSingleTribeLocation(tribeName);
+
+      // Get processed game state data
+      const gameState = await this.getGameState();
+
+      if (!gameState) {
+        console.log('❌ Could not get game state');
+        return;
+      }
+
+      if (!dbTribe) {
+        console.log(`❌ Tribe "${tribeName}" not found in database`);
+        return;
+      }
+
+      const gameStateTribe = gameState.tribes.find(t => t.tribeName === tribeName);
+
+      if (!gameStateTribe) {
+        console.log(`❌ Tribe "${tribeName}" not found in game state`);
+        return;
+      }
+
+      console.log(`🏛️ TRIBE: ${dbTribe.tribeName} (${dbTribe.id})`);
+      console.log(`   Database location: "${dbTribe.location}"`);
+      console.log(`   Game state location: "${gameStateTribe.location}"`);
+      console.log(`   Match: ${dbTribe.location === gameStateTribe.location ? '✅ YES' : '❌ NO'}`);
+
+      if (dbTribe.location !== gameStateTribe.location) {
+        console.log(`   🚨 MISMATCH DETECTED!`);
+        console.log(`      DB: "${dbTribe.location}" (length: ${dbTribe.location?.length || 0})`);
+        console.log(`      GS: "${gameStateTribe.location}" (length: ${gameStateTribe.location?.length || 0})`);
+
+        // Character-by-character comparison
+        console.log(`   🔍 CHARACTER ANALYSIS:`);
+        const dbLoc = dbTribe.location || '';
+        const gsLoc = gameStateTribe.location || '';
+        const maxLen = Math.max(dbLoc.length, gsLoc.length);
+
+        for (let i = 0; i < maxLen; i++) {
+          const dbChar = dbLoc[i] || '∅';
+          const gsChar = gsLoc[i] || '∅';
+          const match = dbChar === gsChar ? '✅' : '❌';
+          console.log(`      [${i}]: DB='${dbChar}' GS='${gsChar}' ${match}`);
+        }
+      }
+
+      // Check garrison locations for this tribe
+      console.log(`   🏰 GARRISON ANALYSIS:`);
+      const garrisonKeys = Object.keys(gameStateTribe.garrisons || {});
+      console.log(`      Garrison count: ${garrisonKeys.length}`);
+      console.log(`      Garrison locations: ${garrisonKeys.slice(0, 5).join(', ')}${garrisonKeys.length > 5 ? '...' : ''}`);
+
+      const hasHomeGarrison = garrisonKeys.includes(gameStateTribe.location);
+      console.log(`      Has garrison at declared home (${gameStateTribe.location}): ${hasHomeGarrison ? '✅' : '❌'}`);
+
+      if (!hasHomeGarrison && garrisonKeys.length > 0) {
+        console.log(`      🚨 PROBLEM: No garrison at declared home location!`);
+        console.log(`      This explains collision detection issues.`);
+      }
+
+      console.log('='.repeat(80));
+      console.log(`🔍 SINGLE TRIBE DIAGNOSTIC COMPLETE: ${tribeName}`);
+      console.log('='.repeat(80));
+      console.log('');
+
+    } catch (error) {
+      console.error('❌ Error in single tribe location diagnostic:', error);
+    }
+  }
+
   // DIAGNOSTIC: Check tribe home locations in database vs game state
   async diagnoseTribeLocations(): Promise<void> {
     console.log('');

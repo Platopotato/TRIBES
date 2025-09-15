@@ -403,12 +403,25 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                 {/* owner tribe badge (falls back to playerTribe if they own the outpost/fortified POI) */}
                 {ownerTribe && (() => {
                   const icon = TRIBE_ICONS[ownerTribe.icon] || TRIBE_ICONS['castle'];
+                  const hexCoords = formatHexCoords(q, r);
+                  const garrison = ownerTribe.garrisons?.[hexCoords];
+                  const defenderCount = garrison?.troops || 0;
+
                   return (
                     <>
                       <circle cx="0" cy="0" r={size * 0.18} fill={ownerTribe.color} />
                       <text x="0" y="0" textAnchor="middle" dy=".3em" fontSize={size * 0.22} className="select-none">
                         {icon}
                       </text>
+                      {/* DEFENDER COUNT: Show number of defenders under the ownership shield */}
+                      {defenderCount > 0 && (
+                        <>
+                          <rect x={-size*0.15} y={size*0.25} width={size*0.3} height={size*0.18} rx="2" fill="rgba(17,24,39,0.95)" stroke="rgba(0,0,0,0.7)" strokeWidth="0.5" />
+                          <text x="0" y={size*0.34} dy=".05em" textAnchor="middle" className="font-bold fill-white" fontSize={size*0.12}>
+                            {defenderCount > 99 ? '99+' : defenderCount}
+                          </text>
+                        </>
+                      )}
                     </>
                   );
                 })()}

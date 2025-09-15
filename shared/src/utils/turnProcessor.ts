@@ -4496,9 +4496,22 @@ function processExploreAction(tribe: any, action: any): string {
 }
 
 function processBasicUpkeep(tribe: any, state?: any): void {
-    // Calculate total troops and chiefs
-    const totalTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
-    const totalChiefs = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + (garrison.chiefs?.length || 0), 0);
+    // Calculate total troops and chiefs IN GARRISONS
+    const garrisonTroops = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + garrison.troops, 0);
+    const garrisonChiefs = Object.values(tribe.garrisons).reduce((sum: number, garrison: any) => sum + (garrison.chiefs?.length || 0), 0);
+
+    // CRITICAL FIX: Include troops and chiefs on journeys in food consumption
+    let journeyTroops = 0;
+    let journeyChiefs = 0;
+    if (state && state.journeys) {
+        const tribeJourneys = state.journeys.filter((j: any) => j.ownerTribeId === tribe.id);
+        journeyTroops = tribeJourneys.reduce((sum: number, journey: any) => sum + (journey.force?.troops || 0), 0);
+        journeyChiefs = tribeJourneys.reduce((sum: number, journey: any) => sum + (journey.force?.chiefs?.length || 0), 0);
+    }
+
+    // Total troops and chiefs (garrisons + journeys)
+    const totalTroops = garrisonTroops + journeyTroops;
+    const totalChiefs = garrisonChiefs + journeyChiefs;
 
     // ENHANCED RATION SYSTEM: Calculate food consumption based on ration level
     let troopConsumption = 0;
@@ -4601,7 +4614,25 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         actionEfficiency
     };
 
-    let upkeepMessage = `Upkeep: ${totalTroops} troops + ${totalChiefs} chiefs consumed ${totalFoodConsumption} food${rationMessage}. Remaining food: ${tribe.globalResources.food}.`;
+    // JOURNEY FOOD CONSUMPTION WARNING: Notify players about the fix
+    if (journeyTroops > 0) {
+        tribe.lastTurnResults.push({
+            id: `journey-food-consumption-${Date.now()}`,
+            actionType: ActionType.Upkeep,
+            actionData: {},
+            result: `⚠️ IMPORTANT: ${journeyTroops} troops on journeys consumed food this turn. Troops on journeys now consume food like garrison troops.`
+        });
+    }
+
+    // ENHANCED UPKEEP MESSAGE: Show breakdown of garrison vs journey troops
+    let troopBreakdown = '';
+    if (journeyTroops > 0 || journeyChiefs > 0) {
+        troopBreakdown = ` (${garrisonTroops} in garrisons + ${journeyTroops} on journeys = ${totalTroops} troops, ${garrisonChiefs} + ${journeyChiefs} = ${totalChiefs} chiefs)`;
+    } else {
+        troopBreakdown = ` (all in garrisons)`;
+    }
+
+    let upkeepMessage = `Upkeep: ${totalTroops} troops + ${totalChiefs} chiefs consumed ${totalFoodConsumption} food${rationMessage}${troopBreakdown}. Remaining food: ${tribe.globalResources.food}.`;
     if (poiIncome.message) {
         upkeepMessage += ` ${poiIncome.message}`;
     }

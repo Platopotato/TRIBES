@@ -1419,7 +1419,7 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
         hex.poi.fortified = true;
         tribe.lastTurnResults.push({ id: `outpost-fortified-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ ${hex.poi.type} at ${destKey} fortified with outpost defenses! 5 builders consumed to create fortifications. Original POI benefits preserved.` });
 
-        // Builders are consumed to create the fortification - no garrison created
+        // Builders are consumed to create the fortification - they become maintenance crew (not combat troops)
         // Only add chiefs if any were sent (they become the garrison commanders)
         if (journey.force.chiefs && journey.force.chiefs.length > 0) {
             if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
@@ -1429,14 +1429,15 @@ function resolveBuildOutpostArrival(journey: any, tribe: any, state: any): void 
     } else {
         // Create new standalone outpost
         hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
-        tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders remain as the garrison.` });
+        tribe.lastTurnResults.push({ id: `outpost-built-${journey.id}`, actionType: ActionType.BuildOutpost, actionData: {}, result: `🛡️ Outpost established at ${destKey}. 5 builders become maintenance crew (provide defensive bonus but don't fight).` });
 
-        // For standalone outposts, builders become the garrison
-        if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-        tribe.garrisons[destKey].troops += (journey.force.troops || 0);
-        tribe.garrisons[destKey].weapons += (journey.force.weapons || 0);
-        if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
-        tribe.garrisons[destKey].chiefs.push(...(journey.force.chiefs || []));
+        // For standalone outposts, builders become maintenance crew (not combat troops)
+        // Only add chiefs if any were sent (they become the garrison commanders)
+        if (journey.force.chiefs && journey.force.chiefs.length > 0) {
+            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+            tribe.garrisons[destKey].chiefs.push(...journey.force.chiefs);
+        }
     }
 }
 
@@ -2914,24 +2915,28 @@ function processBuildOutpostAction(tribe: any, action: any, state: any): string 
             hex.poi.outpostOwner = tribe.id;
             hex.poi.fortified = true;
 
-            // For fortified POIs, builders become additional garrison at the location
-            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-            tribe.garrisons[destKey].troops += 5;
-            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
-            tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+            // For fortified POIs, builders become maintenance crew (not combat troops)
+            // Only add chiefs if any were sent (they become the garrison commanders)
+            if (movingChiefs.length > 0) {
+                if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+                if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+                tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+            }
 
-            return `🛡️ ${hex.poi.type} at ${destKey} instantly fortified with outpost defenses! 5 builders established garrison. Original POI benefits preserved.`;
+            return `🛡️ ${hex.poi.type} at ${destKey} instantly fortified with outpost defenses! 5 builders become maintenance crew (provide defensive bonus but don't fight). Original POI benefits preserved.`;
         } else {
             // Create new standalone outpost
             hex.poi = { id: `poi-outpost-${tribe.id}-${destKey}`, type: POIType.Outpost, rarity: 'Uncommon', difficulty: 1 };
 
-            // For standalone outposts, builders become the garrison
-            if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
-            tribe.garrisons[destKey].troops += 5;
-            if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
-            tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+            // For standalone outposts, builders become maintenance crew (not combat troops)
+            // Only add chiefs if any were sent (they become the garrison commanders)
+            if (movingChiefs.length > 0) {
+                if (!tribe.garrisons[destKey]) tribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+                if (!tribe.garrisons[destKey].chiefs) tribe.garrisons[destKey].chiefs = [];
+                tribe.garrisons[destKey].chiefs.push(...movingChiefs);
+            }
 
-            return `🛡️ Outpost instantly established at ${destKey}! 5 builders remain as the garrison.`;
+            return `🛡️ Outpost instantly established at ${destKey}! 5 builders become maintenance crew (provide defensive bonus but don't fight).`;
         }
     } else {
         // MULTI-TURN JOURNEY for long distances

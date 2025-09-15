@@ -1835,6 +1835,25 @@ export class SocketHandler {
       }
     });
 
+    socket.on('admin:updateAutoDeadlineSettings', async (settings: any) => {
+      console.log(`⏰ Admin updating auto deadline settings:`, settings);
+      try {
+        const gameState = await this.gameService.getGameState();
+        if (gameState) {
+          gameState.autoDeadlineSettings = {
+            enabled: settings.enabled,
+            timeOfDay: settings.timeOfDay,
+            timezone: settings.timezone || "Europe/London"
+          };
+          await this.gameService.updateGameState(gameState);
+          await emitGameState();
+          console.log(`✅ Auto deadline settings updated successfully`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating auto deadline settings:`, error);
+      }
+    });
+
     // Admin password update handler
     socket.on('admin:updateAdminPassword', async (newPassword: string) => {
       console.log(`🔒 Admin updating admin password`);

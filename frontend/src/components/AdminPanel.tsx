@@ -73,6 +73,17 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
   const [deadlineHours, setDeadlineHours] = useState(24);
   const [deadlineMinutes, setDeadlineMinutes] = useState(0);
+  const [showAutoDeadlineModal, setShowAutoDeadlineModal] = useState(false);
+  const [autoDeadlineTime, setAutoDeadlineTime] = useState("20:00");
+  const [autoDeadlineEnabled, setAutoDeadlineEnabled] = useState(true);
+
+  // Initialize auto deadline settings from game state
+  useEffect(() => {
+    if (gameState.autoDeadlineSettings) {
+      setAutoDeadlineEnabled(gameState.autoDeadlineSettings.enabled);
+      setAutoDeadlineTime(gameState.autoDeadlineSettings.timeOfDay);
+    }
+  }, [gameState.autoDeadlineSettings]);
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -368,6 +379,17 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     if (confirm('Are you sure you want to clear the current turn deadline?')) {
       client.clearTurnDeadline();
     }
+  };
+
+  const handleUpdateAutoDeadlineSettings = () => {
+    const settings = {
+      enabled: autoDeadlineEnabled,
+      timeOfDay: autoDeadlineTime,
+      timezone: "Europe/London" // Default timezone for now
+    };
+
+    client.updateAutoDeadlineSettings(settings);
+    setShowAutoDeadlineModal(false);
   };
 
   const handleUpdateAdminPassword = () => {
@@ -1974,12 +1996,39 @@ GAME STATISTICS:
                         : 'NONE SET'}
                     </span>
                   </div>
-                  <Button
-                    onClick={() => setShowDeadlineModal(true)}
-                    className="text-xs bg-blue-600 hover:bg-blue-700"
-                  >
-                    Set Deadline
-                  </Button>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Auto Deadlines:</span>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        gameState.autoDeadlineSettings?.enabled
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-600 text-white'
+                      }`}>
+                        {gameState.autoDeadlineSettings?.enabled ? 'ENABLED' : 'DISABLED'}
+                      </span>
+                      {gameState.autoDeadlineSettings?.enabled && (
+                        <span className="text-xs text-gray-400">
+                          @ {gameState.autoDeadlineSettings.timeOfDay}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => setShowDeadlineModal(true)}
+                      className="text-xs bg-blue-600 hover:bg-blue-700"
+                    >
+                      Set Deadline
+                    </Button>
+                    <Button
+                      onClick={() => setShowAutoDeadlineModal(true)}
+                      className="text-xs bg-purple-600 hover:bg-purple-700"
+                    >
+                      Auto Settings
+                    </Button>
+                  </div>
                 </div>
 
                 {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn && (
@@ -2148,83 +2197,103 @@ GAME STATISTICS:
               </div>
             </Card>
 
-            <Card title="Database Diagnostics" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
-              <div className="space-y-4">
-                <p className="text-neutral-400 leading-relaxed">Diagnose database issues and analyze tribe location data to troubleshoot collision problems.</p>
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  onClick={handleDiagnoseTribeLocations}
-                  disabled={diagnosingTribeLocations}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                  {diagnosingTribeLocations ? 'Diagnosing...' : 'Diagnose Tribe Locations'}
-                </Button>
+            <Card title="🔧 Debug & Diagnostics" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-6">
+                <p className="text-neutral-400 leading-relaxed">Debug tools for diagnosing database issues, analyzing tribe locations, and troubleshooting collision problems.</p>
 
-                <Button
-                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  onClick={handleDiagnoseStartingLocations}
-                  disabled={diagnosingStartingLocations}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {diagnosingStartingLocations ? 'Diagnosing...' : 'Diagnose Starting Locations'}
-                </Button>
+                {/* Global Diagnostics */}
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Global Analysis
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Button
+                      className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      onClick={handleDiagnoseTribeLocations}
+                      disabled={diagnosingTribeLocations}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      {diagnosingTribeLocations ? 'Diagnosing...' : 'All Tribes'}
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      onClick={handleDiagnoseStartingLocations}
+                      disabled={diagnosingStartingLocations}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      {diagnosingStartingLocations ? 'Diagnosing...' : 'Starting Locations'}
+                    </Button>
+                  </div>
+                </div>
 
-                <div className="border-t border-neutral-600 pt-4">
-                  <p className="text-neutral-400 text-sm mb-3">Or diagnose a specific tribe for focused analysis:</p>
+                {/* Single Tribe Analysis */}
+                <div className="bg-gradient-to-br from-indigo-800 to-indigo-900 rounded-xl p-4 border border-indigo-700">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Single Tribe Analysis
+                  </h3>
+                  <p className="text-indigo-200 text-sm mb-3">Focused analysis of a specific tribe:</p>
                   <div className="space-y-3">
                     <input
                       type="text"
                       placeholder="Enter tribe name (e.g., The Scorched Earth)"
                       value={singleTribeName}
                       onChange={(e) => setSingleTribeName(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 bg-indigo-700/50 border border-indigo-600 rounded-lg text-white placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                     />
-                    <Button
-                      className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                      onClick={handleDiagnoseSingleTribeLocation}
-                      disabled={diagnosingSingleTribe || !singleTribeName.trim()}
-                    >
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      {diagnosingSingleTribe ? 'Diagnosing...' : 'Diagnose Single Tribe'}
-                    </Button>
-                    <Button
-                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                      onClick={handleInvestigateTribeOrigin}
-                      disabled={investigatingTribeOrigin || !singleTribeName.trim()}
-                    >
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {investigatingTribeOrigin ? 'Investigating...' : 'Investigate Database Origin'}
-                    </Button>
-                    <Button
-                      className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                      onClick={handleInvestigateAllLocationFields}
-                      disabled={investigatingAllLocationFields || !singleTribeName.trim()}
-                    >
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                      {investigatingAllLocationFields ? 'Investigating...' : 'Show All Database Fields'}
-                    </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <Button
+                        className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                        onClick={handleDiagnoseSingleTribeLocation}
+                        disabled={diagnosingSingleTribe || !singleTribeName.trim()}
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        {diagnosingSingleTribe ? 'Analyzing...' : 'Location'}
+                      </Button>
+                      <Button
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                        onClick={handleInvestigateTribeOrigin}
+                        disabled={investigatingTribeOrigin || !singleTribeName.trim()}
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {investigatingTribeOrigin ? 'Checking...' : 'Origin'}
+                      </Button>
+                      <Button
+                        className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                        onClick={handleInvestigateAllLocationFields}
+                        disabled={investigatingAllLocationFields || !singleTribeName.trim()}
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        {investigatingAllLocationFields ? 'Showing...' : 'All Fields'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-800 to-purple-900 rounded-xl p-6 border border-purple-700 shadow-lg">
-                  <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                    <svg className="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Home Permanence System */}
+                <div className="bg-gradient-to-br from-purple-800 to-purple-900 rounded-xl p-4 border border-purple-700">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
                     </svg>
                     Home Permanence System
                   </h3>
-                  <p className="text-purple-200 mb-4 text-sm">
+                  <p className="text-purple-200 mb-3 text-sm">
                     Backfill originalStartingLocation field for existing tribes using exploration pattern analysis.
                   </p>
                   <Button
@@ -2232,25 +2301,47 @@ GAME STATISTICS:
                     onClick={handleBackfillOriginalStartingLocations}
                     disabled={backfillingOriginalHomes}
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
                     </svg>
                     {backfillingOriginalHomes ? 'Backfilling...' : 'Backfill Original Home Locations'}
                   </Button>
                 </div>
 
-                <div className="text-sm text-neutral-400">
-                  <p><strong>What these tools do:</strong></p>
-                  <ul className="list-disc list-inside space-y-1 mt-2">
-                    <li><strong>All Tribes:</strong> Compares database vs game state for all tribes</li>
-                    <li><strong>Starting Locations:</strong> Shows which tribes are displaced from starting locations</li>
-                    <li><strong>Single Tribe:</strong> Focused analysis of one specific tribe</li>
-                    <li><strong>Database Origin:</strong> Deep dive into database records, creation dates, and garrison history</li>
-                    <li><strong>All Database Fields:</strong> Shows every field in the tribe record to find hidden location data</li>
-                    <li><strong>Backfill Original Homes:</strong> Populates originalStartingLocation field for existing tribes</li>
-                    <li>Identifies coordinate transformation issues and collision problems</li>
-                    <li>Results appear in server logs</li>
-                  </ul>
+                {/* Tool Descriptions */}
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border border-gray-700">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Tool Reference
+                  </h3>
+                  <div className="text-sm text-gray-300 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="font-semibold text-purple-400 mb-1">Global Analysis:</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li><strong>All Tribes:</strong> Database vs game state comparison</li>
+                          <li><strong>Starting Locations:</strong> Displaced tribe detection</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-indigo-400 mb-1">Single Tribe:</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li><strong>Location:</strong> Focused tribe analysis</li>
+                          <li><strong>Origin:</strong> Database records & history</li>
+                          <li><strong>All Fields:</strong> Complete database dump</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-600">
+                      <p className="font-semibold text-purple-400 mb-1">Home Permanence:</p>
+                      <p className="text-xs">Populates originalStartingLocation field using exploration pattern analysis</p>
+                    </div>
+                    <div className="pt-2 border-t border-gray-600">
+                      <p className="text-xs text-gray-400"><strong>Note:</strong> All results appear in server logs. Tools identify coordinate transformation issues and collision problems.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -2588,6 +2679,76 @@ GAME STATISTICS:
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   Update Announcement
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto Deadline Settings Modal */}
+      {showAutoDeadlineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">Auto Deadline Settings</h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="autoDeadlineEnabled"
+                  checked={autoDeadlineEnabled}
+                  onChange={(e) => setAutoDeadlineEnabled(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-neutral-700 border-neutral-600 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="autoDeadlineEnabled" className="text-sm font-medium text-white">
+                  Enable automatic turn deadlines
+                </label>
+              </div>
+
+              {autoDeadlineEnabled && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Daily deadline time (24-hour format):
+                  </label>
+                  <input
+                    type="time"
+                    value={autoDeadlineTime}
+                    onChange={(e) => setAutoDeadlineTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Deadlines will be set automatically for this time each day when turns advance
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 rounded bg-purple-900/20 border border-purple-600">
+                <p className="text-sm font-medium text-purple-300">
+                  Current Settings:
+                </p>
+                <p className="text-sm text-purple-200">
+                  Auto deadlines: {gameState.autoDeadlineSettings?.enabled ? 'Enabled' : 'Disabled'}
+                </p>
+                {gameState.autoDeadlineSettings?.enabled && (
+                  <p className="text-sm text-purple-200">
+                    Time: {gameState.autoDeadlineSettings.timeOfDay}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowAutoDeadlineModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateAutoDeadlineSettings}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Update Settings
                 </Button>
               </div>
             </div>

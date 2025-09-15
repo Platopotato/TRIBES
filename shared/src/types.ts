@@ -621,6 +621,7 @@ export interface GameState {
     ticker?: TickerState;
     loginAnnouncements?: LoginAnnouncementState;
     turnDeadline?: TurnDeadline;
+    autoDeadlineSettings?: AutoDeadlineSettings;
     newsletter?: NewsletterState;
     suspended?: boolean;
     suspensionMessage?: string;
@@ -654,6 +655,12 @@ export interface TurnDeadline {
     turn: number;
     deadline: number; // timestamp
     isActive: boolean;
+}
+
+export interface AutoDeadlineSettings {
+    enabled: boolean;
+    timeOfDay: string; // "20:00" format (24-hour)
+    timezone: string; // e.g., "Europe/London", "America/New_York"
 }
 
 export type TickerPriority = 'normal' | 'important' | 'urgent';

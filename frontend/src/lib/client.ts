@@ -464,6 +464,7 @@ export const toggleLoginAnnouncements = () => socket.emit('admin:toggleLoginAnno
 // Turn deadline emitters
 export const setTurnDeadline = createEmitter<any>('admin:setTurnDeadline');
 export const clearTurnDeadline = () => socket.emit('admin:clearTurnDeadline');
+export const updateAutoDeadlineSettings = createEmitter<any>('admin:updateAutoDeadlineSettings');
 
 // Admin password management
 export const updateAdminPassword = createEmitter<string>('admin:updateAdminPassword');

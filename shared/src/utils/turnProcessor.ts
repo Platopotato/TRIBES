@@ -519,23 +519,19 @@ function describeNeutralEncounter(tribeA: any, tribeB: any, destKey: string, sta
 
 export function processGlobalTurn(gameState: GameState): GameState {
     // CRITICAL FIX: Normalize all tribe coordinates BEFORE any processing
-    console.log(`🔧 NORMALIZING COORDINATES: Ensuring all garrison keys are in standard format`);
     gameState.tribes.forEach((tribe: any) => {
         normalizeTribeCoordinates(tribe);
     });
 
-    // CHIEF INTEGRITY CHECK: Log chief status before turn processing
-    console.log(`👑 PRE-TURN CHIEF STATUS (Turn ${gameState.turn}):`);
+    // CHIEF INTEGRITY CHECK: Validate chief status before turn processing
     gameState.tribes.forEach((tribe: any) => {
         const activeChiefs = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) =>
             sum + (garrison.chiefs?.length || 0), 0);
         const injuredChiefs = tribe.injuredChiefs?.length || 0;
         const prisoners = tribe.prisoners?.length || 0;
 
-        console.log(`  ${tribe.tribeName}: ${activeChiefs} active, ${injuredChiefs} injured, ${prisoners} prisoners`);
-
         if (activeChiefs === 0 && injuredChiefs === 0) {
-            console.log(`  ⚠️ WARNING: ${tribe.tribeName} has NO ACTIVE CHIEFS!`);
+            console.log(`⚠️ WARNING: ${tribe.tribeName} has NO ACTIVE CHIEFS!`);
         }
     });
 
@@ -616,7 +612,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
 
     // Process each tribe's actions
     for (const tribe of state.tribes) {
-        console.log(`🔄 PROCESSING TRIBE: ${tribe.tribeName} (${tribe.actions?.length || 0} actions)`);
+
 
         // Clear previous results: now done globally before the loop to avoid wiping
         // defender reports added during other tribes' actions.
@@ -628,7 +624,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // Process each action with timeout protection
         for (let actionIndex = 0; actionIndex < (tribe.actions || []).length; actionIndex++) {
             const action = tribe.actions[actionIndex];
-            console.log(`🎯 PROCESSING ACTION ${actionIndex + 1}/${tribe.actions.length} for ${tribe.tribeName}: ${action.actionType}`);
+
             let result = '';
 
             // DEBUG: Action processing debugging removed for shared package compatibility
@@ -637,36 +633,26 @@ export function processGlobalTurn(gameState: GameState): GameState {
             // Validate action data
             if (!action.actionData) {
                 result = `❌ Invalid action: ${action.actionType} - missing action data.`;
-                console.log(`❌ ACTION VALIDATION FAILED: ${tribe.tribeName} - ${action.actionType} missing data`);
+
             } else {
-                console.log(`⚙️ PROCESSING: ${tribe.tribeName} - ${action.actionType} with data:`, JSON.stringify(action.actionData));
+
 
                 try {
                     switch (action.actionType) {
                     case ActionType.Recruit:
-                        console.log(`👥 Processing Recruit for ${tribe.tribeName}`);
                         result = processRecruitAction(tribe, action);
-                        console.log(`✅ Recruit completed for ${tribe.tribeName}`);
                         break;
                     case ActionType.Rest:
-                        console.log(`😴 Processing Rest for ${tribe.tribeName}`);
                         result = processRestAction(tribe, action);
-                        console.log(`✅ Rest completed for ${tribe.tribeName}`);
                         break;
                     case ActionType.BuildOutpost:
-                        console.log(`🏗️ Processing BuildOutpost for ${tribe.tribeName}`);
                         result = processBuildOutpostAction(tribe, action, state);
-                        console.log(`✅ BuildOutpost completed for ${tribe.tribeName}`);
                         break;
                     case ActionType.BuildWeapons:
-                        console.log(`🔨 Processing BuildWeapons for ${tribe.tribeName}`);
                         result = processBuildWeaponsAction(tribe, action);
-                        console.log(`✅ BuildWeapons completed for ${tribe.tribeName}`);
                         break;
                     case ActionType.Move:
-                        console.log(`🚶 Processing Move for ${tribe.tribeName}`);
                         result = processMoveAction(tribe, action, state);
-                        console.log(`✅ Move completed for ${tribe.tribeName}`);
                         break;
                 case ActionType.Trade:
                     result = processTradeAction(tribe, action, state);
@@ -731,7 +717,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     result = processReduceTroopsAction(tribe, action);
                     break;
                 default:
-                    console.log(`❓ Unknown action type for ${tribe.tribeName}: ${action.actionType}`);
+
                     result = `${action.actionType} action processed (basic implementation).`;
                 }
                 } catch (actionError) {
@@ -740,7 +726,7 @@ export function processGlobalTurn(gameState: GameState): GameState {
                 }
             }
 
-            console.log(`📝 STORING RESULT for ${tribe.tribeName} action ${actionIndex + 1}: ${result}`);
+
             tribe.lastTurnResults.push({
                 id: action.id,
                 actionType: action.actionType,
@@ -749,12 +735,8 @@ export function processGlobalTurn(gameState: GameState): GameState {
             });
         }
 
-        console.log(`✅ COMPLETED ALL ACTIONS for ${tribe.tribeName}`);
-
         // Basic upkeep
-        console.log(`🔧 PROCESSING UPKEEP for ${tribe.tribeName}`);
         processBasicUpkeep(tribe, state);
-        console.log(`✅ UPKEEP COMPLETED for ${tribe.tribeName}`);
 
         // CRITICAL: Complete turn state reset (same as Force Refresh admin function)
         tribe.actions = [];
@@ -763,11 +745,10 @@ export function processGlobalTurn(gameState: GameState): GameState {
         // CLEAN STATE: Ready for next turn
         // Backend will automatically clear lastTurnResults via applyForceRefreshToAllTribes
 
-        // DEBUGGING: State reset completed for tribe
-        console.log(`🔄 STATE RESET COMPLETED for ${tribe.tribeName}`);
+        // State reset completed for tribe
     }
 
-    console.log(`🎯 ALL TRIBES PROCESSED - Moving to journeys and events`);
+
 
     // Process active journeys
     processActiveJourneys(state);
@@ -800,14 +781,15 @@ export function processGlobalTurn(gameState: GameState): GameState {
     // This ensures players can add actions for the next turn
     applyForceRefreshToAllTribes(state);
 
-    // CHIEF TRACKING: Log chief counts for debugging disappearances
+    // AUTOMATIC DEADLINE SETTING: Set deadline for next turn if enabled
+    setAutomaticTurnDeadline(state);
+
+    // CHIEF TRACKING: Validate chief counts for elimination detection
     state.tribes.forEach((tribe: any) => {
         const totalChiefs = Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) =>
             sum + (garrison.chiefs?.length || 0), 0);
         const injuredChiefs = tribe.injuredChiefs?.length || 0;
         const prisoners = tribe.prisoners?.length || 0;
-
-        console.log(`👑 CHIEF COUNT - ${tribe.tribeName}: ${totalChiefs} active, ${injuredChiefs} injured, ${prisoners} prisoners`);
 
         if (totalChiefs === 0 && injuredChiefs === 0 && prisoners === 0) {
             console.log(`⚠️ WARNING: ${tribe.tribeName} has NO CHIEFS anywhere!`);
@@ -877,13 +859,57 @@ export function processGlobalTurn(gameState: GameState): GameState {
     return state;
 }
 
+// AUTOMATIC TURN DEADLINE SETTING: Set deadline for next turn if auto-deadlines are enabled
+function setAutomaticTurnDeadline(state: any): void {
+    // Initialize auto deadline settings if not present
+    if (!state.autoDeadlineSettings) {
+        state.autoDeadlineSettings = {
+            enabled: true, // Default to enabled
+            timeOfDay: "20:00", // Default to 8PM
+            timezone: "Europe/London" // Default timezone
+        };
+    }
+
+    // Skip if auto deadlines are disabled
+    if (!state.autoDeadlineSettings.enabled) {
+        return;
+    }
+
+    try {
+        // Calculate next deadline at specified time
+        const now = new Date();
+        const [hours, minutes] = state.autoDeadlineSettings.timeOfDay.split(':').map(Number);
+
+        // Create deadline for today at specified time
+        let deadlineDate = new Date();
+        deadlineDate.setHours(hours, minutes, 0, 0);
+
+        // If the time has already passed today, set for tomorrow
+        if (deadlineDate <= now) {
+            deadlineDate.setDate(deadlineDate.getDate() + 1);
+        }
+
+        // Set the turn deadline
+        state.turnDeadline = {
+            turn: state.turn,
+            deadline: deadlineDate.getTime(),
+            isActive: true
+        };
+
+        console.log(`⏰ AUTO-DEADLINE: Set deadline for turn ${state.turn} at ${deadlineDate.toLocaleString()}`);
+    } catch (error) {
+        console.error('❌ Error setting automatic turn deadline:', error);
+        // Don't fail turn processing if deadline setting fails
+    }
+}
+
 function processTradeAgreements(state: any): void {
     if (!state.tradeAgreements) {
         state.tradeAgreements = [];
         return;
     }
 
-    console.log(`🚛 PROCESSING TRADE AGREEMENTS: ${state.tradeAgreements.length} active agreements`);
+
 
     // Process each active trade agreement
     state.tradeAgreements.forEach((agreement: any) => {
@@ -893,7 +919,7 @@ function processTradeAgreements(state: any): void {
         const toTribe = state.tribes.find((t: any) => t.id === agreement.toTribeId);
 
         if (!fromTribe || !toTribe) {
-            console.log(`❌ Trade agreement ${agreement.id}: One or both tribes not found`);
+
             agreement.status = 'cancelled';
             return;
         }
@@ -928,7 +954,7 @@ function processTradeAgreements(state: any): void {
                 result: `❌ Trade agreement with ${insufficientTribe.tribeName} cancelled - they couldn't afford the exchange.`
             });
 
-            console.log(`❌ Trade agreement cancelled: ${insufficientTribe.tribeName} insufficient resources`);
+
             return;
         }
 
@@ -988,9 +1014,6 @@ function processTradeAgreements(state: any): void {
                 result: `📜 Trade agreement with ${fromTribe.tribeName} has expired.`
             });
 
-            console.log(`📜 Trade agreement expired: ${fromTribe.tribeName} ↔ ${toTribe.tribeName}`);
-        } else {
-            console.log(`🚛 Trade executed: ${fromTribe.tribeName} ↔ ${toTribe.tribeName} (${agreement.duration} turns left)`);
         }
     });
 
@@ -1000,7 +1023,7 @@ function processTradeAgreements(state: any): void {
 
 // RANDOM EVENTS SYSTEM: Process environmental events, discoveries, and encounters
 function processRandomEvents(state: any): void {
-    console.log(`🎲 Processing random events for turn ${state.turn}...`);
+
 
     state.tribes.forEach((tribe: any) => {
         // Skip eliminated tribes
@@ -1009,10 +1032,10 @@ function processRandomEvents(state: any): void {
         // Increased chance for random events (25% per tribe per turn for better visibility)
         const EVENT_CHANCE = 0.25;
 
-        console.log(`🎲 Checking random events for ${tribe.tribeName} (${(EVENT_CHANCE * 100).toFixed(0)}% chance)...`);
+
 
         if (Math.random() < EVENT_CHANCE) {
-            console.log(`🎲 Event triggered for ${tribe.tribeName}, generating event...`);
+
             const event = generateRandomEvent(tribe, state);
             if (event) {
                 // Apply event effects
@@ -1026,12 +1049,7 @@ function processRandomEvents(state: any): void {
                     result: event.message
                 });
 
-                console.log(`🎲 ✅ Random event applied to ${tribe.tribeName}: ${event.type}`);
-            } else {
-                console.log(`🎲 ❌ No applicable events found for ${tribe.tribeName}`);
             }
-        } else {
-            console.log(`🎲 No event triggered for ${tribe.tribeName} this turn`);
         }
     });
 }
@@ -1073,9 +1091,7 @@ function generateRandomEvent(tribe: any, state: any): any {
     // Filter events based on tribe conditions
     const availableEvents = events.filter(event => isEventApplicable(event, tribe, state));
 
-    console.log(`🎲 ${tribe.tribeName}: ${availableEvents.length}/${events.length} events available`);
     if (availableEvents.length === 0) {
-        console.log(`🎲 ${tribe.tribeName}: No applicable events (troops: ${Object.values(tribe.garrisons || {}).reduce((sum: number, garrison: any) => sum + garrison.troops, 0)}, food: ${tribe.globalResources?.food || 0}, scrap: ${tribe.globalResources?.scrap || 0}, morale: ${tribe.globalResources?.morale || 50})`);
         return null;
     }
 

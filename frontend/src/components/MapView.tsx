@@ -764,9 +764,15 @@ const MapView: React.FC<MapViewProps> = (props) => {
         }
 
         // ENHANCED TRIBE INFORMATION: Show detailed tribe info when hovering over occupied hexes
-        const tribesOnHex = visibleTribesByLocation.get(hexCoords) || [];
-        if (tribesOnHex.length > 0) {
-          const tribeDetails = tribesOnHex.map(tribe => {
+        // FIXED: Check ALL tribes for garrisons at this location, not just visible ones (fixes fog of war tooltip issue)
+        const tribesWithGarrisonsHere = allTribes.filter(tribe =>
+          tribe.garrisons &&
+          tribe.garrisons[hexCoords] &&
+          (tribe.garrisons[hexCoords].troops > 0 || (tribe.garrisons[hexCoords].chiefs?.length || 0) > 0)
+        );
+
+        if (tribesWithGarrisonsHere.length > 0) {
+          const tribeDetails = tribesWithGarrisonsHere.map(tribe => {
             const garrison = tribe.garrisons[hexCoords];
             const troops = garrison?.troops || 0;
             const weapons = garrison?.weapons || 0;

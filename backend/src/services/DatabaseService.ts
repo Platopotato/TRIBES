@@ -1047,7 +1047,8 @@ export class DatabaseService {
       const converted = this.convertDbGameStateToGameState(gameState);
       const news = this.getNewsletterStateFromDb(gameState);
       const turnDeadline = this.getTurnDeadlineFromDb(gameState);
-      return { ...converted, newsletter: news, turnDeadline };
+      const autoDeadlineSettings = this.getAutoDeadlineSettingsFromDb(gameState);
+      return { ...converted, newsletter: news, turnDeadline, autoDeadlineSettings };
     } else {
       // File-based fallback
       const state = this.getGameStateFromFile();
@@ -1136,18 +1137,43 @@ export class DatabaseService {
     }
   }
 
+  // Database-based auto deadline settings methods
+  private getAutoDeadlineSettingsFromDb(dbGameState: any): any {
+    try {
+      if (dbGameState.autoDeadlineSettings && typeof dbGameState.autoDeadlineSettings === 'object') {
+        console.log(`⏰ Loaded auto deadline settings from DATABASE`);
+        return dbGameState.autoDeadlineSettings;
+      }
+
+      // Default settings if not found
+      console.log(`⏰ Database autoDeadlineSettings field empty, using defaults`);
+      return {
+        enabled: true,
+        timeOfDay: "20:00",
+        timezone: "Europe/London"
+      };
+    } catch (error) {
+      console.error('❌ Error loading auto deadline settings from database:', error);
+      return {
+        enabled: true,
+        timeOfDay: "20:00",
+        timezone: "Europe/London"
+      };
+    }
+  }
+
   // Legacy file-based methods (for fallback during migration)
   public getTurnDeadlineState(): TurnDeadline | undefined { return this.readTurnDeadlineState(); }
   public setTurnDeadlineState(d?: TurnDeadline): void { this.writeTurnDeadlineState(d); }
 
   async updateGameState(gameState: GameState, skipValidation: boolean = false): Promise<void> {
     if (this.useDatabase && this.prisma) {
-      // Update database (now includes newsletter, turnDeadline, and diplomaticMessages)
+      // Update database (now includes newsletter, turnDeadline, autoDeadlineSettings, and diplomaticMessages)
       await this.updateGameStateInDb(gameState);
       // Persist turn deadline separately in file (since DB schema doesn’t include it)
       // Keep file backups for newsletter and turn deadline during migration period
       this.setNewsletterState(gameState.newsletter || { newsletters: [], currentNewsletter: undefined });
-      this.setTurnDeadlineState(gameState.turnDeadline);
+
       // Persist diplomatic messages using dual-write (database + file backup)
       if (gameState.diplomaticMessages) {
         await this.saveDiplomaticMessagesDualWrite(gameState.diplomaticMessages);
@@ -1897,7 +1923,8 @@ export class DatabaseService {
               turn: gameState.turn,
               startingLocations: gameState.startingLocations,
               newsletter: gameState.newsletter as any,
-              // turnDeadline: gameState.turnDeadline as any, // Commented out due to schema mismatch
+              turnDeadline: gameState.turnDeadline as any,
+              autoDeadlineSettings: gameState.autoDeadlineSettings as any,
               suspended: gameState.suspended || false,
               suspensionMessage: gameState.suspensionMessage || null
             }

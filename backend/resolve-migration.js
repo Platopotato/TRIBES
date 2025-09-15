@@ -73,6 +73,24 @@ async function resolveMigration() {
     } else {
       console.log('✅ originalStartingLocation column already exists');
     }
+
+    // Check if the autoDeadlineSettings column already exists
+    const autoDeadlineSettingsExists = await prisma.$queryRaw`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'game_states'
+      AND column_name = 'autoDeadlineSettings'
+    `;
+
+    if (autoDeadlineSettingsExists.length === 0) {
+      console.log('🔧 Adding autoDeadlineSettings column...');
+      await prisma.$executeRaw`
+        ALTER TABLE "game_states" ADD COLUMN "autoDeadlineSettings" JSON
+      `;
+      console.log('✅ autoDeadlineSettings column added successfully');
+    } else {
+      console.log('✅ autoDeadlineSettings column already exists');
+    }
     
     // Only run Prisma resolve if we actually fixed a failed migration
     if (needsResolve) {

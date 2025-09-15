@@ -91,6 +91,24 @@ async function resolveMigration() {
     } else {
       console.log('✅ autoDeadlineSettings column already exists');
     }
+
+    // Check if the loginAnnouncements column already exists
+    const loginAnnouncementsExists = await prisma.$queryRaw`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'game_states'
+      AND column_name = 'loginAnnouncements'
+    `;
+
+    if (loginAnnouncementsExists.length === 0) {
+      console.log('🔧 Adding loginAnnouncements column...');
+      await prisma.$executeRaw`
+        ALTER TABLE "game_states" ADD COLUMN "loginAnnouncements" JSON
+      `;
+      console.log('✅ loginAnnouncements column added successfully');
+    } else {
+      console.log('✅ loginAnnouncements column already exists');
+    }
     
     // Only run Prisma resolve if we actually fixed a failed migration
     if (needsResolve) {

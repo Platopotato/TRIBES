@@ -125,6 +125,7 @@ import { AuthService } from './services/AuthService.js';
 import { SocketHandler } from './services/SocketHandler.js';
 import { AutoBackupService } from './services/AutoBackupService.js';
 import { AnnouncementService } from './services/AnnouncementService.js';
+import { TickerPriority } from '../../shared/dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -170,11 +171,37 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Login announcement endpoints
+// Login announcement endpoints (now database-based)
 app.get('/api/login-announcement', async (req: Request, res: Response) => {
   try {
-    const announcement = await AnnouncementService.getLoginAnnouncement();
-    res.json({ announcement });
+    const gameState = await gameService.getGameState();
+    if (!gameState || !gameState.loginAnnouncements || !gameState.loginAnnouncements.isEnabled) {
+      res.json({ announcement: null });
+      return;
+    }
+
+    // Find the most recent active announcement
+    const activeAnnouncements = gameState.loginAnnouncements.announcements
+      .filter(a => a.isActive)
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    if (activeAnnouncements.length === 0) {
+      res.json({ announcement: null });
+      return;
+    }
+
+    // Convert to old format for compatibility
+    const announcement = activeAnnouncements[0];
+    const legacyFormat = {
+      enabled: true,
+      title: announcement.title,
+      message: announcement.message,
+      type: announcement.priority === 'urgent' ? 'error' :
+            announcement.priority === 'important' ? 'warning' : 'info',
+      lastUpdated: new Date(announcement.createdAt).toISOString()
+    };
+
+    res.json({ announcement: legacyFormat });
   } catch (error) {
     console.error('❌ Error fetching login announcement:', error);
     res.json({ announcement: null });
@@ -184,18 +211,41 @@ app.get('/api/login-announcement', async (req: Request, res: Response) => {
 app.post('/api/login-announcement', async (req: Request, res: Response) => {
   try {
     const { enabled, title, message, type } = req.body;
-    const success = await AnnouncementService.updateLoginAnnouncement({
-      enabled: enabled ?? true,
-      title: title || '',
-      message: message || '',
-      type: type || 'info'
-    });
+    const gameState = await gameService.getGameState();
 
-    if (success) {
-      res.json({ success: true, message: 'Announcement updated successfully' });
-    } else {
-      res.status(500).json({ success: false, message: 'Failed to update announcement' });
+    if (!gameState) {
+      res.status(500).json({ success: false, message: 'Game state not found' });
+      return;
     }
+
+    // Initialize login announcements if not present
+    if (!gameState.loginAnnouncements) {
+      gameState.loginAnnouncements = { announcements: [], isEnabled: true };
+    }
+
+    // Update enabled state
+    gameState.loginAnnouncements.isEnabled = enabled ?? true;
+
+    if (enabled && title && message) {
+      // Deactivate all existing announcements
+      gameState.loginAnnouncements.announcements.forEach(a => a.isActive = false);
+
+      // Add new announcement
+      const newAnnouncement = {
+        id: `announcement-${Date.now()}`,
+        title: title.trim(),
+        message: message.trim(),
+        priority: (type === 'error' ? 'urgent' :
+                  type === 'warning' ? 'important' : 'normal') as TickerPriority,
+        isActive: true,
+        createdAt: Date.now()
+      };
+
+      gameState.loginAnnouncements.announcements.push(newAnnouncement);
+    }
+
+    await gameService.updateGameState(gameState);
+    res.json({ success: true, message: 'Announcement updated successfully' });
   } catch (error) {
     console.error('❌ Error updating login announcement:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });

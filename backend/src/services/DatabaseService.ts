@@ -1048,7 +1048,8 @@ export class DatabaseService {
       const news = this.getNewsletterStateFromDb(gameState);
       const turnDeadline = this.getTurnDeadlineFromDb(gameState);
       const autoDeadlineSettings = this.getAutoDeadlineSettingsFromDb(gameState);
-      return { ...converted, newsletter: news, turnDeadline, autoDeadlineSettings };
+      const loginAnnouncements = this.getLoginAnnouncementsFromDb(gameState);
+      return { ...converted, newsletter: news, turnDeadline, autoDeadlineSettings, loginAnnouncements };
     } else {
       // File-based fallback
       const state = this.getGameStateFromFile();
@@ -1158,6 +1159,29 @@ export class DatabaseService {
         enabled: true,
         timeOfDay: "20:00",
         timezone: "Europe/London"
+      };
+    }
+  }
+
+  // Database-based login announcements methods
+  private getLoginAnnouncementsFromDb(dbGameState: any): any {
+    try {
+      if (dbGameState.loginAnnouncements && typeof dbGameState.loginAnnouncements === 'object') {
+        console.log(`📢 Loaded login announcements from DATABASE`);
+        return dbGameState.loginAnnouncements;
+      }
+
+      // Default settings if not found
+      console.log(`📢 Database loginAnnouncements field empty, using defaults`);
+      return {
+        announcements: [],
+        isEnabled: true
+      };
+    } catch (error) {
+      console.error('❌ Error loading login announcements from database:', error);
+      return {
+        announcements: [],
+        isEnabled: true
       };
     }
   }
@@ -1925,6 +1949,7 @@ export class DatabaseService {
               newsletter: gameState.newsletter as any,
               turnDeadline: gameState.turnDeadline as any,
               autoDeadlineSettings: gameState.autoDeadlineSettings as any,
+              loginAnnouncements: gameState.loginAnnouncements as any,
               suspended: gameState.suspended || false,
               suspensionMessage: gameState.suspensionMessage || null
             }

@@ -1583,7 +1583,7 @@ GAME STATISTICS:
           <div className="space-y-8">
 
 
-            <Card title="Login Announcements (File-Based)" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+            <Card title="Login Announcements (Database-Based)" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">

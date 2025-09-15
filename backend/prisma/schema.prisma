@@ -36,6 +36,7 @@ model GameState {
   diplomaticMessages   Json?  // Diplomatic messages (DiplomaticMessage[])
   turnDeadline         Json?  // Turn deadline data (TurnDeadline)
   autoDeadlineSettings Json?  // Auto deadline settings (AutoDeadlineSettings)
+  loginAnnouncements   Json?  // Login announcements (LoginAnnouncementState)
   suspended            Boolean @default(false)  // Game suspension status
   suspensionMessage    String? // Custom maintenance message
   createdAt            DateTime @default(now())

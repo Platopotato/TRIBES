@@ -3896,11 +3896,14 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
 
             case 'Vault':
                 // Vaults require special discovery processing - redirect to vault discovery
+                console.log(`🏛️ SCAVENGE VAULT DEBUG: Processing vault scavenging at ${location} for ${tribe.tribeName}`);
                 const vaultDiscovery = processVaultDiscoveryScavenging(tribe, location, state);
                 if (vaultDiscovery) {
+                    console.log(`✅ SCAVENGE VAULT DEBUG: Vault discovery successful via scavenging`);
                     return vaultDiscovery; // Return the vault discovery message directly
                 }
                 // If vault already discovered, treat as ruins
+                console.log(`⚠️ SCAVENGE VAULT DEBUG: Vault already discovered, treating as ruins`);
                 poiBonus = 2;
                 poiMessage = ' 🏛️ The depleted vault still contains some salvageable materials.';
                 break;
@@ -4193,7 +4196,15 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         // Check for vault discovery rewards and bonus turns
         let vaultDiscoveryMessage = '';
         if (!defendersRemain) {
+            console.log(`🏛️ VAULT DEBUG: Checking vault discovery at ${targetLocation} for ${tribe.tribeName}`);
             vaultDiscoveryMessage = processVaultDiscovery(tribe, targetLocation, state);
+            if (vaultDiscoveryMessage) {
+                console.log(`✅ VAULT DEBUG: Vault discovery successful - rewards granted`);
+            } else {
+                console.log(`❌ VAULT DEBUG: No vault discovery rewards (not a vault or already discovered)`);
+            }
+        } else {
+            console.log(`⚠️ VAULT DEBUG: Vault discovery skipped - defenders remain at ${targetLocation}`);
         }
 
         // Generate epic battle narrative for attacker victory
@@ -6037,13 +6048,28 @@ function getHexByLocation(location: string): any {
 
 // Process vault discovery rewards and bonus turns
 function processVaultDiscovery(attackerTribe: any, location: string, state: any): string {
+    console.log(`🏛️ VAULT DISCOVERY DEBUG: Processing vault at ${location} for ${attackerTribe.tribeName}`);
+
     // Find the hex data for this location
     const { q, r } = parseHexCoords(location);
     const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
 
-    if (!hexData || !hexData.poi || hexData.poi.type !== POIType.Vault) {
+    if (!hexData) {
+        console.log(`❌ VAULT DEBUG: No hex data found for ${location}`);
+        return ''; // No hex data
+    }
+
+    if (!hexData.poi) {
+        console.log(`❌ VAULT DEBUG: No POI at ${location}`);
+        return ''; // No POI
+    }
+
+    if (hexData.poi.type !== POIType.Vault) {
+        console.log(`❌ VAULT DEBUG: POI at ${location} is ${hexData.poi.type}, not a Vault`);
         return ''; // Not a vault
     }
+
+    console.log(`✅ VAULT DEBUG: Valid vault found at ${location}, processing rewards...`);
 
     // Calculate substantial vault discovery rewards
     const baseReward = {
@@ -6273,8 +6299,12 @@ Your forces have successfully destroyed the ${defeatedTribe.tribeName} and claim
 
 // Process bonus turns from various sources (vaults, bandit conquests, etc.)
 function processBonusTurns(state: any): void {
+    console.log(`🎯 BONUS TURN DEBUG: Processing bonus turns for all tribes`);
+
     state.tribes.forEach((tribe: any) => {
         if (tribe.bonusTurns && tribe.bonusTurns > 0) {
+            console.log(`🎯 BONUS TURN DEBUG: ${tribe.tribeName} has ${tribe.bonusTurns} bonus turns, granting one now`);
+
             // Grant bonus turn by allowing the tribe to submit actions again
             tribe.turnSubmitted = false;
             tribe.actions = []; // Clear current actions to allow new planning

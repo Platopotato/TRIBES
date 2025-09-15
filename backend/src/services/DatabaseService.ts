@@ -2009,6 +2009,30 @@ export class DatabaseService {
         const existingUsers = await tx.user.findMany({ select: { id: true } });
         const existingUserIds = new Set(existingUsers.map(u => u.id));
 
+        // FIXED: Create AI users FIRST to avoid foreign key constraint violations
+        console.log(`🤖 Creating AI users before processing tribes...`);
+        const aiTribes = gameState.tribes.filter(t => t.isAI && t.playerId);
+        for (const aiTribe of aiTribes) {
+          if (!existingUserIds.has(aiTribe.playerId!)) {
+            try {
+              await tx.user.create({
+                data: {
+                  id: aiTribe.playerId!,
+                  username: aiTribe.playerName,
+                  passwordHash: 'AI_NO_PASSWORD',
+                  role: 'player',
+                  securityQuestion: 'AI',
+                  securityAnswerHash: 'AI_NO_ANSWER'
+                }
+              });
+              existingUserIds.add(aiTribe.playerId!);
+              console.log(`✅ AI user created in transaction: ${aiTribe.playerId}`);
+            } catch (error) {
+              console.error(`❌ Failed to create AI user ${aiTribe.playerId}:`, error);
+            }
+          }
+        }
+
         let createdTribes = 0;
         let skippedTribes = 0;
 

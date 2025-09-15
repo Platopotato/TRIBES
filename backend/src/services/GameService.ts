@@ -982,42 +982,16 @@ export class GameService {
       garrisons: Object.keys(aiTribe.garrisons)
     });
 
-    // FIXED: Proper AI tribe creation with database user handling
+    // FIXED: AI user creation now handled in database transaction
     console.log(`🤖 AI tribe ready: ${aiTribe.tribeName} (${aiTribe.aiType}) at ${aiTribe.location}`);
     console.log(`🤖 AI tribe playerId: ${aiTribe.playerId}`);
+    console.log(`🤖 About to save game state with AI tribe (user creation handled in transaction)...`);
 
-    // Create AI user in database if using database storage
-    if (this.databaseService.isUsingDatabase()) {
-      console.log(`🤖 Creating AI user in database: ${aiTribe.playerId}`);
-      try {
-        await this.databaseService.createAIUser({
-          id: aiTribe.playerId!,
-          username: aiTribe.playerName,
-          role: 'player'
-        });
-      } catch (error) {
-        console.error(`❌ Failed to create AI user in database:`, error);
-        return false;
-      }
-    }
-
-    console.log(`🤖 About to save game state with AI tribe...`);
-
-    // FIXED: Proper database handling for AI tribes
-    console.log(`🤖 Saving AI tribe to database with proper user creation`);
+    // FIXED: AI user creation now handled in database transaction
+    console.log(`🤖 Saving AI tribe to database (user creation handled in transaction)`);
     try {
-      // Create AI user in database if using database storage
-      if (this.databaseService.isUsingDatabase()) {
-        console.log(`🤖 Creating AI user in database: ${aiTribe.playerId}`);
-        await this.databaseService.createAIUser({
-          id: aiTribe.playerId!,
-          username: aiTribe.playerName,
-          role: 'player'
-        });
-      }
-
       await this.updateGameState(gameState);
-      console.log(`🤖 AI TRIBE: Game state saved successfully`);
+      console.log(`✅ AI TRIBE: Game state saved successfully`);
 
     } catch (error) {
       console.error(`❌ AI tribe creation failed:`, error);
@@ -1025,6 +999,7 @@ export class GameService {
       const tribeIndex = gameState.tribes.findIndex(t => t.id === aiTribe.id);
       if (tribeIndex !== -1) {
         gameState.tribes.splice(tribeIndex, 1);
+        console.log(`🧹 Removed failed AI tribe from game state`);
       }
       return false;
     }

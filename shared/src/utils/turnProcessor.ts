@@ -595,13 +595,18 @@ export function processGlobalTurn(gameState: GameState): GameState {
     state.tribes.forEach(tribe => {
         if (tribe.isAI && !tribe.turnSubmitted) {
             try {
-                tribe.actions = generateAIActions(tribe, state.tribes, state.mapData);
+                console.log(`🤖 Generating actions for AI tribe: ${tribe.tribeName} (${tribe.aiType})`);
+                const generatedActions = generateAIActions(tribe, state.tribes, state.mapData);
+                tribe.actions = generatedActions;
                 tribe.turnSubmitted = true;
                 aiTribesProcessed++;
+                console.log(`✅ AI tribe ${tribe.tribeName} generated ${generatedActions.length} actions`);
             } catch (error) {
+                console.error(`❌ AI action generation failed for tribe ${tribe.tribeName}:`, error);
                 // Fallback to empty actions if AI generation fails
                 tribe.actions = [];
                 tribe.turnSubmitted = true;
+                console.log(`⚠️ AI tribe ${tribe.tribeName} falling back to no actions`);
             }
         }
     });
@@ -679,9 +684,6 @@ export function processGlobalTurn(gameState: GameState): GameState {
                     break;
                 case ActionType.RespondToPrisonerExchange:
                     result = processPrisonerExchangeResponseAction(tribe, action, state);
-                    break;
-
-
                     break;
                 case ActionType.RespondToTrade:
                     result = processTradeResponseAction(tribe, action, state);

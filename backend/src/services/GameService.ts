@@ -536,12 +536,23 @@ export class GameService {
     // Add AI actions for tribes that haven't submitted
     console.log('🤖 GAMESERVICE: Processing AI tribes...');
     let aiTribesProcessed = 0;
+    const aiTribes = gameState.tribes.filter(t => t.isAI);
+    console.log(`🤖 GAMESERVICE: Found ${aiTribes.length} AI tribes total`);
+
     gameState.tribes.forEach(tribe => {
       if (tribe.isAI && !tribe.turnSubmitted) {
-        console.log(`🤖 GAMESERVICE: Generating AI actions for tribe ${tribe.tribeName}`);
-        tribe.actions = generateAIActions(tribe, gameState.tribes, gameState.mapData);
-        tribe.turnSubmitted = true;
-        aiTribesProcessed++;
+        console.log(`🤖 GAMESERVICE: Generating AI actions for tribe ${tribe.tribeName} (${tribe.aiType})`);
+        try {
+          const actions = generateAIActions(tribe, gameState.tribes, gameState.mapData);
+          tribe.actions = actions;
+          tribe.turnSubmitted = true;
+          aiTribesProcessed++;
+          console.log(`✅ GAMESERVICE: AI tribe ${tribe.tribeName} generated ${actions.length} actions`);
+        } catch (error) {
+          console.error(`❌ GAMESERVICE: AI action generation failed for ${tribe.tribeName}:`, error);
+          tribe.actions = [];
+          tribe.turnSubmitted = true;
+        }
       }
     });
     console.log(`🤖 GAMESERVICE: Processed ${aiTribesProcessed} AI tribes`);
@@ -971,30 +982,50 @@ export class GameService {
       garrisons: Object.keys(aiTribe.garrisons)
     });
 
-    // SIMPLIFIED: Skip database user creation since we're using file storage workaround
-    console.log(`🤖 AI tribe ready for file storage: ${aiTribe.tribeName} (${aiTribe.aiType}) at ${aiTribe.location}`);
+    // FIXED: Proper AI tribe creation with database user handling
+    console.log(`🤖 AI tribe ready: ${aiTribe.tribeName} (${aiTribe.aiType}) at ${aiTribe.location}`);
     console.log(`🤖 AI tribe playerId: ${aiTribe.playerId}`);
-    console.log(`🤖 Skipping database user creation - using file storage workaround`);
 
-    // Note: When using file storage, AI tribes don't need user records in database
-    // The constraint violation only happens with database storage
+    // Create AI user in database if using database storage
+    if (this.databaseService.isUsingDatabase()) {
+      console.log(`🤖 Creating AI user in database: ${aiTribe.playerId}`);
+      try {
+        await this.databaseService.createAIUser({
+          id: aiTribe.playerId!,
+          username: aiTribe.playerName,
+          role: 'player'
+        });
+      } catch (error) {
+        console.error(`❌ Failed to create AI user in database:`, error);
+        return false;
+      }
+    }
 
     console.log(`🤖 About to save game state with AI tribe...`);
 
-    // TEMPORARY WORKAROUND: Force file storage for AI tribe creation to avoid database constraints
-    console.log(`🤖 Using file storage workaround to avoid database constraint issues`);
+    // FIXED: Proper database handling for AI tribes
+    console.log(`🤖 Saving AI tribe to database with proper user creation`);
     try {
-      // Temporarily switch to file storage mode
-      const originalMode = this.databaseService.temporarilyUseFileStorage();
+      // Create AI user in database if using database storage
+      if (this.databaseService.isUsingDatabase()) {
+        console.log(`🤖 Creating AI user in database: ${aiTribe.playerId}`);
+        await this.databaseService.createAIUser({
+          id: aiTribe.playerId!,
+          username: aiTribe.playerName,
+          role: 'player'
+        });
+      }
 
       await this.updateGameState(gameState);
-      console.log(`🤖 AI TRIBE DEBUG: Game state saved to file storage successfully`);
-
-      // Restore original storage mode
-      this.databaseService.restoreStorageMode(originalMode);
+      console.log(`🤖 AI TRIBE: Game state saved successfully`);
 
     } catch (error) {
-      console.error(`❌ File storage fallback failed:`, error);
+      console.error(`❌ AI tribe creation failed:`, error);
+      // Remove the AI tribe from game state if database save failed
+      const tribeIndex = gameState.tribes.findIndex(t => t.id === aiTribe.id);
+      if (tribeIndex !== -1) {
+        gameState.tribes.splice(tribeIndex, 1);
+      }
       return false;
     }
 

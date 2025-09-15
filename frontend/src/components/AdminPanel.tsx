@@ -549,6 +549,30 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     }
   };
 
+  const handleDiagnoseAI = () => {
+    const aiTribes = gameState.tribes.filter(t => t.isAI);
+    if (aiTribes.length === 0) {
+      alert('No AI tribes found to diagnose');
+      return;
+    }
+
+    let diagnostics = `🤖 AI TRIBES DIAGNOSTIC REPORT\n\n`;
+    diagnostics += `Total AI Tribes: ${aiTribes.length}\n\n`;
+
+    aiTribes.forEach((tribe, index) => {
+      diagnostics += `${index + 1}. ${tribe.tribeName}\n`;
+      diagnostics += `   Type: ${tribe.aiType || 'Unknown'}\n`;
+      diagnostics += `   Location: ${tribe.location}\n`;
+      diagnostics += `   Turn Submitted: ${tribe.turnSubmitted ? 'Yes' : 'No'}\n`;
+      diagnostics += `   Actions: ${tribe.actions?.length || 0}\n`;
+      diagnostics += `   Troops: ${Object.values(tribe.garrisons || {}).reduce((sum: number, g: any) => sum + (g.troops || 0), 0)}\n`;
+      diagnostics += `   Food: ${tribe.globalResources?.food || 0}\n`;
+      diagnostics += `   Scrap: ${tribe.globalResources?.scrap || 0}\n\n`;
+    });
+
+    alert(diagnostics);
+  };
+
   // Set up backup status callback and fetch initial status
   useEffect(() => {
     const handleBackupStatus = (status: BackupStatus, backupList: BackupFile[]) => {
@@ -3052,6 +3076,13 @@ GAME STATISTICS:
                 <span className="text-neutral-300">
                   Managing {gameState.tribes.filter(t => t.isAI).length} AI tribes
                 </span>
+                <Button
+                  onClick={handleDiagnoseAI}
+                  className="bg-blue-600 hover:bg-blue-700 text-sm"
+                  disabled={gameState.tribes.filter(t => t.isAI).length === 0}
+                >
+                  🔍 Diagnose AI
+                </Button>
                 <Button
                   onClick={handleBulkRemoveAI}
                   className="bg-red-600 hover:bg-red-700 text-sm"

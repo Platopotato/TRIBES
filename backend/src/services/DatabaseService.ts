@@ -1465,17 +1465,20 @@ export class DatabaseService {
     }
   }
 
-  // Temporary storage mode switching for AI tribe workaround
+  // DEPRECATED: Temporary storage mode switching (no longer needed)
+  // These methods are kept for backward compatibility but should not be used
   temporarilyUseFileStorage(): boolean {
-    const originalMode = this.useDatabase;
-    this.useDatabase = false;
-    console.log(`🔄 Temporarily switched to file storage mode`);
-    return originalMode;
+    console.warn(`⚠️ temporarilyUseFileStorage() is deprecated - AI tribes now work with database storage`);
+    return this.useDatabase;
   }
 
   restoreStorageMode(originalMode: boolean): void {
-    this.useDatabase = originalMode;
-    console.log(`🔄 Restored storage mode to: ${originalMode ? 'database' : 'file'}`);
+    console.warn(`⚠️ restoreStorageMode() is deprecated - AI tribes now work with database storage`);
+  }
+
+  // Check if currently using database storage
+  isUsingDatabase(): boolean {
+    return this.useDatabase && this.prisma !== null;
   }
 
   async createUser(user: User): Promise<void> {

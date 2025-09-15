@@ -353,9 +353,9 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
               const yStep = size * 0.3;
               const startY = -size * 0.45;
 
-              // For outposts, include owner tribe even if not visible
+              // For outposts and fortified POIs, include owner tribe even if not visible
               let tribesWithGarrisons = [...(tribesOnHex || [])];
-              if (poi.type === POIType.Outpost && ownerTribe && !tribesWithGarrisons.some(t => String(t.id) === String(ownerTribe.id))) {
+              if ((poi.type === POIType.Outpost || poi.fortified) && ownerTribe && !tribesWithGarrisons.some(t => String(t.id) === String(ownerTribe.id))) {
                 tribesWithGarrisons.push(ownerTribe);
               }
 
@@ -396,10 +396,11 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
               return <>{overlays}</>;
             })()}
 
-            {poi.type === POIType.Outpost && outpostOwnerId && (
+            {/* OWNERSHIP DISPLAY: Show tribe shield for both Outposts and Fortified POIs */}
+            {outpostOwnerId && (poi.type === POIType.Outpost || poi.fortified) && (
               <g transform={`translate(${size * 0.45}, ${-size * 0.45})`}>
                 <circle cx="0" cy="0" r={size * 0.22} fill="#111827" stroke="rgba(0,0,0,0.6)" strokeWidth="0.5" />
-                {/* owner tribe badge (falls back to playerTribe if they own the outpost) */}
+                {/* owner tribe badge (falls back to playerTribe if they own the outpost/fortified POI) */}
                 {ownerTribe && (() => {
                   const icon = TRIBE_ICONS[ownerTribe.icon] || TRIBE_ICONS['castle'];
                   return (

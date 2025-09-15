@@ -899,6 +899,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
                       size={HEX_SIZE}
                       tribesOnHex={tribesOnHex}
                       playerTribe={playerTribe}
+                      allTribes={allTribes}
                       isInPlayerInfluence={isInInfluence}
                       isFogged={!isPoliticalMode && !isExplored}
                       isSelectable={(selectionMode || paintMode) && hex.terrain !== 'Water'}

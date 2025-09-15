@@ -8,6 +8,7 @@ interface HexagonProps {
   size: number;
   tribesOnHex: Tribe[] | undefined;
   playerTribe: Tribe | undefined;
+  allTribes: Tribe[]; // All tribes for ownership lookup regardless of visibility
   isInPlayerInfluence: boolean;
   isFogged: boolean;
   isSelectable: boolean;
@@ -23,7 +24,7 @@ interface HexagonProps {
 }
 
 export const Hexagon: React.FC<HexagonProps> = (props) => {
-  const { hexData, size, tribesOnHex, playerTribe, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
+  const { hexData, size, tribesOnHex, playerTribe, allTribes, isInPlayerInfluence, isFogged, isSelectable, startOrder, onClick, onMouseDown, onMouseOver, onMouseEnter, onMouseLeave, onTouchEnd, isPoliticalMode, politicalData } = props;
 
   const { q, r, terrain, poi } = hexData;
 
@@ -54,9 +55,10 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
   const ownerTribe: Tribe | undefined = React.useMemo(() => {
     if (!outpostOwnerId) return undefined;
     if (playerTribe && String(playerTribe.id) === String(outpostOwnerId)) return playerTribe;
-    const fromVisible = (tribesOnHex || []).find(t => String(t.id) === String(outpostOwnerId));
-    return fromVisible;
-  }, [outpostOwnerId, playerTribe, tribesOnHex]);
+    // FIXED: Look in ALL tribes, not just visible ones (fixes fog of war ownership display)
+    const fromAllTribes = allTribes.find(t => String(t.id) === String(outpostOwnerId));
+    return fromAllTribes;
+  }, [outpostOwnerId, playerTribe, allTribes]);
   const width = Math.sqrt(3) * size;
   const height = 2 * size;
 

@@ -5105,22 +5105,22 @@ function processPOIPassiveIncome(tribe: any, state?: any): { message: string } {
                 break;
 
             case 'Food Source':
-                // Food Sources produce food at 3x troop count, capped at 800 per turn
+                // Food Sources produce food at 3x troop count, capped at 500 per turn
                 const rawFoodFromSource = troopCount * 3;
-                const foodFromSource = Math.min(rawFoodFromSource, 800);
+                const foodFromSource = Math.min(rawFoodFromSource, 500);
                 tribe.globalResources.food += foodFromSource;
                 totalFoodIncome += foodFromSource;
-                const foodSourceCapMessage = rawFoodFromSource > 800 ? ` ⚠️ Large garrison capped at 800 food per turn.` : '';
+                const foodSourceCapMessage = rawFoodFromSource > 500 ? ` ⚠️ Large garrison capped at 500 food per turn.` : '';
                 incomeMessages.push(`🍎 Food Source at ${location}: ${troopCount} troops harvested ${foodFromSource} food${foodSourceCapMessage}`);
                 break;
 
             case 'Scrapyard':
-                // Scrapyards produce scrap at 3x troop count, capped at 800 per turn
+                // Scrapyards produce scrap at 3x troop count, capped at 500 per turn
                 const rawScrapFromYard = troopCount * 3;
-                const scrapFromYard = Math.min(rawScrapFromYard, 800);
+                const scrapFromYard = Math.min(rawScrapFromYard, 500);
                 tribe.globalResources.scrap += scrapFromYard;
                 totalScrapIncome += scrapFromYard;
-                const scrapyardCapMessage = rawScrapFromYard > 800 ? ` ⚠️ Large garrison capped at 800 scrap per turn.` : '';
+                const scrapyardCapMessage = rawScrapFromYard > 500 ? ` ⚠️ Large garrison capped at 500 scrap per turn.` : '';
                 incomeMessages.push(`⚙️ Scrapyard at ${location}: ${troopCount} troops salvaged ${scrapFromYard} scrap${scrapyardCapMessage}`);
                 break;
 

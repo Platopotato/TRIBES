@@ -3786,9 +3786,32 @@ function processScavengeAction(tribe: any, action: any, state?: any): string {
     // Convert coordinates to standard format
     const location = convertToStandardFormat(locationRaw);
 
-    // Prevent scavenging where player has a garrison - source already gathered
-    if (tribe.garrisons[location]) {
-        return `❌ The source at ${location} has already been gathered by your stationed garrison. No additional resources obtained.`;
+    // Check if this location has a POI that provides passive income
+    let locationPoi = null;
+    if (state?.mapData) {
+        const { q, r } = parseHexCoords(location);
+        const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
+        if (hexData) {
+            // Check for POI - handle both direct poi object and separate poi fields
+            if (hexData.poi) {
+                locationPoi = hexData.poi;
+            } else if (hexData.poiType) {
+                locationPoi = {
+                    type: hexData.poiType,
+                    rarity: hexData.poiRarity || 'Common',
+                    difficulty: hexData.poiDifficulty || 5
+                };
+            }
+        }
+    }
+
+    // Only prevent scavenging if garrison exists AND POI provides passive income
+    if (tribe.garrisons[location] && locationPoi) {
+        const passiveIncomePOIs = ['Factory', 'Mine', 'Food Source', 'Scrapyard', 'Research Lab'];
+        if (passiveIncomePOIs.includes(locationPoi.type)) {
+            return `❌ The ${locationPoi.type} at ${location} is already being worked by your stationed garrison. No additional resources obtained.`;
+        }
+        // For non-passive POIs (Weapons Cache, Settlement, etc.), allow scavenging even with garrison
     }
 
     // Add to explored hexes

@@ -1519,6 +1519,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   }
                 }}
                 homeBaseLocation={playerTribe?.location}
+                centerOnLocation={draftAction?.actionData?.location} // Center on selected garrison for destination selection
                 highlightedHex={selectedHexForAction || highlightedHex}
                 selectedHexForAction={selectedHexForAction}
                 pendingHexSelection={pendingHexSelection}
@@ -1683,6 +1684,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 setSelectedHex(location);
               }}
               homeBaseLocation={playerTribe?.location}
+              centerOnLocation={draftAction?.actionData?.location} // Center on selected garrison for destination selection
             />
 
             {/* Hex Selection Confirmation Dialog */}

@@ -23,6 +23,7 @@ interface MapViewProps {
   highlightedHex?: {q: number, r: number} | null;
   selectedHexForAction?: {q: number, r: number} | null; // Currently selected hex for actions
   pendingHexSelection?: {q: number, r: number} | null; // Hex being previewed for selection
+  centerOnLocation?: string; // Location to center on when opening map (overrides homeBaseLocation for destination selection)
 }
 
 const MAP_RADIUS = 40;
@@ -174,7 +175,7 @@ const JourneyIcon: React.FC<{ journey: Journey; tribe: Tribe | undefined; isPlay
 
 
 const MapView: React.FC<MapViewProps> = (props) => {
-  const { mapData, playerTribe, allTribes, journeys, journeyLabels, startingLocations, selectionMode, onHexSelect, paintMode = false, onHexPaintStart, onHexPaint, onHexPaintEnd, homeBaseLocation, territoryData, highlightedHex, selectedHexForAction, pendingHexSelection } = props;
+  const { mapData, playerTribe, allTribes, journeys, journeyLabels, startingLocations, selectionMode, onHexSelect, paintMode = false, onHexPaintStart, onHexPaint, onHexPaintEnd, homeBaseLocation, territoryData, highlightedHex, selectedHexForAction, pendingHexSelection, centerOnLocation } = props;
   
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -280,22 +281,50 @@ const MapView: React.FC<MapViewProps> = (props) => {
     }
   }, [homeBaseLocation]);
 
-  // Auto-center on home base when selection mode is activated (destination selection)
-  // Only center ONCE when selection mode first activates, no delayed jumping
+  // Auto-center when selection mode is activated (destination selection)
+  // Center on selected garrison location if available, otherwise home base
   useEffect(() => {
-    if (selectionMode && homeBaseLocation) {
+    if (selectionMode) {
       // Detect if mobile device
       const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
 
       if (!isMobileDevice) {
-        // Use regular home centering instead of destination-specific centering
-        console.log('🎯 Centering on home base for destination selection (desktop only)...');
-        handleCenterOnHome();
+        // Use centerOnLocation (selected garrison) if available, otherwise home base
+        const targetLocation = centerOnLocation || homeBaseLocation;
+        if (targetLocation) {
+          console.log('🎯 Centering for destination selection (desktop only)...', {
+            centerOnLocation,
+            homeBaseLocation,
+            targetLocation
+          });
+
+          // Create a temporary centering function for the target location
+          const centerOnTarget = () => {
+            const { q, r } = parseHexCoords(targetLocation);
+            const { x: targetX, y: targetY } = hexToPixel(q, r, HEX_SIZE);
+
+            const zoom = 3.0;
+            const hexOffsetY = HEX_SIZE * 8 * zoom; // Move up by 8 hexes (scaled by zoom)
+            const newX = (mapWidth / 2 - targetX) * zoom;
+            const newY = (mapHeight / 2 - targetY) * zoom - hexOffsetY; // SUBTRACT to move UP
+
+            console.log('🎯 Destination selection centering:', {
+              target: { q, r },
+              targetPixel: { x: targetX, y: targetY },
+              mapDimensions: { width: mapWidth, height: mapHeight },
+              newView: { x: newX, y: newY, zoom }
+            });
+
+            setView({ x: newX, y: newY, zoom: zoom });
+          };
+
+          centerOnTarget();
+        }
       } else {
         console.log('📱 Mobile device detected - skipping auto-centering for destination selection');
       }
     }
-  }, [selectionMode, homeBaseLocation, handleCenterOnHomeForDestinationSelection]);
+  }, [selectionMode, centerOnLocation, homeBaseLocation, mapWidth, mapHeight]);
 
   // --- FOG OF WAR & VISIBILITY CALCULATION ---
   const { exploredSet, influenceSet, visibleTribesByLocation } = useMemo(() => {

@@ -5766,7 +5766,7 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
     // Process mission results
     const result = executeSabotageOperation(
         tribe, targetTribe, sabotage_type, finalResourceTarget, finalAmount,
-        hasTroops ? troops : 0, movingChiefs, missionSuccess, detected, target_location
+        hasTroops ? troops : 0, movingChiefs, missionSuccess, detected, target_location, state
     );
 
     return result;
@@ -5782,7 +5782,8 @@ function executeSabotageOperation(
     chiefs: any[],
     success: boolean,
     detected: boolean,
-    targetLocation: string
+    targetLocation: string,
+    state: any
 ): string {
     const targetGarrison = targetTribe.garrisons[targetLocation];
     let operativesCaptured = 0;
@@ -5861,7 +5862,7 @@ function executeSabotageOperation(
             return executeResearchDestruction(targetTribe, targetLocation, detected, operativesCaptured, chiefsCaptured);
 
         case 'Sabotage Outpost':
-            return executeOutpostSabotage(targetTribe, targetGarrison, targetLocation, detected, operativesCaptured, chiefsCaptured);
+            return executeOutpostSabotage(targetTribe, targetGarrison, targetLocation, detected, operativesCaptured, chiefsCaptured, state);
 
         case 'Poison Supplies':
             return executePoisonSupplies(targetTribe, targetGarrison, targetLocation, detected, operativesCaptured, chiefsCaptured);
@@ -6031,9 +6032,11 @@ function executeResearchDestruction(targetTribe: any, targetLocation: string, de
     return `💥 **RESEARCH SABOTAGED** Destroyed ${progressToDestroy} research points from ${tech?.name || 'Unknown Technology'} at ${targetLocation}.${captureText}`;
 }
 
-function executeOutpostSabotage(targetTribe: any, targetGarrison: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[]): string {
-    const hex = getHexByLocation(targetLocation);
-    const hasOutpost = hex?.poi && (hex.poi.type === 'Outpost' || hex.poi.fortified);
+function executeOutpostSabotage(targetTribe: any, targetGarrison: any, targetLocation: string, detected: boolean, operativesCaptured: number, chiefsCaptured: string[], state: any): string {
+    const hex = getHexByLocation(targetLocation, state);
+    const hasOutpost = hex?.poi && (hex.poi.type === POIType.Outpost || hex.poi.fortified);
+
+    console.log(`🔍 OUTPOST SABOTAGE DEBUG: Location ${targetLocation}, Hex found: ${!!hex}, POI: ${hex?.poi?.type}, Fortified: ${hex?.poi?.fortified}, Has outpost: ${hasOutpost}`);
 
     if (!hasOutpost) {
         const captureText = operativesCaptured > 0 || chiefsCaptured.length > 0
@@ -6085,11 +6088,22 @@ function executePoisonSupplies(targetTribe: any, targetGarrison: any, targetLoca
     return `☠️ **SUPPLIES POISONED** ${troopsAffected} troops at ${targetLocation} poisoned for 3 turns! Their combat effectiveness is reduced.${captureText}`;
 }
 
-// Helper function to get hex by location (you may need to adjust this based on your hex system)
-function getHexByLocation(location: string): any {
-    // This is a placeholder - you'll need to implement based on your hex coordinate system
-    // For now, return null to avoid errors
-    return null;
+// Helper function to get hex by location
+function getHexByLocation(location: string, state?: any): any {
+    if (!state?.mapData) {
+        console.log(`⚠️ getHexByLocation: No state.mapData available for location ${location}`);
+        return null;
+    }
+
+    try {
+        const { q, r } = parseHexCoords(location);
+        const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
+        console.log(`🔍 getHexByLocation: Found hex at ${location}:`, hex ? 'YES' : 'NO', hex?.poi ? `POI: ${hex.poi.type}${hex.poi.fortified ? ' (fortified)' : ''}` : 'No POI');
+        return hex;
+    } catch (error) {
+        console.error(`❌ getHexByLocation: Error parsing location ${location}:`, error);
+        return null;
+    }
 }
 
 // Process vault discovery rewards and bonus turns

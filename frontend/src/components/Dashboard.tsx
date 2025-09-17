@@ -61,6 +61,7 @@ interface DashboardProps {
   onChangePassword: () => void;
   onOpenNewspaper: () => void;
   onProposeAlliance: (toTribeId: string) => void;
+  onCancelAlliance: (toTribeId: string) => void;
   onSueForPeace: (toTribeId: string, reparations: { food: number, scrap: number, weapons: number }) => void;
   onDeclareWar: (toTribeId: string) => void;
   onAcceptProposal: (proposalId: string) => void;
@@ -73,7 +74,7 @@ interface DashboardProps {
 type DashboardView = 'planning' | 'results' | 'waiting';
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, diplomaticMessages = [], history, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
+  const { currentUser, playerTribe, allTribes, turn, mapData, startingLocations, allChiefRequests, allAssetRequests, journeys, diplomaticProposals, diplomaticMessages = [], history, onFinalizeTurn, onRequestChief, onRequestAsset, onUpdateTribe, onLogout, onNavigateToAdmin, onNavigateToLeaderboard, onChangePassword, onOpenNewspaper, onProposeAlliance, onCancelAlliance, onSueForPeace, onDeclareWar, onAcceptProposal, onRejectProposal, onToggleMapSharing, turnDeadline, uiMode = 'mobile' } = props;
 
   // Smart UI detection - mobile gets floating modals, desktop gets integrated windows
   const isMobileDevice = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent);
@@ -1384,9 +1385,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   diplomaticProposals={diplomaticProposals}
                   nonAggressionPacts={[]}
                   turn={turn}
-
                   onAcceptProposal={onAcceptProposal}
                   onRejectProposal={onRejectProposal}
+                  onProposeAlliance={onProposeAlliance}
+                  onCancelAlliance={onCancelAlliance}
+                  onDeclareWar={onDeclareWar}
                 />
               )}
             </div>
@@ -1841,9 +1844,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     diplomaticProposals={diplomaticProposals}
                     nonAggressionPacts={[]}
                     turn={turn}
-
                     onAcceptProposal={onAcceptProposal}
                     onRejectProposal={onRejectProposal}
+                    onProposeAlliance={onProposeAlliance}
+                    onCancelAlliance={onCancelAlliance}
+                    onDeclareWar={onDeclareWar}
                   />
                 </div>
               </div>

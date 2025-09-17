@@ -533,6 +533,7 @@ export const addAITribeLegacy = (aiType?: string) => socket.emit('add_ai_tribe',
 
 // Diplomacy emitters
 export const proposeAlliance = createEmitter<{ fromTribeId: string, toTribeId: string }>('propose_alliance');
+export const cancelAlliance = createEmitter<{ fromTribeId: string, toTribeId: string }>('cancel_alliance');
 export const sueForPeace = createEmitter<{ fromTribeId: string, toTribeId: string, reparations: any }>('sue_for_peace');
 export const declareWar = createEmitter<{ fromTribeId: string, toTribeId: string }>('declare_war');
 export const acceptProposal = createEmitter<string>('accept_proposal');

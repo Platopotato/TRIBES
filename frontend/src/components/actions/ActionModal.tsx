@@ -800,6 +800,7 @@ const ActionModal: React.FC<ActionModalProps> = (props) => {
   const renderDiplomaticActionSelect = (field: ActionField, value: string) => {
     const diplomaticActions = [
       { value: 'propose_alliance', label: '🤝 Propose Alliance', description: 'Formal alliance proposal' },
+      { value: 'cancel_alliance', label: '💔 Cancel Alliance', description: 'End existing alliance (return to neutral)' },
       { value: 'declare_war', label: '⚔️ Declare War', description: 'Immediate war declaration' },
       { value: 'sue_for_peace', label: '🕊️ Sue for Peace', description: 'Peace proposal with reparations' },
       { value: 'propose_non_aggression_pact', label: '🕊️ Propose Non-Aggression Pact', description: 'Temporary peace agreement' }

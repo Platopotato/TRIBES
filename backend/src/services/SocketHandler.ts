@@ -454,6 +454,36 @@ export class SocketHandler {
       }
     });
 
+    socket.on('cancel_alliance', async ({ fromTribeId, toTribeId }) => {
+      const gameState = await this.gameService.getGameState();
+      if (gameState) {
+        const fromTribe = gameState.tribes.find(t => t.id === fromTribeId);
+        const toTribe = gameState.tribes.find(t => t.id === toTribeId);
+        if (fromTribe && toTribe) {
+          // Check if they are actually allied
+          const currentRelation = fromTribe.diplomacy[toTribeId];
+          if (currentRelation?.status === DiplomaticStatus.Alliance) {
+            // Cancel alliance - set both to neutral
+            fromTribe.diplomacy[toTribeId] = { status: DiplomaticStatus.Neutral };
+            toTribe.diplomacy[fromTribeId] = { status: DiplomaticStatus.Neutral };
+
+            // Add notification to target tribe
+            toTribe.lastTurnResults.push({
+              id: `alliance-cancelled-${Date.now()}`,
+              actionType: 'Diplomacy' as any,
+              actionData: {},
+              result: `💔 **ALLIANCE CANCELLED** ${fromTribe.tribeName} has cancelled your alliance. Your diplomatic status is now Neutral.`
+            });
+
+            await this.gameService.updateGameState(gameState);
+            await emitGameState();
+
+            console.log(`💔 Alliance cancelled: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+          }
+        }
+      }
+    });
+
     socket.on('declare_war', async ({ fromTribeId, toTribeId }) => {
       const gameState = await this.gameService.getGameState();
       if (gameState) {

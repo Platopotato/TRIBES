@@ -170,6 +170,7 @@ export interface DiplomaticRelation {
 
 export enum DiplomaticActionType {
     ProposeAlliance = 'ProposeAlliance',
+    CancelAlliance = 'CancelAlliance',
     SueForPeace = 'SueForPeace',
     SendPeaceEnvoy = 'SendPeaceEnvoy',
     SendDemands = 'SendDemands',

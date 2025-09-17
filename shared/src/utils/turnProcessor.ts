@@ -7025,6 +7025,46 @@ function processProposeAllianceAction(tribe: any, action: any, state: any): stri
     return `🤝 **ALLIANCE PROPOSED** You have proposed a formal alliance to ${targetTribe.tribeName}. Awaiting their response.`;
 }
 
+function processCancelAllianceAction(tribe: any, action: any, state: any): string {
+    const { target_tribe } = action.actionData;
+
+    if (!target_tribe) {
+        return `❌ Alliance cancellation failed: No target tribe specified.`;
+    }
+
+    const targetTribe = state.tribes.find((t: any) => t.id === target_tribe);
+    if (!targetTribe) {
+        return `❌ Alliance cancellation failed: Target tribe not found.`;
+    }
+
+    if (targetTribe.id === tribe.id) {
+        return `❌ Cannot cancel alliance with yourself.`;
+    }
+
+    // Check current diplomatic status
+    const currentRelation = tribe.diplomacy[targetTribe.id];
+    if (currentRelation?.status !== DiplomaticStatus.Alliance) {
+        return `❌ You are not currently allied with ${targetTribe.tribeName}.`;
+    }
+
+    // Cancel the alliance - set both tribes to neutral
+    if (!tribe.diplomacy) tribe.diplomacy = {};
+    if (!targetTribe.diplomacy) targetTribe.diplomacy = {};
+
+    tribe.diplomacy[targetTribe.id] = { status: DiplomaticStatus.Neutral };
+    targetTribe.diplomacy[tribe.id] = { status: DiplomaticStatus.Neutral };
+
+    // Notify target tribe
+    targetTribe.lastTurnResults.push({
+        id: `alliance-cancelled-${Date.now()}`,
+        actionType: action.actionType,
+        actionData: {},
+        result: `💔 **ALLIANCE CANCELLED** ${tribe.tribeName} has cancelled your alliance. Your diplomatic status is now Neutral.`
+    });
+
+    return `💔 **ALLIANCE CANCELLED** You have cancelled your alliance with ${targetTribe.tribeName}. Your diplomatic status is now Neutral.`;
+}
+
 function processDeclareWarAction(tribe: any, action: any, state: any): string {
     const { target_tribe } = action.actionData;
 
@@ -7182,6 +7222,8 @@ function processDiplomacyAction(tribe: any, action: any, state: any): string {
     switch (diplomatic_action) {
         case 'propose_alliance':
             return processProposeAllianceAction(tribe, subAction, state);
+        case 'cancel_alliance':
+            return processCancelAllianceAction(tribe, subAction, state);
         case 'declare_war':
             return processDeclareWarAction(tribe, subAction, state);
         case 'sue_for_peace':

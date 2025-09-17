@@ -334,7 +334,6 @@ const App: React.FC = () => {
     client.addAITribeSimple(aiType);
   };
   const handleProposeAlliance = (fromTribeId: string, toTribeId: string) => client.proposeAlliance({ fromTribeId, toTribeId });
-  const handleCancelAlliance = (fromTribeId: string, toTribeId: string) => client.cancelAlliance({ fromTribeId, toTribeId });
   const handleSueForPeace = (fromTribeId: string, toTribeId: string, reparations: { food: number; scrap: number; weapons: number; }) => client.sueForPeace({ fromTribeId, toTribeId, reparations });
   const handleAcceptProposal = (proposalId: string) => client.acceptProposal(proposalId);
   const handleRejectProposal = (proposalId: string) => client.rejectProposal(proposalId);
@@ -552,7 +551,6 @@ const App: React.FC = () => {
             onChangePassword={() => setShowChangePasswordModal(true)}
             onOpenNewspaper={handleOpenNewspaper}
             onProposeAlliance={(toTribeId) => playerTribe && handleProposeAlliance(playerTribe.id, toTribeId)}
-            onCancelAlliance={(toTribeId) => playerTribe && handleCancelAlliance(playerTribe.id, toTribeId)}
             onSueForPeace={(toTribeId, reparations) => playerTribe && handleSueForPeace(playerTribe.id, toTribeId, reparations)}
             onDeclareWar={(toTribeId) => playerTribe && handleDeclareWar(playerTribe.id, toTribeId)}
             onAcceptProposal={handleAcceptProposal}

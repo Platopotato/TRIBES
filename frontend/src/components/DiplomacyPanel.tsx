@@ -18,9 +18,6 @@ interface DiplomacyPanelProps {
   turn: number;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
-  onProposeAlliance?: (toTribeId: string) => void;
-  onCancelAlliance?: (toTribeId: string) => void;
-  onDeclareWar?: (toTribeId: string) => void;
 }
 
 const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
@@ -31,10 +28,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     nonAggressionPacts = [],
     turn,
     onAcceptProposal,
-    onRejectProposal,
-    onProposeAlliance,
-    onCancelAlliance,
-    onDeclareWar
+    onRejectProposal
   } = props;
 
   // Simplified status display only
@@ -169,34 +163,6 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                   <div className="text-xs italic text-yellow-400 mt-1">
                     Proposal pending
                   </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-1">
-                {relation.status === DiplomaticStatus.Alliance && onCancelAlliance && (
-                  <Button
-                    onClick={() => onCancelAlliance(tribe.id)}
-                    className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    💔 Cancel Alliance
-                  </Button>
-                )}
-                {relation.status === DiplomaticStatus.Neutral && onProposeAlliance && !isProposalPending && (
-                  <Button
-                    onClick={() => onProposeAlliance(tribe.id)}
-                    className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    🤝 Propose Alliance
-                  </Button>
-                )}
-                {relation.status !== DiplomaticStatus.War && onDeclareWar && !isTruceActive && (
-                  <Button
-                    onClick={() => onDeclareWar(tribe.id)}
-                    className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    ⚔️ Declare War
-                  </Button>
                 )}
               </div>
             </div>

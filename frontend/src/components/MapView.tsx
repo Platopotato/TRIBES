@@ -739,7 +739,7 @@ const MapView: React.FC<MapViewProps> = (props) => {
   };
 
   const handleHexMouseEnter = (q: number, r: number, event: React.MouseEvent) => {
-    if (isPanning || paintMode || selectionMode) return;
+    if (isPanning || paintMode) return;
     if (mapContainerRef.current) {
       const rect = mapContainerRef.current.getBoundingClientRect();
       const hexCoords = formatHexCoords(q, r);
@@ -747,7 +747,19 @@ const MapView: React.FC<MapViewProps> = (props) => {
       let content = `Hex: ${hexCoords}`;
       const territoryInfo = territoryData?.get(hexCoords);
 
-      if (isPoliticalMode) {
+      // Enhanced tooltips for selection mode
+      if (selectionMode) {
+        const hex = mapData.find(h => formatHexCoords(h.q, h.r) === hexCoords);
+        if (hex) {
+          content = `📍 ${hexCoords} - ${hex.terrain}`;
+          if (hex.poi) {
+            content += ` (${hex.poi.type}${hex.poi.fortified ? ' - Fortified' : ''})`;
+          }
+          if (territoryInfo) {
+            content += ` - ${territoryInfo.tribeName}`;
+          }
+        }
+      } else if (isPoliticalMode) {
           if (territoryInfo) {
               content = territoryInfo.tribeName;
           } else {

@@ -1069,7 +1069,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               {selectedHexInfo && (
                 <div className="bg-slate-700 p-2 rounded text-sm">
                   <div className="text-amber-400 font-bold">
-                    Selected: ({selectedHexInfo.q}, {selectedHexInfo.r})
+                    Selected: {formatHexCoords(selectedHexInfo.q, selectedHexInfo.r)}
                   </div>
                   <div className="text-slate-300">
                     Terrain: {selectedHexInfo.terrain}
@@ -1535,7 +1535,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             {selectedHexInfo && !pendingHexSelection && (
               <div className="absolute top-4 left-4 bg-slate-800/90 border border-slate-600 p-3 rounded text-white z-40">
                 <div className="text-amber-400 font-bold">
-                  Selected: ({selectedHexInfo.q}, {selectedHexInfo.r})
+                  Selected: {formatHexCoords(selectedHexInfo.q, selectedHexInfo.r)}
                 </div>
                 <div className="text-slate-300">
                   Terrain: {selectedHexInfo.terrain}
@@ -1690,7 +1690,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               <div className="absolute top-4 left-4 right-4 bg-green-600/95 border border-green-400 p-4 rounded-lg text-white shadow-lg z-60">
                 <div className="text-center mb-3">
                   <div className="text-green-100 font-bold text-lg">
-                    📍 Selected Location: {pendingHexSelection.q},{pendingHexSelection.r}
+                    📍 Selected Location: {formatHexCoords(pendingHexSelection.q, pendingHexSelection.r)}
                   </div>
                 </div>
                 <div className="flex gap-3">

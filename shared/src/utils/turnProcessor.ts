@@ -4793,6 +4793,15 @@ function processBasicUpkeep(tribe: any, state?: any): void {
         }
     }
 
+    // ZOMBIE TRIBE FIX: Clean up empty garrisons first
+    Object.keys(tribe.garrisons || {}).forEach(location => {
+        const garrison = tribe.garrisons[location];
+        if (garrison && garrison.troops <= 0 && garrison.weapons <= 0 && (!garrison.chiefs || garrison.chiefs.length === 0)) {
+            console.log(`🧹 CLEANUP: Removing empty garrison at ${location} for ${tribe.tribeName}`);
+            delete tribe.garrisons[location];
+        }
+    });
+
     // Check for tribe elimination (no garrisons remaining)
     const remainingGarrisons = Object.keys(tribe.garrisons || {}).filter(loc => {
         const garrison = tribe.garrisons[loc];
@@ -4802,6 +4811,10 @@ function processBasicUpkeep(tribe: any, state?: any): void {
     if (remainingGarrisons.length === 0) {
         // Tribe is eliminated - mark for removal
         tribe.eliminated = true;
+
+        // ZOMBIE TRIBE FIX: Clear all remaining garrison data to prevent zombie state
+        tribe.garrisons = {};
+
         tribe.lastTurnResults.push({
             id: `elimination-${tribe.id}`,
             actionType: ActionType.Upkeep,
@@ -4821,6 +4834,7 @@ function processBasicUpkeep(tribe: any, state?: any): void {
             }
         });
 
+        console.log(`💀 ELIMINATION: ${tribe.tribeName} marked for elimination and garrison data cleared`);
         return; // Skip normal upkeep for eliminated tribes
     }
 
@@ -4861,6 +4875,8 @@ function processMoraleSystem(tribe: any, initialFood: number, foodConsumption: n
             if (troopsLost >= desertionRate) break;
             const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
             (garrison as any).troops -= toRemove;
+            // ZOMBIE TRIBE FIX: Ensure troops never go negative
+            (garrison as any).troops = Math.max(0, (garrison as any).troops);
             troopsLost += toRemove;
 
             // CRITICAL FIX: Handle chiefs when garrison becomes empty due to desertion
@@ -4976,6 +4992,8 @@ function processEnhancedMoraleSystem(tribe: any, initialFood: number, foodConsum
             if (troopsLost >= desertionRate) break;
             const toRemove = Math.min((garrison as any).troops, desertionRate - troopsLost);
             (garrison as any).troops -= toRemove;
+            // ZOMBIE TRIBE FIX: Ensure troops never go negative
+            (garrison as any).troops = Math.max(0, (garrison as any).troops);
             troopsLost += toRemove;
 
             // CRITICAL FIX: Handle chiefs when garrison becomes empty due to desertion

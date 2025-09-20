@@ -321,6 +321,48 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${newHomeBase.trim()}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
   };
 
+  // Calculate current actions for a tribe (same logic as Dashboard)
+  const calculateCurrentActions = (tribe: Tribe): number => {
+    // Check for admin override first
+    if (tribe.maxActionsOverride !== undefined && tribe.maxActionsOverride !== null) {
+      return tribe.maxActionsOverride;
+    }
+
+    let baseActions = 3;
+
+    // Calculate total troops and chiefs
+    const totalTroops = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + g.troops, 0);
+    const totalChiefs = Object.values(tribe.garrisons || {}).reduce((sum, g) => sum + (g.chiefs?.length || 0), 0);
+
+    // Troop bonuses: +1 at 60 members, +2 at 100 members
+    let troopBonus = 0;
+    if (totalTroops >= 100) {
+      troopBonus = 2;
+    } else if (totalTroops >= 60) {
+      troopBonus = 1;
+    }
+
+    // Leadership bonus: +1 action per 10 leadership points
+    const leadershipBonus = Math.floor((tribe.stats?.leadership || 0) / 10);
+
+    // Chief bonus: +1 action per chief
+    const chiefBonus = totalChiefs;
+
+    // BONUS TURN ACTIONS: +2 actions per bonus turn (vault discovery bonus)
+    const bonusTurnActions = (tribe.bonusTurns || 0) * 2;
+
+    return baseActions + troopBonus + leadershipBonus + chiefBonus + bonusTurnActions;
+  };
+
+  const handleAdjustActions = (adjustment: number) => {
+    if (!selectedTribe) return;
+
+    const currentActions = calculateCurrentActions(selectedTribe);
+    const newActions = Math.max(0, Math.min(20, currentActions + adjustment));
+
+    setEditingMaxActions(newActions);
+  };
+
   const handleAddAsset = (assetName: string) => {
     if (!selectedTribe) return;
     if (selectedTribe.assets.includes(assetName)) return; // Already has this asset
@@ -988,14 +1030,92 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
         {/* Max Actions Editor */}
         {selectedTribe && (
-          <Card title={`Action Limits - ${selectedTribe.tribeName}`} className="lg:col-span-1">
+          <Card title={`⚡ Action Management - ${selectedTribe.tribeName}`} className="lg:col-span-1">
             <div className="space-y-4">
+              {/* Current Actions Display */}
               <div className="p-3 bg-slate-900/50 rounded-md">
-                <h4 className="text-slate-300 font-semibold mb-2">Actions Per Turn</h4>
+                <h4 className="text-slate-300 font-semibold mb-3">Current Actions Status</h4>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 bg-slate-800 rounded">
+                    <span className="text-slate-300 text-sm">Actions Available:</span>
+                    <span className="text-lg font-bold text-green-400">
+                      {calculateCurrentActions(selectedTribe)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-slate-800 rounded">
+                    <span className="text-slate-300 text-sm">Actions Used:</span>
+                    <span className="text-lg font-bold text-orange-400">
+                      {selectedTribe.actions?.length || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-slate-800 rounded">
+                    <span className="text-slate-300 text-sm">Actions Remaining:</span>
+                    <span className="text-lg font-bold text-blue-400">
+                      {Math.max(0, calculateCurrentActions(selectedTribe) - (selectedTribe.actions?.length || 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Action Adjustments */}
+              <div className="p-3 bg-slate-900/50 rounded-md">
+                <h4 className="text-slate-300 font-semibold mb-3">Quick Adjustments</h4>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Button
+                      onClick={() => handleAdjustActions(-2)}
+                      variant="secondary"
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white"
+                      title="Remove 2 actions"
+                    >
+                      -2
+                    </Button>
+                    <Button
+                      onClick={() => handleAdjustActions(-1)}
+                      variant="secondary"
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white"
+                      title="Remove 1 action"
+                    >
+                      -1
+                    </Button>
+                    <div className="px-4 py-2 bg-slate-700 rounded text-white text-center min-w-[60px]">
+                      {editingMaxActions !== undefined ? editingMaxActions : calculateCurrentActions(selectedTribe)}
+                    </div>
+                    <Button
+                      onClick={() => handleAdjustActions(+1)}
+                      variant="secondary"
+                      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white"
+                      title="Add 1 action"
+                    >
+                      +1
+                    </Button>
+                    <Button
+                      onClick={() => handleAdjustActions(+2)}
+                      variant="secondary"
+                      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white"
+                      title="Add 2 actions"
+                    >
+                      +2
+                    </Button>
+                  </div>
+
+                  <div className="text-xs text-slate-400 text-center">
+                    Click buttons to quickly adjust action count
+                  </div>
+                </div>
+              </div>
+
+              {/* Manual Override */}
+              <div className="p-3 bg-slate-900/50 rounded-md">
+                <h4 className="text-slate-300 font-semibold mb-3">Manual Override</h4>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-slate-300 text-sm">Admin Override</label>
+                    <label className="text-slate-300 text-sm">Set Exact Value</label>
                     <div className="flex items-center space-x-2">
                       <input
                         type="number"
@@ -1012,7 +1132,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                           variant="secondary"
                           className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
                         >
-                          Clear
+                          Reset to Auto
                         </Button>
                       )}
                     </div>
@@ -1020,16 +1140,18 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
                   <div className="text-xs text-slate-400 space-y-1">
                     <p>
-                      <strong>Current:</strong> {editingMaxActions !== undefined ? `${editingMaxActions} (Admin Override)` : 'Auto-calculated'}
+                      <strong>Mode:</strong> {editingMaxActions !== undefined ? `Manual Override (${editingMaxActions})` : 'Auto-calculated'}
                     </p>
                     {editingMaxActions === undefined && (
                       <p className="text-slate-500">
                         Auto: 3 base + troop bonuses + leadership/10 + chiefs + bonus turns×2
                       </p>
                     )}
-                    <p className="text-amber-400">
-                      ⚠️ Override disables all automatic action calculations
-                    </p>
+                    {editingMaxActions !== undefined && (
+                      <p className="text-amber-400">
+                        ⚠️ Manual override disables automatic action calculations
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

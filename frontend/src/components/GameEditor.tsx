@@ -14,6 +14,22 @@ interface GameEditorProps {
   onRemoveJourney?: (journeyId: string) => void;
 }
 
+// Helper function to extract owner ID from outpost poi.id (format: poi-outpost-{tribeId}-{hexCoord})
+const getOutpostOwnerFromId = (poiId: string): string | null => {
+  if (!poiId) return null;
+
+  const prefix = 'poi-outpost-';
+  const idx = poiId.indexOf(prefix);
+  if (idx === -1) return null;
+
+  const rest = poiId.slice(idx + prefix.length);
+  // Tribe IDs may contain hyphens; take everything before the last '-' as tribeId
+  const lastDash = rest.lastIndexOf('-');
+  if (lastDash === -1) return null;
+
+  return rest.slice(0, lastDash) || null;
+};
+
 // Helper function to extract fortified POI and outpost garrisons from a tribe
 const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Record<string, Garrison> => {
   const fortifiedPOIGarrisons: Record<string, Garrison> = {};
@@ -58,15 +74,26 @@ const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Recor
       // Check for regular outposts
       if (hex.poi.type === 'Outpost') {
         outposts++;
-        console.log(`🏗️ Found outpost at (${hex.q}, ${hex.r})`);
+        console.log(`🏗️ Found outpost at (${hex.q}, ${hex.r}) with ID: ${hex.poi.id}`);
 
-        // For outposts, check if tribe has a garrison there (indicates ownership)
-        const hexCoord = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
-        if (tribe.garrisons[hexCoord]) {
+        // Check outpost ownership using the poi.id format: poi-outpost-{tribeId}-{hexCoord}
+        const outpostOwnerId = getOutpostOwnerFromId(hex.poi.id);
+        console.log(`🔍 Outpost owner ID from poi.id: ${outpostOwnerId}`);
+
+        if (outpostOwnerId === tribe.id) {
           ownedStructures++;
+          const hexCoord = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
           console.log(`✅ Tribe owns outpost at ${hexCoord} (map coords: ${hex.q}, ${hex.r})`);
-          fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
-          console.log(`🏕️ Found garrison at outpost: ${JSON.stringify(tribe.garrisons[hexCoord])}`);
+
+          // Check if tribe has a garrison at this location
+          if (tribe.garrisons[hexCoord]) {
+            fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
+            console.log(`🏕️ Found garrison at outpost: ${JSON.stringify(tribe.garrisons[hexCoord])}`);
+          } else {
+            console.log(`⚠️ No garrison found at owned outpost ${hexCoord}`);
+            // Create empty garrison for editing
+            fortifiedPOIGarrisons[hexCoord] = { troops: 0, weapons: 0, chiefs: [] };
+          }
         }
       }
     }

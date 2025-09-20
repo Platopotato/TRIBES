@@ -97,6 +97,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
   const [editingFortifiedPOIs, setEditingFortifiedPOIs] = useState<Record<string, Garrison> | null>(null);
   const [newHomeBase, setNewHomeBase] = useState<string>('');
+  const [customHomeBaseCoords, setCustomHomeBaseCoords] = useState<string>('');
   const [editingResearch, setEditingResearch] = useState<ResearchProject[]>([]);
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [editingMaxActions, setEditingMaxActions] = useState<number | undefined>(undefined);
@@ -300,6 +301,12 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     });
   };
 
+  // Validate hex coordinate format (e.g., "051.044")
+  const isValidHexCoordinate = (coord: string): boolean => {
+    const hexPattern = /^\d{3}\.\d{3}$/;
+    return hexPattern.test(coord);
+  };
+
   const handleSetHomeBase = () => {
     if (!selectedTribe || !newHomeBase.trim()) return;
 
@@ -319,6 +326,34 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setNewHomeBase('');
 
     alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${newHomeBase.trim()}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
+  };
+
+  const handleSetCustomHomeBase = () => {
+    if (!selectedTribe || !customHomeBaseCoords.trim()) return;
+
+    const coords = customHomeBaseCoords.trim();
+
+    // Validate coordinate format
+    if (!isValidHexCoordinate(coords)) {
+      alert(`❌ Invalid coordinate format: ${coords}\n\nPlease use the format NNN.NNN (e.g., "051.044")`);
+      return;
+    }
+
+    const updatedTribe: Tribe = {
+      ...selectedTribe,
+      location: coords
+    };
+
+    onUpdateTribe(updatedTribe);
+    setSelectedTribe(updatedTribe);
+    setCustomHomeBaseCoords('');
+
+    const hasGarrison = selectedTribe.garrisons[coords];
+    const warningMessage = hasGarrison
+      ? ''
+      : '\n\n⚠️ Note: No garrison exists at this location. Consider adding troops there for defensive purposes.';
+
+    alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${coords}${warningMessage}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
   };
 
   // Calculate current actions for a tribe (same logic as Dashboard)
@@ -988,41 +1023,78 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-slate-300 mb-2 block">Available Garrison Locations:</label>
-                  <select
-                    value={newHomeBase}
-                    onChange={(e) => setNewHomeBase(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600"
-                  >
-                    <option value="">Select new home base location...</option>
-                    {Object.keys(selectedTribe.garrisons).map(location => {
-                      const garrison = selectedTribe.garrisons[location];
-                      const isCurrentHome = location === selectedTribe.location;
-                      return (
-                        <option key={location} value={location}>
-                          {location} - {garrison.troops} troops, {garrison.weapons} weapons, {garrison.chiefs?.length || 0} chiefs
-                          {isCurrentHome ? ' (Current Home)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+              <div className="space-y-4">
+                {/* Option 1: Select from existing garrisons */}
+                <div className="p-3 bg-slate-800/50 rounded-md">
+                  <h5 className="text-sm text-slate-300 font-semibold mb-2">📍 Option 1: Select from Garrison Locations</h5>
+                  <div className="space-y-2">
+                    <select
+                      value={newHomeBase}
+                      onChange={(e) => setNewHomeBase(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600"
+                    >
+                      <option value="">Select garrison location...</option>
+                      {Object.keys(selectedTribe.garrisons).map(location => {
+                        const garrison = selectedTribe.garrisons[location];
+                        const isCurrentHome = location === selectedTribe.location;
+                        return (
+                          <option key={location} value={location}>
+                            {location} - {garrison.troops} troops, {garrison.weapons} weapons, {garrison.chiefs?.length || 0} chiefs
+                            {isCurrentHome ? ' (Current Home)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    <Button
+                      onClick={handleSetHomeBase}
+                      disabled={!newHomeBase.trim()}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed"
+                    >
+                      🏠 Set Garrison Location as Home Base
+                    </Button>
+
+                    {Object.keys(selectedTribe.garrisons).length === 0 && (
+                      <div className="p-2 bg-yellow-900/30 border border-yellow-600 rounded text-yellow-200 text-xs">
+                        ⚠️ No garrisons found. Use Option 2 below to set custom coordinates.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <Button
-                  onClick={handleSetHomeBase}
-                  disabled={!newHomeBase.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed"
-                >
-                  🏠 Set as Home Base
-                </Button>
+                {/* Option 2: Custom hex coordinates */}
+                <div className="p-3 bg-slate-800/50 rounded-md">
+                  <h5 className="text-sm text-slate-300 font-semibold mb-2">🎯 Option 2: Set Custom Hex Coordinates</h5>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">
+                        Enter hex coordinates (format: NNN.NNN, e.g., "051.044"):
+                      </label>
+                      <input
+                        type="text"
+                        value={customHomeBaseCoords}
+                        onChange={(e) => setCustomHomeBaseCoords(e.target.value)}
+                        placeholder="051.044"
+                        className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 font-mono"
+                        pattern="^\d{3}\.\d{3}$"
+                        title="Format: NNN.NNN (e.g., 051.044)"
+                      />
+                    </div>
 
-                {Object.keys(selectedTribe.garrisons).length === 0 && (
-                  <div className="p-2 bg-yellow-900/30 border border-yellow-600 rounded text-yellow-200 text-xs">
-                    ⚠️ No garrisons found. Create a garrison first before setting a home base.
+                    <Button
+                      onClick={handleSetCustomHomeBase}
+                      disabled={!customHomeBaseCoords.trim()}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed"
+                    >
+                      🎯 Set Custom Coordinates as Home Base
+                    </Button>
+
+                    <div className="text-xs text-slate-400">
+                      💡 Use this option when the home base location doesn't have a garrison yet.
+                      You can add troops there later using the garrison editor.
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </Card>

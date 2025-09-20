@@ -14,30 +14,34 @@ interface GameEditorProps {
   onRemoveJourney?: (journeyId: string) => void;
 }
 
-// Helper function to extract fortified POI garrisons from a tribe
+// Helper function to extract fortified POI and outpost garrisons from a tribe
 const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Record<string, Garrison> => {
   const fortifiedPOIGarrisons: Record<string, Garrison> = {};
 
-  console.log(`🔍 Extracting fortified POIs for tribe: ${tribe.tribeName} (${tribe.id})`);
+  console.log(`🔍 Extracting fortified POIs and outposts for tribe: ${tribe.tribeName} (${tribe.id})`);
   console.log(`🗺️ Total map hexes: ${gameState.mapData.length}`);
 
   // Count POIs for debugging
   let totalPOIs = 0;
   let fortifiedPOIs = 0;
-  let ownedFortifiedPOIs = 0;
+  let outposts = 0;
+  let ownedStructures = 0;
 
-  // Find all fortified POIs owned by this tribe
+  // Find all fortified POIs and outposts owned by this tribe
   gameState.mapData.forEach(hex => {
     if (hex.poi) {
       totalPOIs++;
+
+      // Check for fortified POIs
       if (hex.poi.fortified) {
         fortifiedPOIs++;
         console.log(`🏰 Found fortified POI: ${hex.poi.type} at (${hex.q}, ${hex.r}) owned by ${hex.poi.outpostOwner}`);
 
         if (hex.poi.outpostOwner === tribe.id) {
-          ownedFortifiedPOIs++;
-          const hexCoord = `${String(hex.q).padStart(3, '0')}.${String(hex.r).padStart(3, '0')}`;
-          console.log(`✅ Tribe owns fortified POI at ${hexCoord}`);
+          ownedStructures++;
+          // Use formatHexCoords logic: add 50 offset and pad with zeros
+          const hexCoord = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+          console.log(`✅ Tribe owns fortified POI at ${hexCoord} (map coords: ${hex.q}, ${hex.r})`);
 
           // Check if tribe has a garrison at this location
           if (tribe.garrisons[hexCoord]) {
@@ -50,11 +54,26 @@ const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Recor
           }
         }
       }
+
+      // Check for regular outposts
+      if (hex.poi.type === 'Outpost') {
+        outposts++;
+        console.log(`🏗️ Found outpost at (${hex.q}, ${hex.r})`);
+
+        // For outposts, check if tribe has a garrison there (indicates ownership)
+        const hexCoord = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+        if (tribe.garrisons[hexCoord]) {
+          ownedStructures++;
+          console.log(`✅ Tribe owns outpost at ${hexCoord} (map coords: ${hex.q}, ${hex.r})`);
+          fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
+          console.log(`🏕️ Found garrison at outpost: ${JSON.stringify(tribe.garrisons[hexCoord])}`);
+        }
+      }
     }
   });
 
-  console.log(`📊 POI Summary: ${totalPOIs} total, ${fortifiedPOIs} fortified, ${ownedFortifiedPOIs} owned by tribe`);
-  console.log(`🏰 Fortified POI garrisons found: ${Object.keys(fortifiedPOIGarrisons).length}`);
+  console.log(`📊 Structure Summary: ${totalPOIs} total POIs, ${fortifiedPOIs} fortified, ${outposts} outposts, ${ownedStructures} owned by tribe`);
+  console.log(`🏰 Fortified structures found: ${Object.keys(fortifiedPOIGarrisons).length}`);
 
   return fortifiedPOIGarrisons;
 };
@@ -62,10 +81,13 @@ const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Recor
 // Helper function to get POI info for a location
 const getPOIInfo = (location: string, gameState: GameState) => {
   const [qStr, rStr] = location.split('.');
-  const q = parseInt(qStr);
-  const r = parseInt(rStr);
+  // Convert from coordinate format (e.g., "051.044") back to map coordinates
+  const q = parseInt(qStr) - 50;  // Remove the 50 offset
+  const r = parseInt(rStr) - 50;  // Remove the 50 offset
 
   const hex = gameState.mapData.find(h => h.q === q && h.r === r);
+  console.log(`🔍 getPOIInfo: Looking for hex at map coords (${q}, ${r}) from location ${location}`);
+  console.log(`🔍 Found hex:`, hex ? `${hex.terrain}${hex.poi ? ` with ${hex.poi.type}` : ' (no POI)'}` : 'NOT FOUND');
   return hex?.poi || null;
 };
 
@@ -1054,14 +1076,14 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
           </Card>
         )}
 
-        {/* Fortified POI Editor */}
+        {/* Fortified POI & Outpost Editor */}
         {selectedTribe && editingFortifiedPOIs && (
-          <Card title={`🏰 Edit Fortified POIs (${Object.keys(editingFortifiedPOIs).length})`} className="lg:col-span-1">
+          <Card title={`🏰 Edit Fortified POIs & Outposts (${Object.keys(editingFortifiedPOIs).length})`} className="lg:col-span-1">
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {Object.keys(editingFortifiedPOIs).length === 0 ? (
                 <div className="text-center py-4">
-                  <p className="text-blue-300 text-sm">This tribe has no fortified POIs.</p>
-                  <p className="text-blue-400 text-xs mt-1">Fortified POIs are created by building outposts at POI locations.</p>
+                  <p className="text-blue-300 text-sm">This tribe has no fortified POIs or outposts.</p>
+                  <p className="text-blue-400 text-xs mt-1">Fortified structures are created by building outposts at locations or fortifying existing POIs.</p>
                 </div>
               ) : (
                 Object.entries(editingFortifiedPOIs).map(([location, garrison]) => {
@@ -1076,7 +1098,15 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                       <div>
                         <h4 className="text-blue-200 font-semibold">{location}</h4>
                         {poiInfo && (
-                          <p className="text-xs text-blue-300">🏰 {poiInfo.type} ({poiInfo.rarity})</p>
+                          <div className="text-xs text-blue-300">
+                            {poiInfo.type === 'Outpost' ? (
+                              <span>🏗️ Outpost</span>
+                            ) : poiInfo.fortified ? (
+                              <span>🏰 Fortified {poiInfo.type} ({poiInfo.rarity})</span>
+                            ) : (
+                              <span>📍 {poiInfo.type} ({poiInfo.rarity})</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

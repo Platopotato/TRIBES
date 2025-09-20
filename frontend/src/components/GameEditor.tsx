@@ -96,6 +96,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const [editingResources, setEditingResources] = useState<GlobalResources | null>(null);
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
   const [editingFortifiedPOIs, setEditingFortifiedPOIs] = useState<Record<string, Garrison> | null>(null);
+  const [newHomeBase, setNewHomeBase] = useState<string>('');
   const [editingResearch, setEditingResearch] = useState<ResearchProject[]>([]);
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [editingMaxActions, setEditingMaxActions] = useState<number | undefined>(undefined);
@@ -297,6 +298,27 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
         chiefs: []
       }
     });
+  };
+
+  const handleSetHomeBase = () => {
+    if (!selectedTribe || !newHomeBase.trim()) return;
+
+    // Validate that the location exists in tribe's garrisons
+    if (!selectedTribe.garrisons[newHomeBase.trim()]) {
+      alert(`❌ Cannot set home base to ${newHomeBase.trim()}: No garrison exists at this location.\n\nPlease ensure the tribe has a garrison at the target location first.`);
+      return;
+    }
+
+    const updatedTribe: Tribe = {
+      ...selectedTribe,
+      location: newHomeBase.trim()
+    };
+
+    onUpdateTribe(updatedTribe);
+    setSelectedTribe(updatedTribe);
+    setNewHomeBase('');
+
+    alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${newHomeBase.trim()}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
   };
 
   const handleAddAsset = (assetName: string) => {
@@ -896,6 +918,69 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                     </select>
                   )}
                 </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Home Base Editor */}
+        {selectedTribe && (
+          <Card title={`🏠 Home Base - ${selectedTribe.tribeName}`} className="lg:col-span-1">
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-900/50 rounded-md">
+                <div className="text-sm text-slate-300 mb-2">
+                  <strong>Current Home Base:</strong> {selectedTribe.location || 'Not Set'}
+                </div>
+
+                {/* Check for location mismatch */}
+                {selectedTribe.location && !selectedTribe.garrisons[selectedTribe.location] && (
+                  <div className="p-2 bg-red-900/30 border border-red-600 rounded text-red-200 text-xs mb-3">
+                    ⚠️ <strong>Database Issue Detected:</strong> Home base location "{selectedTribe.location}" has no garrison!
+                    <br />This can cause game errors. Please set a valid home base below.
+                  </div>
+                )}
+
+                <div className="text-xs text-slate-400 mb-3">
+                  The home base determines where chiefs retreat, defensive bonuses apply, and resource allocation occurs.
+                  Only locations with active garrisons can be set as home base.
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-slate-300 mb-2 block">Available Garrison Locations:</label>
+                  <select
+                    value={newHomeBase}
+                    onChange={(e) => setNewHomeBase(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600"
+                  >
+                    <option value="">Select new home base location...</option>
+                    {Object.keys(selectedTribe.garrisons).map(location => {
+                      const garrison = selectedTribe.garrisons[location];
+                      const isCurrentHome = location === selectedTribe.location;
+                      return (
+                        <option key={location} value={location}>
+                          {location} - {garrison.troops} troops, {garrison.weapons} weapons, {garrison.chiefs?.length || 0} chiefs
+                          {isCurrentHome ? ' (Current Home)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <Button
+                  onClick={handleSetHomeBase}
+                  disabled={!newHomeBase.trim()}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed"
+                >
+                  🏠 Set as Home Base
+                </Button>
+
+                {Object.keys(selectedTribe.garrisons).length === 0 && (
+                  <div className="p-2 bg-yellow-900/30 border border-yellow-600 rounded text-yellow-200 text-xs">
+                    ⚠️ No garrisons found. Create a garrison first before setting a home base.
+                  </div>
+                )}
               </div>
             </div>
           </Card>

@@ -18,17 +18,43 @@ interface GameEditorProps {
 const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Record<string, Garrison> => {
   const fortifiedPOIGarrisons: Record<string, Garrison> = {};
 
+  console.log(`🔍 Extracting fortified POIs for tribe: ${tribe.tribeName} (${tribe.id})`);
+  console.log(`🗺️ Total map hexes: ${gameState.mapData.length}`);
+
+  // Count POIs for debugging
+  let totalPOIs = 0;
+  let fortifiedPOIs = 0;
+  let ownedFortifiedPOIs = 0;
+
   // Find all fortified POIs owned by this tribe
   gameState.mapData.forEach(hex => {
-    if (hex.poi && hex.poi.fortified && hex.poi.outpostOwner === tribe.id) {
-      const hexCoord = `${String(hex.q).padStart(3, '0')}.${String(hex.r).padStart(3, '0')}`;
+    if (hex.poi) {
+      totalPOIs++;
+      if (hex.poi.fortified) {
+        fortifiedPOIs++;
+        console.log(`🏰 Found fortified POI: ${hex.poi.type} at (${hex.q}, ${hex.r}) owned by ${hex.poi.outpostOwner}`);
 
-      // Check if tribe has a garrison at this location
-      if (tribe.garrisons[hexCoord]) {
-        fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
+        if (hex.poi.outpostOwner === tribe.id) {
+          ownedFortifiedPOIs++;
+          const hexCoord = `${String(hex.q).padStart(3, '0')}.${String(hex.r).padStart(3, '0')}`;
+          console.log(`✅ Tribe owns fortified POI at ${hexCoord}`);
+
+          // Check if tribe has a garrison at this location
+          if (tribe.garrisons[hexCoord]) {
+            fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
+            console.log(`🏕️ Found garrison at fortified POI: ${JSON.stringify(tribe.garrisons[hexCoord])}`);
+          } else {
+            console.log(`⚠️ No garrison found at fortified POI ${hexCoord}`);
+            // Create empty garrison for editing
+            fortifiedPOIGarrisons[hexCoord] = { troops: 0, weapons: 0, chiefs: [] };
+          }
+        }
       }
     }
   });
+
+  console.log(`📊 POI Summary: ${totalPOIs} total, ${fortifiedPOIs} fortified, ${ownedFortifiedPOIs} owned by tribe`);
+  console.log(`🏰 Fortified POI garrisons found: ${Object.keys(fortifiedPOIGarrisons).length}`);
 
   return fortifiedPOIGarrisons;
 };
@@ -1029,10 +1055,16 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
         )}
 
         {/* Fortified POI Editor */}
-        {selectedTribe && editingFortifiedPOIs && Object.keys(editingFortifiedPOIs).length > 0 && (
-          <Card title="🏰 Edit Fortified POIs" className="lg:col-span-1">
+        {selectedTribe && editingFortifiedPOIs && (
+          <Card title={`🏰 Edit Fortified POIs (${Object.keys(editingFortifiedPOIs).length})`} className="lg:col-span-1">
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {Object.entries(editingFortifiedPOIs).map(([location, garrison]) => {
+              {Object.keys(editingFortifiedPOIs).length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-blue-300 text-sm">This tribe has no fortified POIs.</p>
+                  <p className="text-blue-400 text-xs mt-1">Fortified POIs are created by building outposts at POI locations.</p>
+                </div>
+              ) : (
+                Object.entries(editingFortifiedPOIs).map(([location, garrison]) => {
                 const poiInfo = getPOIInfo(location, gameState);
                 const availableChiefs = ALL_CHIEFS.filter(chief =>
                   !garrison.chiefs?.some(c => c.name === chief.name)
@@ -1126,7 +1158,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                     </div>
                   </div>
                 );
-              })}
+                })
+              )}
             </div>
           </Card>
         )}

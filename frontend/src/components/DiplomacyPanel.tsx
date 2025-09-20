@@ -18,7 +18,7 @@ interface DiplomacyPanelProps {
   turn: number;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
-  onAddAction?: (action: any) => void; // Add action to planned actions
+  onAddAction?: (action: GameAction) => void; // Add action to planned actions
 }
 
 const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
@@ -47,26 +47,6 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   );
   const activePacts = playerPacts.filter(pact => pact.status === 'active');
   const proposedPacts = playerPacts.filter(pact => pact.status === 'proposed');
-
-  // Helper function to create diplomacy actions
-  const createDiplomacyAction = (diplomaticAction: string, targetTribeId: string, reparations?: { food: number; scrap: number; weapons: number }) => {
-    if (!onAddAction) return;
-
-    const action: GameAction = {
-      id: `diplomacy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      actionType: ActionType.Diplomacy,
-      actionData: {
-        diplomatic_action: diplomaticAction,
-        target_tribe: targetTribeId,
-        duration: 5, // Default duration for pacts
-        reparations_food: reparations?.food || 0,
-        reparations_scrap: reparations?.scrap || 0,
-        reparations_weapons: reparations?.weapons || 0
-      }
-    };
-
-    onAddAction(action);
-  };
 
 
 
@@ -187,44 +167,6 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                   </div>
                 )}
               </div>
-
-              {/* Diplomacy Actions */}
-              {onAddAction && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
-                    <Button
-                      onClick={() => createDiplomacyAction('propose_alliance', tribe.id)}
-                      className="text-xs px-3 py-1 bg-green-800 hover:bg-green-700"
-                    >
-                      🤝 Alliance
-                    </Button>
-                  )}
-                  {relation.status === DiplomaticStatus.War && !isProposalPending && (
-                    <Button
-                      onClick={() => createDiplomacyAction('sue_for_peace', tribe.id)}
-                      className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700"
-                    >
-                      🕊️ Peace
-                    </Button>
-                  )}
-                  {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
-                    <Button
-                      onClick={() => createDiplomacyAction('declare_war', tribe.id)}
-                      className="text-xs px-3 py-1 bg-red-700 hover:bg-red-600"
-                    >
-                      ⚔️ War
-                    </Button>
-                  )}
-                  {relation.status === DiplomaticStatus.Alliance && !isProposalPending && (
-                    <Button
-                      onClick={() => createDiplomacyAction('cancel_alliance', tribe.id)}
-                      className="text-xs px-3 py-1 bg-orange-700 hover:bg-orange-600"
-                    >
-                      💔 End Alliance
-                    </Button>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )
@@ -240,6 +182,14 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
         {/* Simplified Diplomacy - No Tabs */}
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
 
+          {onAddAction && (
+            <div className="mb-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
+              <p className="text-sm text-blue-200">
+                <strong>💡 Turn-Based Diplomacy:</strong> Click action buttons below to plan diplomatic actions.
+                They will be executed when you finalize your turn.
+              </p>
+            </div>
+          )}
 
           {incomingProposals.length > 0 && (
             <div className="space-y-3">

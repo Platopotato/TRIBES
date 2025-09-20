@@ -527,6 +527,45 @@ export class SocketHandler {
             else if (proposal.statusChangeTo) {
               fromTribe.diplomacy[toTribe.id] = { status: proposal.statusChangeTo };
               toTribe.diplomacy[fromTribe.id] = { status: proposal.statusChangeTo };
+
+              // Ensure lastTurnResults arrays exist
+              fromTribe.lastTurnResults = fromTribe.lastTurnResults || [];
+              toTribe.lastTurnResults = toTribe.lastTurnResults || [];
+
+              // Send success notifications to both tribes
+              if (proposal.statusChangeTo === 'Alliance') {
+                fromTribe.lastTurnResults.push({
+                  id: `alliance-accepted-${Date.now()}`,
+                  actionType: 'ProposeAlliance' as any,
+                  actionData: {},
+                  result: `🤝 **ALLIANCE FORMED!** ${toTribe.tribeName} has accepted your alliance proposal. You are now allied!`
+                });
+
+                toTribe.lastTurnResults.push({
+                  id: `alliance-accepted-${Date.now()}`,
+                  actionType: 'ProposeAlliance' as any,
+                  actionData: {},
+                  result: `🤝 **ALLIANCE FORMED!** You have accepted the alliance proposal from ${fromTribe.tribeName}. You are now allied!`
+                });
+
+                console.log(`🤝 Alliance formed: ${fromTribe.tribeName} ↔ ${toTribe.tribeName}`);
+              } else if (proposal.statusChangeTo === 'Neutral') {
+                fromTribe.lastTurnResults.push({
+                  id: `peace-accepted-${Date.now()}`,
+                  actionType: 'SueForPeace' as any,
+                  actionData: {},
+                  result: `🕊️ **PEACE TREATY SIGNED!** ${toTribe.tribeName} has accepted your peace proposal. You are now at peace!`
+                });
+
+                toTribe.lastTurnResults.push({
+                  id: `peace-accepted-${Date.now()}`,
+                  actionType: 'SueForPeace' as any,
+                  actionData: {},
+                  result: `🕊️ **PEACE TREATY SIGNED!** You have accepted the peace proposal from ${fromTribe.tribeName}. You are now at peace!`
+                });
+
+                console.log(`🕊️ Peace treaty signed: ${fromTribe.tribeName} ↔ ${toTribe.tribeName}`);
+              }
             }
 
             // Remove the proposal
@@ -541,6 +580,53 @@ export class SocketHandler {
     socket.on('reject_proposal', async (proposalId) => {
       const gameState = await this.gameService.getGameState();
       if (gameState) {
+        const proposal = gameState.diplomaticProposals.find(p => p.id === proposalId);
+        if (proposal) {
+          const fromTribe = gameState.tribes.find(t => t.id === proposal.fromTribeId);
+          const toTribe = gameState.tribes.find(t => t.id === proposal.toTribeId);
+
+          if (fromTribe && toTribe) {
+            // Ensure lastTurnResults arrays exist
+            fromTribe.lastTurnResults = fromTribe.lastTurnResults || [];
+            toTribe.lastTurnResults = toTribe.lastTurnResults || [];
+
+            // Send rejection notifications
+            if (proposal.actionType === 'ProposeAlliance') {
+              fromTribe.lastTurnResults.push({
+                id: `alliance-rejected-${Date.now()}`,
+                actionType: 'ProposeAlliance' as any,
+                actionData: {},
+                result: `💔 **ALLIANCE REJECTED** ${toTribe.tribeName} has rejected your alliance proposal.`
+              });
+
+              toTribe.lastTurnResults.push({
+                id: `alliance-rejected-${Date.now()}`,
+                actionType: 'ProposeAlliance' as any,
+                actionData: {},
+                result: `💔 You have rejected the alliance proposal from ${fromTribe.tribeName}.`
+              });
+
+              console.log(`💔 Alliance rejected: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+            } else if (proposal.actionType === 'SueForPeace') {
+              fromTribe.lastTurnResults.push({
+                id: `peace-rejected-${Date.now()}`,
+                actionType: 'SueForPeace' as any,
+                actionData: {},
+                result: `⚔️ **PEACE REJECTED** ${toTribe.tribeName} has rejected your peace proposal. The war continues.`
+              });
+
+              toTribe.lastTurnResults.push({
+                id: `peace-rejected-${Date.now()}`,
+                actionType: 'SueForPeace' as any,
+                actionData: {},
+                result: `⚔️ You have rejected the peace proposal from ${fromTribe.tribeName}. The war continues.`
+              });
+
+              console.log(`⚔️ Peace rejected: ${fromTribe.tribeName} → ${toTribe.tribeName}`);
+            }
+          }
+        }
+
         gameState.diplomaticProposals = gameState.diplomaticProposals.filter(p => p.id !== proposalId);
         await this.gameService.updateGameState(gameState);
         await emitGameState();

@@ -325,7 +325,7 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setSelectedTribe(updatedTribe);
     setNewHomeBase('');
 
-    alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${newHomeBase.trim()}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
+    alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${newHomeBase.trim()}\n💡 You can adjust troops and weapons at this location using the Garrison Editor below.\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
   };
 
   const handleSetCustomHomeBase = () => {
@@ -339,21 +339,37 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       return;
     }
 
+    const hasGarrison = selectedTribe.garrisons[coords];
+
+    // Create a new garrison if one doesn't exist at this location
+    const updatedGarrisons = { ...selectedTribe.garrisons };
+    if (!hasGarrison) {
+      updatedGarrisons[coords] = {
+        troops: 0,
+        weapons: 0,
+        chiefs: []
+      };
+    }
+
     const updatedTribe: Tribe = {
       ...selectedTribe,
-      location: coords
+      location: coords,
+      garrisons: updatedGarrisons
     };
 
     onUpdateTribe(updatedTribe);
     setSelectedTribe(updatedTribe);
+
+    // Update editing states to include the new garrison
+    setEditingGarrisons(updatedGarrisons);
+
     setCustomHomeBaseCoords('');
 
-    const hasGarrison = selectedTribe.garrisons[coords];
-    const warningMessage = hasGarrison
-      ? ''
-      : '\n\n⚠️ Note: No garrison exists at this location. Consider adding troops there for defensive purposes.';
+    const message = hasGarrison
+      ? `✅ Home base updated successfully!\n\n🏠 New home base: ${coords}\n🔔 ${selectedTribe.playerName} will be notified of this change.`
+      : `✅ Home base updated successfully!\n\n🏠 New home base: ${coords}\n🏗️ Created new garrison at this location\n\n💡 You can now add troops and weapons using the Garrison Editor below.\n🔔 ${selectedTribe.playerName} will be notified of this change.`;
 
-    alert(`✅ Home base updated successfully!\n\n🏠 New home base: ${coords}${warningMessage}\n🔔 ${selectedTribe.playerName} will be notified of this change.`);
+    alert(message);
   };
 
   // Calculate current actions for a tribe (same logic as Dashboard)
@@ -1233,21 +1249,59 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
 
         {/* Garrison Editor */}
         {selectedTribe && editingGarrisons && (
-          <Card title="Edit Garrisons" className="lg:col-span-1">
+          <Card title="🏕️ Edit Garrisons" className="lg:col-span-1">
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {Object.entries(editingGarrisons).map(([location, garrison]) => (
-                <div key={location} className="p-3 bg-slate-900/50 rounded-md border border-slate-700">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-slate-200 font-semibold">{location}</h4>
-                    <Button
-                      onClick={() => setGarrisonToDelete({ location, tribeName: selectedTribe?.tribeName || 'Unknown' })}
-                      variant="secondary"
-                      className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
-                      title="Delete this garrison"
-                    >
-                      🗑️ Delete
-                    </Button>
-                  </div>
+              {Object.entries(editingGarrisons).map(([location, garrison]) => {
+                const isHomeBase = location === selectedTribe.location;
+                return (
+                  <div
+                    key={location}
+                    className={`p-3 rounded-md border ${
+                      isHomeBase
+                        ? 'bg-blue-900/30 border-blue-500 shadow-lg'
+                        : 'bg-slate-900/50 border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-slate-200 font-semibold">{location}</h4>
+                        {isHomeBase && (
+                          <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full font-bold">
+                            🏠 HOME BASE
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {isHomeBase && garrison.troops === 0 && garrison.weapons === 0 && (
+                          <Button
+                            onClick={() => {
+                              if (!editingGarrisons) return;
+                              setEditingGarrisons({
+                                ...editingGarrisons,
+                                [location]: {
+                                  ...garrison,
+                                  troops: 10,
+                                  weapons: 5
+                                }
+                              });
+                            }}
+                            variant="secondary"
+                            className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
+                            title="Quick setup: Add 10 troops and 5 weapons"
+                          >
+                            ⚡ Quick Setup
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => setGarrisonToDelete({ location, tribeName: selectedTribe?.tribeName || 'Unknown' })}
+                          variant="secondary"
+                          className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white"
+                          title="Delete this garrison"
+                        >
+                          🗑️ Delete
+                        </Button>
+                      </div>
+                    </div>
                   
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <div>
@@ -1350,7 +1404,8 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </Card>
         )}

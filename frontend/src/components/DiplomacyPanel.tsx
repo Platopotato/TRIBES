@@ -39,6 +39,28 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   const incomingProposals = diplomaticProposals.filter(p => p.toTribeId === playerTribe.id);
   const outgoingProposals = diplomaticProposals.filter(p => p.fromTribeId === playerTribe.id);
 
+  // Debug logging for diplomacy issues
+  console.log('🔍 DIPLOMACY DEBUG:', {
+    playerTribeId: playerTribe.id,
+    totalProposals: diplomaticProposals.length,
+    incomingCount: incomingProposals.length,
+    outgoingCount: outgoingProposals.length,
+    allProposals: diplomaticProposals.map(p => ({
+      id: p.id,
+      from: p.fromTribeId,
+      to: p.toTribeId,
+      type: p.actionType,
+      fromName: p.fromTribeName
+    })),
+    incomingProposals: incomingProposals.map(p => ({
+      id: p.id,
+      from: p.fromTribeId,
+      type: p.actionType,
+      fromName: p.fromTribeName,
+      expires: p.expiresOnTurn
+    }))
+  });
+
   // Filter non-aggression pacts involving this player
   const playerPacts = nonAggressionPacts.filter(pact =>
     pact.tribe1Id === playerTribe.id || pact.tribe2Id === playerTribe.id
@@ -179,6 +201,27 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
       <Card title="Diplomacy">
         {/* Simplified Diplomacy - No Tabs */}
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
+
+          {/* Debug Section - Remove this after testing */}
+          <div className="p-2 bg-red-900/20 border border-red-600 rounded text-xs">
+            <strong>🔍 DEBUG INFO:</strong>
+            <div>Total proposals: {diplomaticProposals.length}</div>
+            <div>Incoming: {incomingProposals.length}</div>
+            <div>Outgoing: {outgoingProposals.length}</div>
+            {diplomaticProposals.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer text-red-300">Show all proposals</summary>
+                <div className="mt-1 space-y-1">
+                  {diplomaticProposals.map(p => (
+                    <div key={p.id} className="text-xs">
+                      {p.fromTribeName} → {allTribes.find(t => t.id === p.toTribeId)?.tribeName || 'Unknown'}
+                      ({p.actionType}) - Expires: Turn {p.expiresOnTurn}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
 
 
           {incomingProposals.length > 0 && (

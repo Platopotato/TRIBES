@@ -14,10 +14,40 @@ interface GameEditorProps {
   onRemoveJourney?: (journeyId: string) => void;
 }
 
+// Helper function to extract fortified POI garrisons from a tribe
+const extractFortifiedPOIGarrisons = (tribe: Tribe, gameState: GameState): Record<string, Garrison> => {
+  const fortifiedPOIGarrisons: Record<string, Garrison> = {};
+
+  // Find all fortified POIs owned by this tribe
+  gameState.mapData.forEach(hex => {
+    if (hex.poi && hex.poi.fortified && hex.poi.outpostOwner === tribe.id) {
+      const hexCoord = `${String(hex.q).padStart(3, '0')}.${String(hex.r).padStart(3, '0')}`;
+
+      // Check if tribe has a garrison at this location
+      if (tribe.garrisons[hexCoord]) {
+        fortifiedPOIGarrisons[hexCoord] = { ...tribe.garrisons[hexCoord] };
+      }
+    }
+  });
+
+  return fortifiedPOIGarrisons;
+};
+
+// Helper function to get POI info for a location
+const getPOIInfo = (location: string, gameState: GameState) => {
+  const [qStr, rStr] = location.split('.');
+  const q = parseInt(qStr);
+  const r = parseInt(rStr);
+
+  const hex = gameState.mapData.find(h => h.q === q && h.r === r);
+  return hex?.poi || null;
+};
+
 const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpdateTribe, onRemovePlayer, onRemoveJourney }) => {
   const [selectedTribe, setSelectedTribe] = useState<Tribe | null>(null);
   const [editingResources, setEditingResources] = useState<GlobalResources | null>(null);
   const [editingGarrisons, setEditingGarrisons] = useState<Record<string, Garrison> | null>(null);
+  const [editingFortifiedPOIs, setEditingFortifiedPOIs] = useState<Record<string, Garrison> | null>(null);
   const [editingResearch, setEditingResearch] = useState<ResearchProject[]>([]);
   const [editingCompletedTechs, setEditingCompletedTechs] = useState<string[]>([]);
   const [editingMaxActions, setEditingMaxActions] = useState<number | undefined>(undefined);
@@ -40,6 +70,10 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     setEditingResearch(tribe.currentResearch ? [...tribe.currentResearch] : []);
     setEditingCompletedTechs([...tribe.completedTechs]);
     setEditingMaxActions(tribe.maxActionsOverride);
+
+    // Extract fortified POI garrisons
+    const fortifiedPOIGarrisons = extractFortifiedPOIGarrisons(tribe, gameState);
+    setEditingFortifiedPOIs(fortifiedPOIGarrisons);
   };
 
   const handleResourceChange = (resource: keyof GlobalResources, value: number) => {
@@ -56,6 +90,17 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       ...editingGarrisons,
       [location]: {
         ...editingGarrisons[location],
+        [field]: Math.max(0, value)
+      }
+    });
+  };
+
+  const handleFortifiedPOIChange = (location: string, field: 'troops' | 'weapons', value: number) => {
+    if (!editingFortifiedPOIs) return;
+    setEditingFortifiedPOIs({
+      ...editingFortifiedPOIs,
+      [location]: {
+        ...editingFortifiedPOIs[location],
         [field]: Math.max(0, value)
       }
     });
@@ -82,6 +127,32 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
       ...editingGarrisons,
       [location]: {
         ...editingGarrisons[location],
+        chiefs: [...currentChiefs, chief]
+      }
+    });
+  };
+
+  const handleAddChiefToPOI = (location: string, chiefName: string) => {
+    if (!editingFortifiedPOIs || !selectedTribe) return;
+    const chief = ALL_CHIEFS.find(c => c.name === chiefName);
+    if (!chief) {
+      console.error(`❌ Chief ${chiefName} not found in ALL_CHIEFS`);
+      return;
+    }
+
+    const currentChiefs = editingFortifiedPOIs[location]?.chiefs || [];
+    if (currentChiefs.some(c => c.name === chiefName)) {
+      console.warn(`⚠️ Chief ${chiefName} already exists at fortified POI ${location}`);
+      return; // Already has this chief
+    }
+
+    console.log(`➕ Adding chief ${chiefName} to fortified POI ${location}`);
+    console.log('Before addition:', currentChiefs.map(c => c.name));
+
+    setEditingFortifiedPOIs({
+      ...editingFortifiedPOIs,
+      [location]: {
+        ...editingFortifiedPOIs[location],
         chiefs: [...currentChiefs, chief]
       }
     });
@@ -144,6 +215,42 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
     });
   };
 
+  // Fortified POI chief management functions
+  const handleRemoveChiefFromPOI = (location: string, chiefIndex: number) => {
+    if (!editingFortifiedPOIs || !editingFortifiedPOIs[location]) return;
+
+    const currentChiefs = editingFortifiedPOIs[location].chiefs || [];
+    console.log(`🗑️ Removing chief at index ${chiefIndex} from fortified POI ${location}`);
+    console.log('Before removal:', currentChiefs.map((c, i) => `${i}: ${c.name}`));
+
+    const filteredChiefs = currentChiefs.filter((_, index) => index !== chiefIndex);
+
+    console.log('After removal:', filteredChiefs.map((c, i) => `${i}: ${c.name}`));
+
+    setEditingFortifiedPOIs({
+      ...editingFortifiedPOIs,
+      [location]: {
+        ...editingFortifiedPOIs[location],
+        chiefs: filteredChiefs
+      }
+    });
+  };
+
+  const handleClearAllChiefsFromPOI = (location: string) => {
+    if (!editingFortifiedPOIs || !editingFortifiedPOIs[location]) return;
+
+    console.log(`🗑️ Clearing ALL chiefs from fortified POI ${location}`);
+    console.log('Before clearing:', editingFortifiedPOIs[location].chiefs?.map(c => c.name));
+
+    setEditingFortifiedPOIs({
+      ...editingFortifiedPOIs,
+      [location]: {
+        ...editingFortifiedPOIs[location],
+        chiefs: []
+      }
+    });
+  };
+
   const handleAddAsset = (assetName: string) => {
     if (!selectedTribe) return;
     if (selectedTribe.assets.includes(assetName)) return; // Already has this asset
@@ -167,10 +274,18 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
   const handleSaveChanges = () => {
     if (!selectedTribe || !editingResources || !editingGarrisons) return;
 
+    // Merge regular garrisons with fortified POI garrisons
+    const mergedGarrisons = { ...editingGarrisons };
+    if (editingFortifiedPOIs) {
+      Object.entries(editingFortifiedPOIs).forEach(([location, garrison]) => {
+        mergedGarrisons[location] = garrison;
+      });
+    }
+
     const updatedTribe: Tribe = {
       ...selectedTribe,
       globalResources: editingResources,
-      garrisons: editingGarrisons,
+      garrisons: mergedGarrisons,
       currentResearch: editingResearch,
       completedTechs: editingCompletedTechs,
       maxActionsOverride: editingMaxActions
@@ -909,6 +1024,109 @@ const GameEditor: React.FC<GameEditorProps> = ({ gameState, users, onBack, onUpd
                   </div>
                 </div>
               ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Fortified POI Editor */}
+        {selectedTribe && editingFortifiedPOIs && Object.keys(editingFortifiedPOIs).length > 0 && (
+          <Card title="🏰 Edit Fortified POIs" className="lg:col-span-1">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {Object.entries(editingFortifiedPOIs).map(([location, garrison]) => {
+                const poiInfo = getPOIInfo(location, gameState);
+                const availableChiefs = ALL_CHIEFS.filter(chief =>
+                  !garrison.chiefs?.some(c => c.name === chief.name)
+                );
+
+                return (
+                  <div key={location} className="p-3 bg-blue-900/30 rounded-md border border-blue-600">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="text-blue-200 font-semibold">{location}</h4>
+                        {poiInfo && (
+                          <p className="text-xs text-blue-300">🏰 {poiInfo.type} ({poiInfo.rarity})</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div>
+                        <label className="text-xs text-blue-300">Troops</label>
+                        <input
+                          type="number"
+                          value={garrison.troops}
+                          onChange={(e) => handleFortifiedPOIChange(location, 'troops', parseInt(e.target.value) || 0)}
+                          className="w-full px-2 py-1 bg-blue-800 text-white rounded border border-blue-500 text-sm"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-blue-300">Weapons</label>
+                        <input
+                          type="number"
+                          value={garrison.weapons}
+                          onChange={(e) => handleFortifiedPOIChange(location, 'weapons', parseInt(e.target.value) || 0)}
+                          className="w-full px-2 py-1 bg-blue-800 text-white rounded border border-blue-500 text-sm"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-blue-300">Chiefs ({garrison.chiefs?.length || 0})</label>
+                        {garrison.chiefs && garrison.chiefs.length > 0 && (
+                          <Button
+                            onClick={() => handleClearAllChiefsFromPOI(location)}
+                            variant="secondary"
+                            className="text-xs px-2 py-1 bg-red-700 hover:bg-red-800 text-white"
+                            title="Remove all chiefs from this fortified POI"
+                          >
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+
+                      {garrison.chiefs && garrison.chiefs.length > 0 ? (
+                        <>
+                          {garrison.chiefs.map((chief, index) => (
+                            <div key={`${chief.name}-${index}`} className="flex items-center justify-between p-1 rounded mb-1 bg-blue-800">
+                              <span className="text-xs text-blue-200">{chief.name}</span>
+                              <Button
+                                onClick={() => handleRemoveChiefFromPOI(location, index)}
+                                variant="secondary"
+                                className="text-xs px-1 py-0 bg-red-600 hover:bg-red-700 text-white"
+                                title="Remove this chief"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="text-xs text-blue-400 italic">No chiefs assigned</div>
+                      )}
+                      {availableChiefs.length > 0 && (
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAddChiefToPOI(location, e.target.value);
+                              e.target.value = ""; // Reset selection after adding
+                            }
+                          }}
+                          className="w-full px-2 py-1 bg-blue-800 text-white rounded border border-blue-500 text-xs"
+                          defaultValue=""
+                        >
+                          <option value="">Add Chief...</option>
+                          {availableChiefs.map(chief => (
+                            <option key={chief.name} value={chief.name}>{chief.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}

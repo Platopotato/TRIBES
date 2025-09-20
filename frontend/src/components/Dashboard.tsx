@@ -1386,6 +1386,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                   turn={turn}
                   onAcceptProposal={onAcceptProposal}
                   onRejectProposal={onRejectProposal}
+                  onAddAction={handleAddAction}
                 />
               )}
             </div>
@@ -1844,6 +1845,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     turn={turn}
                     onAcceptProposal={onAcceptProposal}
                     onRejectProposal={onRejectProposal}
+                    onAddAction={handleAddAction}
                   />
                 </div>
               </div>

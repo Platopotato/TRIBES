@@ -3,7 +3,7 @@
 
 /** @jsxImportSource react */
 import React, { useState } from 'react';
-import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticActionType, NonAggressionPact } from '@radix-tribes/shared';
+import { Tribe, DiplomaticStatus, DiplomaticProposal, DiplomaticRelation, DiplomaticActionType, NonAggressionPact, ActionType, GameAction } from '@radix-tribes/shared';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { TRIBE_ICONS } from '@radix-tribes/shared';
@@ -18,6 +18,7 @@ interface DiplomacyPanelProps {
   turn: number;
   onAcceptProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onAddAction?: (action: any) => void; // Add action to planned actions
 }
 
 const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
@@ -28,7 +29,8 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
     nonAggressionPacts = [],
     turn,
     onAcceptProposal,
-    onRejectProposal
+    onRejectProposal,
+    onAddAction
   } = props;
 
   // Simplified status display only
@@ -39,34 +41,32 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
   const incomingProposals = diplomaticProposals.filter(p => p.toTribeId === playerTribe.id);
   const outgoingProposals = diplomaticProposals.filter(p => p.fromTribeId === playerTribe.id);
 
-  // Debug logging for diplomacy issues
-  console.log('🔍 DIPLOMACY DEBUG:', {
-    playerTribeId: playerTribe.id,
-    totalProposals: diplomaticProposals.length,
-    incomingCount: incomingProposals.length,
-    outgoingCount: outgoingProposals.length,
-    allProposals: diplomaticProposals.map(p => ({
-      id: p.id,
-      from: p.fromTribeId,
-      to: p.toTribeId,
-      type: p.actionType,
-      fromName: p.fromTribeName
-    })),
-    incomingProposals: incomingProposals.map(p => ({
-      id: p.id,
-      from: p.fromTribeId,
-      type: p.actionType,
-      fromName: p.fromTribeName,
-      expires: p.expiresOnTurn
-    }))
-  });
-
   // Filter non-aggression pacts involving this player
   const playerPacts = nonAggressionPacts.filter(pact =>
     pact.tribe1Id === playerTribe.id || pact.tribe2Id === playerTribe.id
   );
   const activePacts = playerPacts.filter(pact => pact.status === 'active');
   const proposedPacts = playerPacts.filter(pact => pact.status === 'proposed');
+
+  // Helper function to create diplomacy actions
+  const createDiplomacyAction = (diplomaticAction: string, targetTribeId: string, reparations?: { food: number; scrap: number; weapons: number }) => {
+    if (!onAddAction) return;
+
+    const action: GameAction = {
+      id: `diplomacy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      actionType: ActionType.Diplomacy,
+      actionData: {
+        diplomatic_action: diplomaticAction,
+        target_tribe: targetTribeId,
+        duration: 5, // Default duration for pacts
+        reparations_food: reparations?.food || 0,
+        reparations_scrap: reparations?.scrap || 0,
+        reparations_weapons: reparations?.weapons || 0
+      }
+    };
+
+    onAddAction(action);
+  };
 
 
 
@@ -187,6 +187,44 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                   </div>
                 )}
               </div>
+
+              {/* Diplomacy Actions */}
+              {onAddAction && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
+                    <Button
+                      onClick={() => createDiplomacyAction('propose_alliance', tribe.id)}
+                      className="text-xs px-3 py-1 bg-green-800 hover:bg-green-700"
+                    >
+                      🤝 Alliance
+                    </Button>
+                  )}
+                  {relation.status === DiplomaticStatus.War && !isProposalPending && (
+                    <Button
+                      onClick={() => createDiplomacyAction('sue_for_peace', tribe.id)}
+                      className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700"
+                    >
+                      🕊️ Peace
+                    </Button>
+                  )}
+                  {relation.status === DiplomaticStatus.Neutral && !isProposalPending && !isTruceActive && (
+                    <Button
+                      onClick={() => createDiplomacyAction('declare_war', tribe.id)}
+                      className="text-xs px-3 py-1 bg-red-700 hover:bg-red-600"
+                    >
+                      ⚔️ War
+                    </Button>
+                  )}
+                  {relation.status === DiplomaticStatus.Alliance && !isProposalPending && (
+                    <Button
+                      onClick={() => createDiplomacyAction('cancel_alliance', tribe.id)}
+                      className="text-xs px-3 py-1 bg-orange-700 hover:bg-orange-600"
+                    >
+                      💔 End Alliance
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )
@@ -201,27 +239,6 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
       <Card title="Diplomacy">
         {/* Simplified Diplomacy - No Tabs */}
         <div className="space-y-4 max-h-[40rem] overflow-y-auto pr-2">
-
-          {/* Debug Section - Remove this after testing */}
-          <div className="p-2 bg-red-900/20 border border-red-600 rounded text-xs">
-            <strong>🔍 DEBUG INFO:</strong>
-            <div>Total proposals: {diplomaticProposals.length}</div>
-            <div>Incoming: {incomingProposals.length}</div>
-            <div>Outgoing: {outgoingProposals.length}</div>
-            {diplomaticProposals.length > 0 && (
-              <details className="mt-1">
-                <summary className="cursor-pointer text-red-300">Show all proposals</summary>
-                <div className="mt-1 space-y-1">
-                  {diplomaticProposals.map(p => (
-                    <div key={p.id} className="text-xs">
-                      {p.fromTribeName} → {allTribes.find(t => t.id === p.toTribeId)?.tribeName || 'Unknown'}
-                      ({p.actionType}) - Expires: Turn {p.expiresOnTurn}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
 
 
           {incomingProposals.length > 0 && (

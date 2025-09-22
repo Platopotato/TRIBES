@@ -7022,8 +7022,9 @@ function processProposeAllianceAction(tribe: any, action: any, state: any): stri
         fromTribeId: tribe.id,
         toTribeId: targetTribe.id,
         actionType: 'ProposeAlliance',
-        turn: state.turn,
-        data: {}
+        statusChangeTo: DiplomaticStatus.Alliance,
+        expiresOnTurn: state.turn + 3,
+        fromTribeName: tribe.tribeName
     };
 
     state.diplomaticProposals.push(newProposal);
@@ -7182,13 +7183,13 @@ function processSueForPeaceAction(tribe: any, action: any, state: any): string {
         fromTribeId: tribe.id,
         toTribeId: targetTribe.id,
         actionType: 'SueForPeace',
-        turn: state.turn,
-        data: {
-            reparations: {
-                food: reparations_food,
-                scrap: reparations_scrap,
-                weapons: reparations_weapons
-            }
+        statusChangeTo: DiplomaticStatus.Neutral,
+        expiresOnTurn: state.turn + 3,
+        fromTribeName: tribe.tribeName,
+        reparations: {
+            food: reparations_food || 0,
+            scrap: reparations_scrap || 0,
+            weapons: reparations_weapons || 0
         }
     };
 

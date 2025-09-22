@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import Card from './ui/Card';
 import Button from './ui/Button';
+import { User } from '../../../shared/dist/index.js';
 
 interface HelpModalProps {
   onClose: () => void;
   isOpen?: boolean;
   isDesktopWindow?: boolean;
+  currentUser?: User | null;
 }
 
 type HelpTab = 'rules' | 'ui' | 'actions' | 'research' | 'combat' | 'diplomacy' | 'resources' | 'poi' | 'outposts' | 'sabotage' | 'tips';
@@ -36,6 +38,289 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     <div className="space-y-2 text-slate-300">{children}</div>
   </div>
 );
+
+// Helper function to convert React content to plain text/HTML
+const convertToPlainText = (element: any): string => {
+  if (typeof element === 'string') return element;
+  if (typeof element === 'number') return element.toString();
+  if (!element || !element.props) return '';
+
+  const { children } = element.props;
+
+  if (Array.isArray(children)) {
+    return children.map(child => convertToPlainText(child)).join('');
+  }
+
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return children.toString();
+  if (React.isValidElement(children)) return convertToPlainText(children);
+
+  return '';
+};
+
+// Export functions
+const exportToHTML = (content: { [key: string]: React.ReactElement }) => {
+  let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radix Tribes - Game Help Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { color: #d97706; border-bottom: 3px solid #d97706; padding-bottom: 10px; }
+        h2 { color: #d97706; border-bottom: 2px solid #d97706; padding-bottom: 5px; margin-top: 30px; }
+        h3 { color: #92400e; margin-top: 25px; }
+        ul { margin: 10px 0; padding-left: 20px; }
+        li { margin: 5px 0; }
+        strong { color: #1f2937; }
+        .section { margin-bottom: 30px; }
+        .tab-content { margin-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <h1>🏛️ Radix Tribes - Complete Game Documentation</h1>
+    <p><em>Exported on ${new Date().toLocaleDateString()}</em></p>
+`;
+
+  Object.entries(content).forEach(([tabName, tabContent]) => {
+    html += `    <div class="tab-content">
+        <h2>${tabName.charAt(0).toUpperCase() + tabName.slice(1)} Guide</h2>
+        ${convertReactToHTML(tabContent)}
+    </div>`;
+  });
+
+  html += `</body>
+</html>`;
+
+  return html;
+};
+
+const convertReactToHTML = (element: React.ReactElement): string => {
+  if (!element || !element.props) return '';
+
+  const { children } = element.props;
+  let result = '';
+
+  // Handle Section components
+  if (element.type === Section) {
+    const title = element.props.title;
+    result += `<div class="section"><h3>${title}</h3>`;
+    if (Array.isArray(children)) {
+      children.forEach(child => {
+        if (React.isValidElement(child)) {
+          result += convertReactToHTML(child);
+        } else if (typeof child === 'string') {
+          result += `<p>${child}</p>`;
+        }
+      });
+    } else if (React.isValidElement(children)) {
+      result += convertReactToHTML(children);
+    } else if (typeof children === 'string') {
+      result += `<p>${children}</p>`;
+    }
+    result += '</div>';
+    return result;
+  }
+
+  // Handle basic HTML elements
+  if (typeof element.type === 'string') {
+    const tag = element.type;
+    result += `<${tag}>`;
+
+    if (Array.isArray(children)) {
+      children.forEach(child => {
+        if (React.isValidElement(child)) {
+          result += convertReactToHTML(child);
+        } else if (typeof child === 'string') {
+          result += child;
+        }
+      });
+    } else if (React.isValidElement(children)) {
+      result += convertReactToHTML(children);
+    } else if (typeof children === 'string') {
+      result += children;
+    }
+
+    result += `</${tag}>`;
+    return result;
+  }
+
+  // Handle fragments and other components
+  if (Array.isArray(children)) {
+    children.forEach(child => {
+      if (React.isValidElement(child)) {
+        result += convertReactToHTML(child);
+      } else if (typeof child === 'string') {
+        result += child;
+      }
+    });
+  } else if (React.isValidElement(children)) {
+    result += convertReactToHTML(children);
+  } else if (typeof children === 'string') {
+    result += children;
+  }
+
+  return result;
+};
+
+const exportToMarkdown = (content: { [key: string]: React.ReactElement }) => {
+  let markdown = `# 🏛️ Radix Tribes - Complete Game Documentation\n\n*Exported on ${new Date().toLocaleDateString()}*\n\n`;
+
+  Object.entries(content).forEach(([tabName, tabContent]) => {
+    markdown += `## ${tabName.charAt(0).toUpperCase() + tabName.slice(1)} Guide\n\n`;
+    markdown += convertReactToMarkdown(tabContent) + '\n\n';
+  });
+
+  return markdown;
+};
+
+const convertReactToMarkdown = (element: React.ReactElement): string => {
+  if (!element || !element.props) return '';
+
+  const { children } = element.props;
+  let result = '';
+
+  // Handle Section components
+  if (element.type === Section) {
+    const title = element.props.title;
+    result += `### ${title}\n\n`;
+    if (Array.isArray(children)) {
+      children.forEach(child => {
+        if (React.isValidElement(child)) {
+          result += convertReactToMarkdown(child);
+        } else if (typeof child === 'string') {
+          result += `${child}\n\n`;
+        }
+      });
+    } else if (React.isValidElement(children)) {
+      result += convertReactToMarkdown(children);
+    } else if (typeof children === 'string') {
+      result += `${children}\n\n`;
+    }
+    return result;
+  }
+
+  // Handle basic HTML elements
+  if (typeof element.type === 'string') {
+    const tag = element.type;
+
+    if (tag === 'p') {
+      if (Array.isArray(children)) {
+        children.forEach(child => {
+          if (React.isValidElement(child)) {
+            result += convertReactToMarkdown(child);
+          } else if (typeof child === 'string') {
+            result += child;
+          }
+        });
+      } else if (React.isValidElement(children)) {
+        result += convertReactToMarkdown(children);
+      } else if (typeof children === 'string') {
+        result += children;
+      }
+      result += '\n\n';
+      return result;
+    }
+
+    if (tag === 'ul') {
+      result += '\n';
+      if (Array.isArray(children)) {
+        children.forEach(child => {
+          if (React.isValidElement(child)) {
+            result += convertReactToMarkdown(child);
+          }
+        });
+      }
+      result += '\n';
+      return result;
+    }
+
+    if (tag === 'li') {
+      result += '- ';
+      if (Array.isArray(children)) {
+        children.forEach(child => {
+          if (React.isValidElement(child)) {
+            result += convertReactToMarkdown(child);
+          } else if (typeof child === 'string') {
+            result += child;
+          }
+        });
+      } else if (React.isValidElement(children)) {
+        result += convertReactToMarkdown(children);
+      } else if (typeof children === 'string') {
+        result += children;
+      }
+      result += '\n';
+      return result;
+    }
+
+    if (tag === 'strong') {
+      result += '**';
+      if (Array.isArray(children)) {
+        children.forEach(child => {
+          if (React.isValidElement(child)) {
+            result += convertReactToMarkdown(child);
+          } else if (typeof child === 'string') {
+            result += child;
+          }
+        });
+      } else if (React.isValidElement(children)) {
+        result += convertReactToMarkdown(children);
+      } else if (typeof children === 'string') {
+        result += children;
+      }
+      result += '**';
+      return result;
+    }
+
+    // Default handling for other tags
+    if (Array.isArray(children)) {
+      children.forEach(child => {
+        if (React.isValidElement(child)) {
+          result += convertReactToMarkdown(child);
+        } else if (typeof child === 'string') {
+          result += child;
+        }
+      });
+    } else if (React.isValidElement(children)) {
+      result += convertReactToMarkdown(children);
+    } else if (typeof children === 'string') {
+      result += children;
+    }
+
+    return result;
+  }
+
+  // Handle fragments and other components
+  if (Array.isArray(children)) {
+    children.forEach(child => {
+      if (React.isValidElement(child)) {
+        result += convertReactToMarkdown(child);
+      } else if (typeof child === 'string') {
+        result += child;
+      }
+    });
+  } else if (React.isValidElement(children)) {
+    result += convertReactToMarkdown(children);
+  } else if (typeof children === 'string') {
+    result += children;
+  }
+
+  return result;
+};
+
+const downloadFile = (content: string, filename: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 const GameRulesContent: React.FC = () => (
     <>
@@ -861,8 +1146,50 @@ const renderTabContent = (tab: HelpTab) => {
   }
 };
 
-const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktopWindow = false }) => {
+const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktopWindow = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<HelpTab>('rules');
+
+  // Check if user is admin
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Export functions for admin
+  const handleExportHTML = () => {
+    const allContent = {
+      rules: <GameRulesContent />,
+      ui: <UIGuideContent />,
+      actions: <ActionsGuideContent />,
+      research: <ResearchGuideContent />,
+      combat: <CombatGuideContent />,
+      diplomacy: <DiplomacyGuideContent />,
+      resources: <ResourcesGuideContent />,
+      poi: <POIGuideContent />,
+      outposts: <OutpostsGuideContent />,
+      sabotage: <SabotageGuideContent />,
+      tips: <TipsGuideContent />
+    };
+
+    const htmlContent = exportToHTML(allContent);
+    downloadFile(htmlContent, `radix-tribes-help-${new Date().toISOString().split('T')[0]}.html`, 'text/html');
+  };
+
+  const handleExportMarkdown = () => {
+    const allContent = {
+      rules: <GameRulesContent />,
+      ui: <UIGuideContent />,
+      actions: <ActionsGuideContent />,
+      research: <ResearchGuideContent />,
+      combat: <CombatGuideContent />,
+      diplomacy: <DiplomacyGuideContent />,
+      resources: <ResourcesGuideContent />,
+      poi: <POIGuideContent />,
+      outposts: <OutpostsGuideContent />,
+      sabotage: <SabotageGuideContent />,
+      tips: <TipsGuideContent />
+    };
+
+    const markdownContent = exportToMarkdown(allContent);
+    downloadFile(markdownContent, `radix-tribes-help-${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
+  };
 
   if (!isOpen) return null;
 
@@ -949,11 +1276,33 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, isOpen = true, isDesktop
                     <TabButton label="Sabotage" isActive={activeTab === 'sabotage'} onClick={() => setActiveTab('sabotage')} />
                     <TabButton label="Tips" isActive={activeTab === 'tips'} onClick={() => setActiveTab('tips')} />
                 </div>
-                 <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                 </Button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <div className="flex gap-1 mr-4">
+                      <Button
+                        onClick={handleExportHTML}
+                        variant="secondary"
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
+                        title="Export help documentation as HTML file"
+                      >
+                        📄 HTML
+                      </Button>
+                      <Button
+                        onClick={handleExportMarkdown}
+                        variant="secondary"
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
+                        title="Export help documentation as Markdown file"
+                      >
+                        📝 MD
+                      </Button>
+                    </div>
+                  )}
+                  <Button onClick={onClose} variant="secondary" className="bg-transparent hover:bg-slate-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                  </Button>
+                </div>
             </header>
             <main className="flex-grow p-6 overflow-y-auto bg-neutral-800">
                 {renderTabContent(activeTab)}

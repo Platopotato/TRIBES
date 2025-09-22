@@ -1787,6 +1787,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 isOpen={true}
                 onClose={() => setIsHelpModalOpen(false)}
                 isDesktopWindow={true}
+                currentUser={currentUser}
               />
             )}
 
@@ -1990,6 +1991,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             <HelpModal
               isOpen={isHelpModalOpen}
               onClose={() => setIsHelpModalOpen(false)}
+              currentUser={currentUser}
             />
           )}
 

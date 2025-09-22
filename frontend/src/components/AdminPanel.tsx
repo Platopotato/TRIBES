@@ -8,6 +8,21 @@ import NewsletterEditor from './NewsletterEditor';
 import * as Auth from '../lib/auth';
 import * as client from '../lib/client';
 
+// Import help content components for export
+import {
+  GameRulesContent,
+  UIGuideContent,
+  ActionsGuideContent,
+  ResearchGuideContent,
+  CombatGuideContent,
+  DiplomacyGuideContent,
+  ResourcesGuideContent,
+  POIGuideContent,
+  OutpostsGuideContent,
+  SabotageGuideContent,
+  TipsGuideContent
+} from './HelpModal';
+
 interface AdminPanelProps {
   gameState: GameState;
   users: User[];
@@ -84,6 +99,100 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
       setAutoDeadlineTime(gameState.autoDeadlineSettings.timeOfDay);
     }
   }, [gameState.autoDeadlineSettings]);
+
+  // Help Export Functions
+  const exportHelpToHTML = () => {
+    const allContent = {
+      rules: React.createElement(GameRulesContent),
+      ui: React.createElement(UIGuideContent),
+      actions: React.createElement(ActionsGuideContent),
+      research: React.createElement(ResearchGuideContent),
+      combat: React.createElement(CombatGuideContent),
+      diplomacy: React.createElement(DiplomacyGuideContent),
+      resources: React.createElement(ResourcesGuideContent),
+      poi: React.createElement(POIGuideContent),
+      outposts: React.createElement(OutpostsGuideContent),
+      sabotage: React.createElement(SabotageGuideContent),
+      tips: React.createElement(TipsGuideContent)
+    };
+
+    let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radix Tribes - Game Help Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { color: #d97706; border-bottom: 3px solid #d97706; padding-bottom: 10px; }
+        h2 { color: #d97706; border-bottom: 2px solid #d97706; padding-bottom: 5px; margin-top: 30px; }
+        h3 { color: #92400e; margin-top: 25px; }
+        ul { margin: 10px 0; padding-left: 20px; }
+        li { margin: 5px 0; }
+        strong { color: #1f2937; }
+        .section { margin-bottom: 30px; }
+        .tab-content { margin-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <h1>🏛️ Radix Tribes - Complete Game Documentation</h1>
+    <p><em>Exported on ${new Date().toLocaleDateString()}</em></p>
+`;
+
+    Object.entries(allContent).forEach(([tabName, tabContent]) => {
+      html += `    <div class="tab-content">
+        <h2>${tabName.charAt(0).toUpperCase() + tabName.slice(1)} Guide</h2>
+        <div class="section">
+          <p>This section contains the ${tabName} documentation from the game help system.</p>
+        </div>
+    </div>`;
+    });
+
+    html += `</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `radix-tribes-help-${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportHelpToMarkdown = () => {
+    let markdown = `# 🏛️ Radix Tribes - Complete Game Documentation\n\n*Exported on ${new Date().toLocaleDateString()}*\n\n`;
+
+    const sections = [
+      { name: 'Rules', content: 'Basic game rules and mechanics' },
+      { name: 'UI Guide', content: 'User interface overview and navigation' },
+      { name: 'Actions', content: 'Available actions and their effects' },
+      { name: 'Research', content: 'Technology tree and research system' },
+      { name: 'Combat', content: 'Combat mechanics and strategies' },
+      { name: 'Diplomacy', content: 'Diplomatic actions and relationships' },
+      { name: 'Resources', content: 'Resource management and economy' },
+      { name: 'POIs', content: 'Points of Interest and their benefits' },
+      { name: 'Outposts', content: 'Outpost system and management' },
+      { name: 'Sabotage', content: 'Sabotage actions and espionage' },
+      { name: 'Tips', content: 'Strategic tips and advanced tactics' }
+    ];
+
+    sections.forEach(section => {
+      markdown += `## ${section.name} Guide\n\n${section.content}\n\n`;
+    });
+
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `radix-tribes-help-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2217,6 +2326,32 @@ GAME STATISTICS:
                     </svg>
                     Newsletter Summary
                   </Button>
+
+                  {/* Help Documentation Export */}
+                  <div className="border-t border-neutral-600 pt-4 mt-4">
+                    <p className="text-neutral-400 text-sm mb-3">📚 Export help documentation for your website:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
+                        onClick={exportHelpToHTML}
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        📄 Export HTML
+                      </Button>
+                      <Button
+                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
+                        onClick={exportHelpToMarkdown}
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        📝 Export MD
+                      </Button>
+                    </div>
+                  </div>
+
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
               </div>
             </Card>

@@ -6149,26 +6149,49 @@ function processVaultDiscovery(attackerTribe: any, location: string, state: any)
     }
 
     // BONUS TURNS MECHANIC: Grant 2 additional turns for vault discovery
+    console.log(`🎯 ATTACK VAULT DEBUG: Granting bonus turns to ${attackerTribe.tribeName}`);
+    console.log(`🎯 ATTACK VAULT DEBUG: Current bonus turns: ${attackerTribe.bonusTurns || 0}`);
+
     if (!attackerTribe.bonusTurns) attackerTribe.bonusTurns = 0;
     attackerTribe.bonusTurns += 2;
+
+    console.log(`🎯 ATTACK VAULT DEBUG: New bonus turns total: ${attackerTribe.bonusTurns}`);
 
     // Track the source of bonus turns for proper messaging
     if (!attackerTribe.bonusTurnSource) attackerTribe.bonusTurnSource = [];
     attackerTribe.bonusTurnSource.push({ source: 'vault', count: 2, location: location });
 
+    console.log(`🎯 ATTACK VAULT DEBUG: Bonus turn source added: vault at ${location}`);
+
     // Random asset discovery (50% chance)
     let assetReward = '';
-    if (Math.random() < 0.5) {
+    console.log(`🎁 ATTACK VAULT DEBUG: Rolling for asset discovery (50% chance)...`);
+    const assetRoll = Math.random();
+    console.log(`🎁 ATTACK VAULT DEBUG: Asset roll: ${assetRoll.toFixed(3)} (need < 0.5)`);
+
+    if (assetRoll < 0.5) {
+        console.log(`✅ ATTACK VAULT DEBUG: Asset discovery successful! Checking available assets...`);
+        console.log(`🎁 ATTACK VAULT DEBUG: ALL_ASSETS length: ${ALL_ASSETS.length}`);
+        console.log(`🎁 ATTACK VAULT DEBUG: Tribe current assets: ${JSON.stringify(attackerTribe.assets || [])}`);
+
         const availableAssets = ALL_ASSETS.filter(asset =>
             !attackerTribe.assets || !attackerTribe.assets.includes(asset.name)
         );
+
+        console.log(`🎁 ATTACK VAULT DEBUG: Available assets: ${availableAssets.length}`);
+        console.log(`🎁 ATTACK VAULT DEBUG: Available asset names: ${availableAssets.map(a => a.name).join(', ')}`);
 
         if (availableAssets.length > 0) {
             const randomAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)];
             if (!attackerTribe.assets) attackerTribe.assets = [];
             attackerTribe.assets.push(randomAsset.name);
+            console.log(`🎁 ATTACK VAULT DEBUG: Asset granted: ${randomAsset.name}`);
             assetReward = `\n\n🎁 **RARE ASSET DISCOVERED!** Your forces uncovered a pristine ${randomAsset.name.replace(/_/g, ' ')}! This valuable equipment has been added to your tribe's arsenal.`;
+        } else {
+            console.log(`❌ ATTACK VAULT DEBUG: No available assets to grant`);
         }
+    } else {
+        console.log(`❌ ATTACK VAULT DEBUG: Asset discovery failed (rolled ${assetRoll.toFixed(3)})`);
     }
 
     // 25% chance for bonus technology
@@ -6214,18 +6237,28 @@ The vault's systems have been depleted, leaving behind only ruins, but the knowl
 
 // Process vault discovery through scavenging (peaceful discovery)
 function processVaultDiscoveryScavenging(tribe: any, location: string, state: any): string {
+    console.log(`🏛️ SCAVENGE VAULT DISCOVERY DEBUG: Processing vault at ${location} for ${tribe.tribeName}`);
+
     // Find the hex data for this location
     const { q, r } = parseHexCoords(location);
     const hexData = state.mapData.find((hex: any) => hex.q === q && hex.r === r);
 
-    if (!hexData || !hexData.poi || hexData.poi.type !== POIType.Vault) {
+    if (!hexData) {
+        console.log(`❌ SCAVENGE VAULT DEBUG: No hex data found for ${location}`);
+        return ''; // No hex data
+    }
+
+    if (!hexData.poi) {
+        console.log(`❌ SCAVENGE VAULT DEBUG: No POI at ${location}`);
+        return ''; // No POI
+    }
+
+    if (hexData.poi.type !== POIType.Vault) {
+        console.log(`❌ SCAVENGE VAULT DEBUG: POI at ${location} is ${hexData.poi.type}, not a Vault`);
         return ''; // Not a vault or already discovered
     }
 
-    // Check if this vault has already been discovered (converted to ruins)
-    if (hexData.poi.type === POIType.Ruins) {
-        return ''; // Already discovered
-    }
+    console.log(`✅ SCAVENGE VAULT DEBUG: Valid vault found at ${location}, processing rewards...`);
 
     // Same rewards as attack discovery but slightly reduced since it's peaceful
     const baseReward = {
@@ -6245,26 +6278,49 @@ function processVaultDiscoveryScavenging(tribe: any, location: string, state: an
     }
 
     // BONUS TURNS MECHANIC: Grant 2 additional turns for vault discovery
+    console.log(`🎯 SCAVENGE VAULT DEBUG: Granting bonus turns to ${tribe.tribeName}`);
+    console.log(`🎯 SCAVENGE VAULT DEBUG: Current bonus turns: ${tribe.bonusTurns || 0}`);
+
     if (!tribe.bonusTurns) tribe.bonusTurns = 0;
     tribe.bonusTurns += 2;
+
+    console.log(`🎯 SCAVENGE VAULT DEBUG: New bonus turns total: ${tribe.bonusTurns}`);
 
     // Track the source of bonus turns for proper messaging
     if (!tribe.bonusTurnSource) tribe.bonusTurnSource = [];
     tribe.bonusTurnSource.push({ source: 'vault', count: 2, location: location });
 
+    console.log(`🎯 SCAVENGE VAULT DEBUG: Bonus turn source added: vault at ${location}`);
+
     // Random asset discovery (40% chance - slightly lower than attack)
     let assetReward = '';
-    if (Math.random() < 0.4) {
+    console.log(`🎁 SCAVENGE VAULT DEBUG: Rolling for asset discovery (40% chance)...`);
+    const assetRoll = Math.random();
+    console.log(`🎁 SCAVENGE VAULT DEBUG: Asset roll: ${assetRoll.toFixed(3)} (need < 0.4)`);
+
+    if (assetRoll < 0.4) {
+        console.log(`✅ SCAVENGE VAULT DEBUG: Asset discovery successful! Checking available assets...`);
+        console.log(`🎁 SCAVENGE VAULT DEBUG: ALL_ASSETS length: ${ALL_ASSETS.length}`);
+        console.log(`🎁 SCAVENGE VAULT DEBUG: Tribe current assets: ${JSON.stringify(tribe.assets || [])}`);
+
         const availableAssets = ALL_ASSETS.filter(asset =>
             !tribe.assets || !tribe.assets.includes(asset.name)
         );
+
+        console.log(`🎁 SCAVENGE VAULT DEBUG: Available assets: ${availableAssets.length}`);
+        console.log(`🎁 SCAVENGE VAULT DEBUG: Available asset names: ${availableAssets.map(a => a.name).join(', ')}`);
 
         if (availableAssets.length > 0) {
             const randomAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)];
             if (!tribe.assets) tribe.assets = [];
             tribe.assets.push(randomAsset.name);
+            console.log(`🎁 SCAVENGE VAULT DEBUG: Asset granted: ${randomAsset.name}`);
             assetReward = `\n\n🎁 **RARE ASSET DISCOVERED!** Hidden within the vault, your scouts found a pristine ${randomAsset.name.replace(/_/g, ' ')}! This valuable equipment has been added to your tribe's arsenal.`;
+        } else {
+            console.log(`❌ SCAVENGE VAULT DEBUG: No available assets to grant`);
         }
+    } else {
+        console.log(`❌ SCAVENGE VAULT DEBUG: Asset discovery failed (rolled ${assetRoll.toFixed(3)})`);
     }
 
     // 20% chance for bonus technology (lower than attack)

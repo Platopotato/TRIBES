@@ -145,6 +145,7 @@ const ActionsGuideContent: React.FC = () => (
   <>
     <Section title="Movement & Exploration">
       <p><strong className="text-white">Journey:</strong> Move troops and chiefs to explore new territories. Success depends on distance, terrain, and troop count.</p>
+
       <p><strong className="text-white">Scavenge:</strong> Search locations for resources. Different terrains and POIs yield different materials:</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
         <li><strong>Cities:</strong> High scrap and weapons, some food</li>
@@ -153,6 +154,14 @@ const ActionsGuideContent: React.FC = () => (
         <li><strong>Wasteland:</strong> Minimal resources, high risk</li>
         <li><strong>POIs:</strong> Bonus resources related to POI type (farms give extra food, factories give extra scrap)</li>
       </ul>
+
+      <p><strong className="text-white">🚫 Scavenging Restrictions:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Garrison Conflict:</strong> Cannot scavenge at locations where you already have a garrison stationed</li>
+        <li><strong>Resource Overlap:</strong> Stationed troops already gather resources automatically from POIs</li>
+        <li><strong>Strategic Choice:</strong> Either station troops for passive income OR scavenge for immediate resources</li>
+      </ul>
+
       <p><strong className="text-white">Note:</strong> Scavenging at POIs provides immediate resources plus the ongoing income from controlling them.</p>
     </Section>
 
@@ -171,8 +180,21 @@ const ActionsGuideContent: React.FC = () => (
 
     <Section title="Economic Actions">
       <p><strong className="text-white">Recruit:</strong> Train new troops using food. Cost varies by technology and garrison size.</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Base Cost:</strong> 5 food per troop recruited</li>
+        <li><strong>Scaling Cost:</strong> Increases with existing garrison size</li>
+        <li><strong>Technology Bonuses:</strong> Various techs reduce recruitment costs</li>
+        <li><strong>Settlement Bonus:</strong> POI provides recruitment efficiency boost</li>
+      </ul>
+
       <p><strong className="text-white">Produce Weapons:</strong> Convert scrap into weapons for combat effectiveness.</p>
-      <p><strong className="text-white">Trade:</strong> Exchange resources with other tribes (requires diplomatic agreements).</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>Base Cost:</strong> 10 scrap per weapon produced</li>
+        <li><strong>Technology Bonuses:</strong> Various techs reduce production costs</li>
+        <li><strong>Strategic Value:</strong> Weapons multiply combat effectiveness significantly</li>
+      </ul>
+
+      <p><strong className="text-white">Trade:</strong> Exchange resources with other tribes through journey system.</p>
     </Section>
 
     <Section title="Sabotage Success Rates">
@@ -553,12 +575,21 @@ const POIGuideContent: React.FC = () => (
         <li>Scales with garrison size</li>
       </ul>
 
-      <p><strong className="text-white">🍎 Food Source (F):</strong> Abandoned food caches, supermarkets, orchards</p>
+      <p><strong className="text-white">🍎 Food Source (F):</strong> Produces food at 3× troop count per turn (max 500)</p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Excellent scavenging for food (Common)</li>
+        <li>Passive food income when garrisoned (Common)</li>
         <li>Found in Plains, Forest, and Swamp</li>
-        <li>No passive income - scavenging only</li>
-        <li>Critical for early game survival</li>
+        <li>Also excellent for scavenging immediate food</li>
+        <li>Critical for early game survival and growth</li>
+        <li>Resource generation capped at 500 per turn</li>
+      </ul>
+
+      <p><strong className="text-white">🔧 Scrapyard (S):</strong> Produces scrap at 3× troop count per turn (max 500)</p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Passive scrap income when garrisoned (Common)</li>
+        <li>Found in Ruins and Wasteland</li>
+        <li>Essential for technology research and weapon production</li>
+        <li>Resource generation capped at 500 per turn</li>
       </ul>
 
       <p><strong className="text-white">🏛️ Vault (V):</strong> Special discovery bonuses</p>
@@ -571,11 +602,12 @@ const POIGuideContent: React.FC = () => (
 
       <p><strong className="text-white">Other POI Types:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>🔧 Scrapyard (S):</strong> Excellent scrap scavenging (Common)</li>
-        <li><strong>⚔️ Weapons Cache (W):</strong> Rare weapons source (Uncommon)</li>
-        <li><strong>🔬 Research Lab (R):</strong> Accelerates research (Rare)</li>
-        <li><strong>🏘️ Settlement (H):</strong> Improves recruitment (Rare)</li>
-        <li><strong>🏴‍☠️ Bandit Camp (B):</strong> Dangerous but rewarding (Uncommon)</li>
+        <li><strong>⚔️ Weapons Cache (W):</strong> Rare weapons source, scavenging only (Uncommon)</li>
+        <li><strong>🔬 Research Lab (R):</strong> Accelerates research by +25% (Rare)</li>
+        <li><strong>🏘️ Settlement (H):</strong> Improves recruitment efficiency (Rare)</li>
+        <li><strong>🏴‍☠️ Bandit Camp (B):</strong> Must be attacked first, rewards on victory (Uncommon)</li>
+        <li><strong>🏛️ Ruins POI (X):</strong> General scavenging location (Common)</li>
+        <li><strong>⚡ Battlefield (!):</strong> Weapons scavenging location (Rare)</li>
       </ul>
     </Section>
 
@@ -600,10 +632,19 @@ const POIGuideContent: React.FC = () => (
       </ul>
     </Section>
 
-    <Section title="POI Income Timing">
+    <Section title="POI Income Rules & Limits">
       <p><strong className="text-white">Income Processing:</strong> POI income is added during turn processing, after upkeep costs.</p>
       <p><strong className="text-white">Control Requirements:</strong> You must control the POI at the start of the turn to receive income.</p>
       <p><strong className="text-white">Stacking:</strong> POI income stacks with technology passive generation (e.g., farms + Crop Rotation).</p>
+
+      <p><strong className="text-white">🚫 Resource Generation Limits:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>500 Resource Cap:</strong> Automatic resource generation from POIs is capped at 500 per turn</li>
+        <li><strong>Applies to:</strong> Food Sources (3× troop count) and Scrapyards (3× troop count)</li>
+        <li><strong>Large Garrisons:</strong> Deploying 167+ troops won't increase income beyond 500</li>
+        <li><strong>Strategic Impact:</strong> Prevents massive resource exploitation from oversized garrisons</li>
+        <li><strong>Balance:</strong> Encourages spreading troops across multiple POIs rather than concentrating</li>
+      </ul>
     </Section>
   </>
 );

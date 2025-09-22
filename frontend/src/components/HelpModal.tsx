@@ -49,11 +49,14 @@ const GameRulesContent: React.FC = () => (
             </ul>
         </Section>
         <Section title="Diplomacy">
-            <p>You can manage your relationships with other tribes via the new Diplomacy panel.</p>
+            <p>Diplomacy is managed through the turn-based action system. Use "Add New Action" → "Diplomacy" to plan diplomatic actions.</p>
             <ul className="list-disc list-inside space-y-1 pl-4">
-                 <li><strong className="text-white">Propose Alliance:</strong> You can send an alliance proposal to a tribe you are Neutral with. They will have a few turns to accept or reject it.</li>
-                 <li><strong className="text-blue-400">Alliances:</strong> Allies share vision, allowing you to see their territory and any enemies they spot. You can also move your forces into an ally's garrisoned hex without starting a fight.</li>
-                 <li><strong className="text-red-400">Declare War:</strong> You can declare war on any tribe. This is a formal action that takes effect at the end of the turn, changing your status to 'War'.</li>
+                 <li><strong className="text-white">Turn-Based System:</strong> All diplomatic actions are planned during your turn and executed when you finalize.</li>
+                 <li><strong className="text-blue-400">Propose Alliance:</strong> Send alliance proposals to neutral tribes. They have 3 turns to accept or reject.</li>
+                 <li><strong className="text-green-400">Alliance Benefits:</strong> Allies share vision and cannot attack each other.</li>
+                 <li><strong className="text-red-400">Declare War:</strong> Enables attacks and changes diplomatic status to War.</li>
+                 <li><strong className="text-yellow-400">Sue for Peace:</strong> Offer reparations to end wars and return to neutral status.</li>
+                 <li><strong className="text-purple-400">End Alliance:</strong> Cancel existing alliances and return to neutral status.</li>
             </ul>
         </Section>
         <Section title="Journeys & Travel Time">
@@ -270,117 +273,143 @@ const CombatGuideContent: React.FC = () => (
 
 const DiplomacyGuideContent: React.FC = () => (
   <>
-    <Section title="Diplomatic Relations Overview">
-      <p>Diplomacy is a comprehensive system for managing relationships, forming alliances, conducting wars, and sharing intelligence.</p>
-      <p><strong className="text-white">Diplomatic Statuses:</strong></p>
+    <Section title="Turn-Based Diplomacy System">
+      <p>Diplomacy in Radix Tribes uses a turn-based action system where all diplomatic actions are planned during your turn and executed when you finalize.</p>
+      <p><strong className="text-white">How to Use Diplomacy:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>🤝 Alliance:</strong> Mutual cooperation with shared benefits and advanced options</li>
-        <li><strong>⚖️ Neutral:</strong> Default state with full range of diplomatic options</li>
-        <li><strong>⚔️ War:</strong> Open hostilities with combat and peace negotiation options</li>
+        <li><strong>1. Add Action:</strong> Click "Add New Action" in your Dashboard</li>
+        <li><strong>2. Select Diplomacy:</strong> Choose "Diplomacy" from the action types</li>
+        <li><strong>3. Choose Sub-Action:</strong> Select specific diplomatic action (Alliance, War, Peace, etc.)</li>
+        <li><strong>4. Select Target:</strong> Choose which tribe to interact with</li>
+        <li><strong>5. Finalize Turn:</strong> Action executes when you submit your turn</li>
       </ul>
-      <p><strong className="text-white">Access:</strong> Use the 🤝 Diplomacy button to open the comprehensive diplomatic interface with Relations, Proposals, Actions, Trade, and Intelligence tabs.</p>
+      <p><strong className="text-white">View Status:</strong> Use the 🤝 Diplomacy panel to view current relationships and incoming proposals.</p>
     </Section>
 
-    <Section title="Neutral Relations Actions">
-      <p><strong className="text-white">Available diplomatic actions when neutral:</strong></p>
+    <Section title="Diplomatic Statuses">
+      <p><strong className="text-white">Three main diplomatic relationships:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>🤝 Propose Alliance:</strong> Offer formal alliance (expires in 3 turns)</li>
-        <li><strong>🕊️ Non-Aggression Pact:</strong> Temporary peace agreement without full alliance</li>
-        <li><strong>🆘 Request Aid:</strong> Ask for resources or assistance</li>
-        <li><strong>📜 Send Demands:</strong> Demand resources, territory, or concessions</li>
-        <li><strong>⚔️ Declare War:</strong> Immediately enable attacks and sabotage</li>
-      </ul>
-    </Section>
-
-    <Section title="Alliance Benefits & Actions">
-      <p><strong className="text-white">Alliance Benefits:</strong></p>
-      <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Cannot attack each other's territories</li>
-        <li>Shared vision of allied garrisons and influence zones</li>
-        <li>Optional map sharing (toggle in Intelligence tab)</li>
-        <li>Advanced diplomatic options and coordination</li>
-        <li>Mutual protection and strategic cooperation</li>
-      </ul>
-
-      <p><strong className="text-white">Alliance Actions:</strong></p>
-      <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>💰 Trade Agreements:</strong> Framework for resource exchange (coming soon)</li>
-        <li><strong>🗺️ Map Sharing:</strong> Toggle sharing of explored territories</li>
-        <li><strong>🆘 Request Aid:</strong> Ask allied support in resources or strategy</li>
-        <li><strong>🚶 Request Passage:</strong> Safe travel through allied territory</li>
-        <li><strong>💔 Break Alliance:</strong> End alliance and return to neutral</li>
+        <li><strong>⚖️ Neutral:</strong> Default state - can propose alliances or declare war</li>
+        <li><strong>🤝 Alliance:</strong> Mutual cooperation with shared vision and protection</li>
+        <li><strong>⚔️ War:</strong> Open hostilities - can attack each other's territories</li>
       </ul>
     </Section>
 
-    <Section title="War Actions & Peace Options">
-      <p><strong className="text-white">War Consequences:</strong></p>
+    <Section title="Available Diplomatic Actions">
+      <p><strong className="text-white">🤝 Propose Alliance (Neutral → Alliance):</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Can attack enemy garrisons and territories</li>
-        <li>All sabotage operations become available</li>
-        <li>No diplomatic cooperation possible during active war</li>
-        <li>Potential for escalating conflicts and resource drain</li>
+        <li>Send alliance proposal to neutral tribes</li>
+        <li>Target tribe has 3 turns to accept or reject</li>
+        <li>Creates formal alliance with shared benefits</li>
+        <li>Proposal expires automatically if not responded to</li>
       </ul>
 
-      <p><strong className="text-white">Peace Negotiation Options:</strong></p>
+      <p><strong className="text-white">⚔️ Declare War (Neutral → War):</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li><strong>🕊️ Send Peace Envoy:</strong> Open negotiations without offering reparations</li>
-        <li><strong>💰 Sue for Peace:</strong> Offer reparations to end war immediately</li>
-        <li><strong>🎁 Offer Tribute:</strong> Ongoing payments to appease enemies</li>
-        <li><strong>⚔️ Send Ultimatum:</strong> Final demands before escalation</li>
-      </ul>
-    </Section>
-
-    <Section title="Map Intelligence Sharing">
-      <p><strong className="text-white">🗺️ Map Sharing System:</strong> Control what allies can see of your explored territories through the Intelligence tab.</p>
-
-      <p><strong className="text-white">Sharing Enabled (Default):</strong></p>
-      <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Allies see all terrain you've explored</li>
-        <li>Allies can see POIs you've discovered</li>
-        <li>Strengthens alliance cooperation and coordination</li>
-        <li>Helps avoid territorial conflicts during expansion</li>
-      </ul>
-
-      <p><strong className="text-white">Sharing Disabled:</strong></p>
-      <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Your discoveries remain private</li>
-        <li>Useful for keeping strategic locations secret</li>
-        <li>You can still see allies' maps if they share</li>
-        <li>Toggle anytime with immediate effect</li>
+        <li>Immediately changes status to War</li>
+        <li>Enables attack actions against target tribe</li>
+        <li>No proposal system - takes effect immediately</li>
+        <li>Opens path for future peace negotiations</li>
       </ul>
     </Section>
 
-    <Section title="Diplomatic Proposals System">
-      <p><strong className="text-white">Proposal Mechanics:</strong></p>
+    <Section title="Alliance Benefits">
+      <p><strong className="text-white">When you have an alliance with another tribe:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Most diplomatic actions create proposals requiring acceptance</li>
-        <li>Proposals expire in 3 turns if not responded to</li>
-        <li>View incoming and outgoing proposals in Proposals tab</li>
-        <li>Accept or reject proposals with immediate effect</li>
+        <li><strong>🛡️ Mutual Protection:</strong> Cannot attack each other's territories</li>
+        <li><strong>👁️ Shared Vision:</strong> See allied garrisons and their influence zones on the map</li>
+        <li><strong>🤝 Coordination:</strong> Plan joint strategies and coordinate movements</li>
+        <li><strong>📍 Safe Passage:</strong> Move through allied territory without conflict</li>
       </ul>
 
-      <p><strong className="text-white">Truce System:</strong></p>
+      <p><strong className="text-white">💔 End Alliance (Alliance → Neutral):</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Successful peace negotiations create truce periods</li>
-        <li>During truce, war cannot be declared again</li>
-        <li>Truce duration varies based on negotiation type</li>
-        <li>Allows time for relationship rebuilding</li>
+        <li>Cancel existing alliance and return to neutral status</li>
+        <li>Takes effect immediately when turn is processed</li>
+        <li>Removes shared vision and mutual protection</li>
+        <li>Allows future war declarations or new alliance proposals</li>
       </ul>
     </Section>
 
-    <Section title="Strategic Diplomacy Tips">
-      <p><strong className="text-white">Early Game:</strong> Form alliances for exploration and mutual protection</p>
-      <p><strong className="text-white">Mid Game:</strong> Use demands and aid requests to gain advantages</p>
-      <p><strong className="text-white">Late Game:</strong> Strategic alliance breaking and peace envoys for positioning</p>
-
-      <p><strong className="text-white">Advanced Strategies:</strong></p>
+    <Section title="War Status & Peace Negotiations">
+      <p><strong className="text-white">War Status Effects:</strong></p>
       <ul className="list-disc list-inside space-y-1 pl-4">
-        <li>Disable map sharing before secret operations (vault attacks)</li>
-        <li>Use peace envoys to test enemy willingness to negotiate</li>
-        <li>Send demands to weaker enemies for resource extraction</li>
-        <li>Request aid from strong allies during difficult periods</li>
-        <li>Time alliance breaks for maximum strategic advantage</li>
-        <li>Coordinate with allies using shared vision and intelligence</li>
+        <li><strong>⚔️ Combat Enabled:</strong> Can attack enemy garrisons and territories</li>
+        <li><strong>🎯 Sabotage Available:</strong> All sabotage operations become possible</li>
+        <li><strong>🚫 No Cooperation:</strong> Cannot form alliances while at war</li>
+        <li><strong>💰 Resource Drain:</strong> Wars consume resources through conflict</li>
+      </ul>
+
+      <p><strong className="text-white">🕊️ Sue for Peace (War → Neutral):</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Offer reparations to end war and return to neutral status</li>
+        <li>Specify food, scrap, and weapons to offer as compensation</li>
+        <li>Target tribe can accept or reject the peace proposal</li>
+        <li>Proposal expires in 3 turns if not responded to</li>
+        <li>Successful peace negotiations end hostilities immediately</li>
+      </ul>
+    </Section>
+
+    <Section title="Alliance Vision Sharing">
+      <p><strong className="text-white">🗺️ Shared Vision:</strong> Alliances automatically provide shared vision benefits.</p>
+
+      <p><strong className="text-white">What You Share with Allies:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>👁️ Garrison Vision:</strong> Allies can see your garrisons on the map</li>
+        <li><strong>🌍 Influence Zones:</strong> Allies see your territory control areas</li>
+        <li><strong>🎯 Enemy Detection:</strong> Enemies spotted by your forces are visible to allies</li>
+        <li><strong>📍 Strategic Coordination:</strong> Plan joint operations with shared intelligence</li>
+      </ul>
+
+      <p><strong className="text-white">Alliance Vision Benefits:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Improved situational awareness across allied territories</li>
+        <li>Early warning system for enemy movements</li>
+        <li>Better coordination for joint military operations</li>
+        <li>Shared intelligence for strategic planning</li>
+      </ul>
+    </Section>
+
+    <Section title="Proposal System">
+      <p><strong className="text-white">How Proposals Work:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>📤 Outgoing:</strong> Alliance and peace proposals you send to other tribes</li>
+        <li><strong>📥 Incoming:</strong> Proposals other tribes send to you</li>
+        <li><strong>⏰ Expiration:</strong> All proposals expire in 3 turns if not responded to</li>
+        <li><strong>👁️ Visibility:</strong> View all proposals in the Diplomacy panel</li>
+      </ul>
+
+      <p><strong className="text-white">Responding to Proposals:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>✅ Accept:</strong> Approve the proposal - status changes immediately</li>
+        <li><strong>❌ Reject:</strong> Decline the proposal - returns to previous status</li>
+        <li><strong>⏳ Ignore:</strong> Let proposal expire automatically after 3 turns</li>
+        <li><strong>📊 Tracking:</strong> See proposal details including reparations offered</li>
+      </ul>
+    </Section>
+
+    <Section title="Diplomatic Strategy Tips">
+      <p><strong className="text-white">Early Game Strategy:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>🤝 Secure Alliances:</strong> Form alliances early for mutual protection and shared vision</li>
+        <li><strong>🛡️ Avoid Early Wars:</strong> Focus on expansion and resource gathering before conflicts</li>
+        <li><strong>👁️ Use Shared Vision:</strong> Leverage allied intelligence for safer exploration</li>
+      </ul>
+
+      <p><strong className="text-white">Mid-Late Game Strategy:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li><strong>⚔️ Strategic Wars:</strong> Declare war only when you have clear military advantage</li>
+        <li><strong>🕊️ Peace Negotiations:</strong> Offer generous reparations to end costly wars quickly</li>
+        <li><strong>💔 Alliance Management:</strong> End alliances when they no longer serve your interests</li>
+        <li><strong>🎯 Timing:</strong> Plan diplomatic actions to coincide with military campaigns</li>
+      </ul>
+
+      <p><strong className="text-white">Advanced Tips:</strong></p>
+      <ul className="list-disc list-inside space-y-1 pl-4">
+        <li>Use diplomacy actions as part of your overall turn strategy</li>
+        <li>Monitor proposal expiration times to avoid missed opportunities</li>
+        <li>Coordinate with allies before major military operations</li>
+        <li>Consider offering peace before enemies become too powerful</li>
       </ul>
     </Section>
   </>

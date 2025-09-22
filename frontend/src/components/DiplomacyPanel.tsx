@@ -185,7 +185,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
           {onAddAction && (
             <div className="mb-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
               <p className="text-sm text-blue-200">
-                <strong>💡 Turn-Based Diplomacy:</strong> Click action buttons below to plan diplomatic actions.
+                <strong>💡 Turn-Based Diplomacy:</strong> Use the "Add New Action" button in your Dashboard to plan diplomatic actions (Alliance, War, Peace, etc.).
                 They will be executed when you finalize your turn.
               </p>
             </div>

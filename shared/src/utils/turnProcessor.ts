@@ -4102,13 +4102,24 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         return `Insufficient troops at ${attackerLocation} for attack. Need ${troopsToAttack}, have ${attackerGarrison?.troops || 0}.`;
     }
 
-    // Find defending tribe
-    const defendingTribe = state.tribes.find((t: any) =>
+    // Find defending tribe - check both garrison presence AND outpost ownership
+    let defendingTribe = state.tribes.find((t: any) =>
         t.id !== tribe.id && (t.garrisons[targetLocation] || t.garrisons[convertToStandardFormat(targetLocation)])
     );
 
+    // If no garrison found, check if there's an outpost owned by another tribe
     if (!defendingTribe) {
-        return `No enemy garrison found at ${targetLocation} to attack.`;
+        const targetCoords = parseHexCoords(targetLocation);
+        const targetHex = state.mapData.find((h: any) => h.q === targetCoords.q && h.r === targetCoords.r);
+        const outpostOwnerId = getOutpostOwnerTribeId(targetHex);
+
+        if (outpostOwnerId && outpostOwnerId !== tribe.id) {
+            defendingTribe = state.tribes.find((t: any) => t.id === outpostOwnerId);
+        }
+    }
+
+    if (!defendingTribe) {
+        return `No enemy garrison or outpost found at ${targetLocation} to attack.`;
     }
 
     // Check for active non-aggression pact
@@ -4116,7 +4127,14 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         return `❌ **ATTACK BLOCKED** You have an active non-aggression pact with ${defendingTribe.tribeName}. You cannot attack them while the pact is in effect.`;
     }
 
-    const defenderGarrison = defendingTribe.garrisons[targetLocation] || defendingTribe.garrisons[convertToStandardFormat(targetLocation)];
+    let defenderGarrison = defendingTribe.garrisons[targetLocation] || defendingTribe.garrisons[convertToStandardFormat(targetLocation)];
+
+    // If there's no garrison but there's an outpost, create an empty garrison for the defender
+    if (!defenderGarrison) {
+        defenderGarrison = { troops: 0, weapons: 0, chiefs: [] };
+        // Store it in the defending tribe's garrisons so combat resolution works
+        defendingTribe.garrisons[targetLocation] = defenderGarrison;
+    }
 
     // Simple combat resolution
 
@@ -4127,7 +4145,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
     // Weapons provide 1.5x combat effectiveness
     const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0) * 1.5;
-    const defenderStrength = defenderGarrison.troops + (defenderGarrison.weapons || 0) * 1.5;
+    const defenderStrength = (defenderGarrison.troops || 0) + ((defenderGarrison.weapons || 0) * 1.5);
 
     // Terrain-specific defense bonuses for defender
     let terrainDefBonus = 0;

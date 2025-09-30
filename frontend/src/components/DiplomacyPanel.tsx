@@ -204,13 +204,7 @@ const DiplomacyPanel: React.FC<DiplomacyPanelProps> = (props) => {
                 let icon = '🤝';
                 let title = 'Alliance';
 
-                if (p.actionType === DiplomaticActionType.ProposeTradeAgreement) {
-                  proposalType = 'trade';
-                  bgColor = 'bg-purple-900/50 border-purple-700';
-                  textColor = 'text-purple-300';
-                  icon = '🚛';
-                  title = 'Trade Agreement';
-                } else if (p.actionType === DiplomaticActionType.SueForPeace) {
+                if (p.actionType === DiplomaticActionType.SueForPeace) {
                   proposalType = 'peace';
                   bgColor = 'bg-yellow-900/50 border-yellow-700';
                   textColor = 'text-yellow-300';

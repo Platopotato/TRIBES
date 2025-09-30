@@ -1198,27 +1198,16 @@ export class DatabaseService {
       // Keep file backups for newsletter and turn deadline during migration period
       this.setNewsletterState(gameState.newsletter || { newsletters: [], currentNewsletter: undefined });
 
-      // Persist diplomatic messages using dual-write (database + file backup)
-      if (gameState.diplomaticMessages) {
-        await this.saveDiplomaticMessagesDualWrite(gameState.diplomaticMessages);
-      }
+
     } else {
       // File-based fallback
       if (skipValidation) {
         // During backup loading, skip validation since users are loaded separately
         this.saveGameStateToFile(gameState);
-        // Also save diplomatic messages using dual-write
-        if (gameState.diplomaticMessages) {
-          await this.saveDiplomaticMessagesDualWrite(gameState.diplomaticMessages);
-        }
       } else {
         // Normal operation - validate and clean game state first
         const cleanedGameState = await this.validateAndCleanGameState(gameState);
         this.saveGameStateToFile(cleanedGameState);
-        // Also save diplomatic messages using dual-write
-        if (cleanedGameState.diplomaticMessages) {
-          await this.saveDiplomaticMessagesDualWrite(cleanedGameState.diplomaticMessages);
-        }
       }
     }
   }
@@ -1844,7 +1833,6 @@ export class DatabaseService {
       assetRequests: dbGameState.assetRequests,
       journeys: dbGameState.journeys,
       diplomaticProposals: dbGameState.diplomaticProposals,
-      diplomaticMessages: this.loadDiplomaticMessagesSyncWithFallback(dbGameState), // Load from DB with file fallback
       history: (() => {
         console.log(`🔍 DB CONVERSION: Processing turn history - found ${dbGameState.turnHistory?.length || 0} records`);
         if (dbGameState.turnHistory && dbGameState.turnHistory.length > 0) {

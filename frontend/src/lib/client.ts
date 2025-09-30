@@ -539,27 +539,6 @@ export const acceptProposal = createEmitter<string>('accept_proposal');
 export const rejectProposal = createEmitter<string>('reject_proposal');
 export const proposeTradeAgreement = createEmitter<{ fromTribeId: string, toTribeId: string, terms: any }>('propose_trade_agreement');
 
-// New unified diplomatic message system
-export const sendDiplomaticMessage = createEmitter<{
-    fromTribeId: string;
-    toTribeId: string;
-    messageData: {
-        type: string;
-        subject: string;
-        message: string;
-        data?: any;
-        requiresResponse?: boolean;
-        expiresOnTurn?: number;
-    };
-}>('send_diplomatic_message');
-
-export const respondToMessage = createEmitter<{
-    messageId: string;
-    response: 'accepted' | 'rejected' | 'dismissed';
-    responseData?: any;
-}>('respond_to_message');
-
-export const dismissMessage = createEmitter<string>('dismiss_message');
 export const toggleMapSharing = (payload: { tribeId: string, enable: boolean, targetTribeId?: string }) => {
   console.log('🗺️ CLIENT toggleMapSharing called:', payload);
   if (socket && socket.connected) {

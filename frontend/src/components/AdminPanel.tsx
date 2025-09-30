@@ -92,6 +92,9 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const [autoDeadlineTime, setAutoDeadlineTime] = useState("20:00");
   const [autoDeadlineEnabled, setAutoDeadlineEnabled] = useState(true);
 
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useState<'game' | 'players' | 'content' | 'system' | 'debug'>('game');
+
   // Initialize auto deadline settings from game state
   useEffect(() => {
     if (gameState.autoDeadlineSettings) {
@@ -1212,14 +1215,14 @@ GAME STATISTICS:
           </Button>
         </div>
 
-        {/* Safety Zone Headers */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center mb-6">
+        {/* Safety Status Banner */}
+        <div className="mb-6">
+          <div className="flex items-center justify-center">
             <div className="flex items-center space-x-4 bg-neutral-800/50 rounded-lg px-6 py-3 border border-neutral-600">
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${safetyLockEnabled ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
                 <span className="text-lg font-bold text-neutral-200">
-                  Admin Safety Status: {safetyLockEnabled ? 'PROTECTED' : 'UNLOCKED'}
+                  Safety Lock: {safetyLockEnabled ? 'PROTECTED' : 'UNLOCKED'}
                 </span>
               </div>
               {!safetyLockEnabled && (
@@ -1229,31 +1232,76 @@ GAME STATISTICS:
               )}
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-green-900/20 border border-green-600/50 rounded-lg p-4">
-              <div className="text-green-400 font-bold text-lg mb-2">🟢 SAFE ZONE</div>
-              <p className="text-green-300 text-sm">View data, approve requests, manage settings</p>
-            </div>
-            <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4">
-              <div className="text-yellow-400 font-bold text-lg mb-2">🟡 MODERATE ZONE</div>
-              <p className="text-yellow-300 text-sm">User management, backups, AI tribes</p>
-            </div>
-            <div className="bg-red-900/20 border border-red-600/50 rounded-lg p-4">
-              <div className="text-red-400 font-bold text-lg mb-2">🔴 DANGER ZONE</div>
-              <p className="text-red-300 text-sm">Turn processing, new games, data loading</p>
-            </div>
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2 bg-neutral-800/50 rounded-lg p-2 border border-neutral-600">
+            <button
+              onClick={() => setActiveTab('game')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'game'
+                  ? 'bg-amber-600 text-white shadow-lg'
+                  : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              🎮 Game Control
+            </button>
+            <button
+              onClick={() => setActiveTab('players')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'players'
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              👥 Players & Tribes
+            </button>
+            <button
+              onClick={() => setActiveTab('content')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'content'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              📰 Content & Announcements
+            </button>
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'system'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              ⚙️ System & Data
+            </button>
+            <button
+              onClick={() => setActiveTab('debug')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'debug'
+                  ? 'bg-red-600 text-white shadow-lg'
+                  : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              🔧 Debug & Tools
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="space-y-8 xl:col-span-2">
-            {/* SAFE ZONE - Always accessible */}
-            <div className="border-l-4 border-green-500 pl-4">
-              <h2 className="text-xl font-bold text-green-400 mb-4">🟢 SAFE ZONE - View & Approve</h2>
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {/* 🎮 GAME CONTROL TAB */}
+          {activeTab === 'game' && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-amber-400 mb-2">🎮 Game Control</h2>
+                <p className="text-neutral-400">Manage turn processing, game status, and world settings</p>
+              </div>
 
             {/* Game Suspension Control */}
-            <Card title="🚨 Game Access Control" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50 mb-6">
+            <Card title="🚨 Game Access Control" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded-lg border border-neutral-600">
                   <div className="flex items-center space-x-3">
@@ -1592,6 +1640,112 @@ GAME STATISTICS:
               </div>
             </Card>
 
+            {/* Turn Deadline Management - moved here from below */}
+            <Card title="⏰ Turn Deadline Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Current Deadline:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-600 text-white'
+                    }`}>
+                      {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
+                        ? 'ACTIVE'
+                        : 'NONE SET'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Auto Deadlines:</span>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        gameState.autoDeadlineSettings?.enabled
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-600 text-white'
+                      }`}>
+                        {gameState.autoDeadlineSettings?.enabled ? 'ENABLED' : 'DISABLED'}
+                      </span>
+                      {gameState.autoDeadlineSettings?.enabled && (
+                        <span className="text-xs text-gray-400">
+                          @ {gameState.autoDeadlineSettings.timeOfDay}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => setShowDeadlineModal(true)}
+                      className="text-xs bg-blue-600 hover:bg-blue-700"
+                    >
+                      Set Deadline
+                    </Button>
+                    <Button
+                      onClick={() => setShowAutoDeadlineModal(true)}
+                      className="text-xs bg-purple-600 hover:bg-purple-700"
+                    >
+                      Auto Settings
+                    </Button>
+                  </div>
+                </div>
+
+                {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn && (
+                  <div className="p-3 rounded border bg-blue-900/20 border-blue-600">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Turn {gameState.turnDeadline.turn} Deadline</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(gameState.turnDeadline.deadline).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleClearTurnDeadline}
+                        className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-neutral-400">
+                  <p>Set a deadline for the current turn to create urgency for players.</p>
+                  <p>Players will see a countdown timer in the header showing time remaining.</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* World Management - moved here from below */}
+            <Card title="🗺️ World Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+                <div className="space-y-4">
+                    <p className="text-neutral-400 leading-relaxed">Edit the game world directly or start a new game on the current map.</p>
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onNavigateToEditor}>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      Edit World Map
+                    </Button>
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onNavigateToGameEditor}>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                      Game Editor
+                    </Button>
+                </div>
+            </Card>
+            </div>
+          )}
+
+          {/* 👥 PLAYERS & TRIBES TAB */}
+          {activeTab === 'players' && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-blue-400 mb-2">👥 Players & Tribes</h2>
+                <p className="text-neutral-400">Manage users, tribes, and approval requests</p>
+              </div>
+
             <Card title="Pending Asset Approvals" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
                 <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
                     {pendingAssetRequests.length > 0 ? (
@@ -1711,12 +1865,100 @@ GAME STATISTICS:
                 </div>
               </div>
             </Card>
-          </div>
 
-          <div className="space-y-8">
+            {/* AI Tribe Management - moved here from below */}
+            <Card title="🤖 AI Tribe Management" className="bg-gradient-to-br from-purple-800/90 to-purple-900/90 backdrop-blur-sm border-purple-600/50">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => setShowAIManagementModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    🤖 Manage AI Tribes
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddAIModal(true)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    ➕ Add AI Tribe
+                  </Button>
+                </div>
 
+                <div className="bg-purple-900/20 border border-purple-600 rounded p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-purple-300">Current AI Tribes:</span>
+                    <span className="text-xs text-purple-400">
+                      {gameState.tribes.filter(t => t.isAI).length} active
+                    </span>
+                  </div>
 
-            <Card title="Login Announcements (Database-Based)" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {gameState.tribes.filter(t => t.isAI).map(tribe => (
+                      <div key={tribe.id} className="flex items-center justify-between p-2 bg-purple-800/30 rounded">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">{tribe.icon}</span>
+                          <div>
+                            <div className="text-sm font-medium text-purple-200">{tribe.tribeName}</div>
+                            <div className="text-xs text-purple-400">{tribe.aiType} • {tribe.location}</div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => handleRemoveAITribe(tribe.id)}
+                          className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    )) || (
+                      <p className="text-purple-400 text-sm text-center py-2">No AI tribes active</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* All Tribes - moved here from below */}
+             <Card title="📋 All Tribes" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+              {allTribes.length > 0 ? (
+                <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-neutral-600 sticky top-0 bg-gradient-to-r from-neutral-800 to-neutral-900">
+                        <th className="p-3 text-amber-300 font-semibold">Tribe Name</th>
+                        <th className="p-3 text-amber-300 font-semibold">Location</th>
+                        <th className="p-3 text-amber-300 font-semibold">Troops</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allTribes.map(tribe => (
+                        <tr key={tribe.id} className="border-b border-neutral-700/50 hover:bg-neutral-700/30 transition-colors">
+                          <td className="p-3 font-semibold text-white">
+                            {tribe.tribeName}
+                            {tribe.isAI && <span className="ml-2 px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full border border-blue-500/30">AI</span>}
+                          </td>
+                          <td className="p-3 font-mono text-neutral-300">{tribe.location}</td>
+                          <td className="p-3 text-amber-400 font-semibold">{Object.values(tribe.garrisons).reduce((total, garrison) => total + garrison.troops, 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-center p-4">No tribes have been founded yet.</p>
+              )}
+            </Card>
+            </div>
+          )}
+
+          {/* 📰 CONTENT & ANNOUNCEMENTS TAB */}
+          {activeTab === 'content' && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-purple-400 mb-2">📰 Content & Announcements</h2>
+                <p className="text-neutral-400">Manage newsletters, announcements, and player communications</p>
+              </div>
+
+            <Card title="📢 Login Announcements" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1896,140 +2138,39 @@ GAME STATISTICS:
               </div>
             </Card>
 
-            </div>
-
-            {/* DANGER ZONE - Requires safety lock to be disabled */}
-            <div className="border-l-4 border-red-500 pl-4">
-              <h2 className="text-xl font-bold text-red-400 mb-4">🔴 DANGER ZONE - Game Breaking Actions</h2>
-              {safetyLockEnabled && (
-                <div className="bg-red-900/20 border border-red-600/50 rounded-lg p-4 mb-6">
-                  <p className="text-red-300 text-sm">
-                    🔒 <strong>Safety Lock Enabled:</strong> Dangerous actions are locked to prevent accidental game damage.
-                    Disable the safety lock above to access these features.
-                  </p>
-                </div>
-              )}
-
-            <Card title="World Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
-                <div className="space-y-4">
-                    <p className="text-neutral-400 leading-relaxed">Edit the game world directly or start a new game on the current map.</p>
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onNavigateToEditor}>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                      </svg>
-                      Edit World Map
-                    </Button>
-                    <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={onNavigateToGameEditor}>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                      </svg>
-                      Game Editor
-                    </Button>
-                    {dangerousActionConfirmStep === 'START_NEW_GAME' ? (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-red-900/50 border border-red-600 rounded-lg">
-                          <p className="text-red-300 text-sm font-medium">🚨 DANGEROUS ACTION: Start New Game</p>
-                          <p className="text-red-200 text-xs mt-1">This will DELETE ALL tribes, requests, and game progress!</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-neutral-400 mb-1">Type "I UNDERSTAND THE RISKS" to continue:</label>
-                          <input
-                            type="text"
-                            value={confirmationText}
-                            onChange={(e) => setConfirmationText(e.target.value)}
-                            className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded text-white text-sm"
-                            placeholder="I UNDERSTAND THE RISKS"
-                          />
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={() => handleDangerousAction('START_NEW_GAME', () => setShowNewGameConfirm(true))}
-                            disabled={confirmationText !== 'I UNDERSTAND THE RISKS'}
-                            className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            🚨 CONFIRM START NEW GAME
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setDangerousActionConfirmStep(null);
-                              setConfirmationText('');
-                            }}
-                            className="bg-gray-600 hover:bg-gray-700"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        className={`w-full font-semibold py-3 px-4 rounded-lg shadow-lg transition-all duration-200 ${
-                          safetyLockEnabled
-                            ? 'bg-gray-500 cursor-not-allowed opacity-50'
-                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white hover:shadow-xl transform hover:scale-[1.02]'
-                        }`}
-                        onClick={() => handleDangerousAction('START_NEW_GAME', () => setShowNewGameConfirm(true))}
-                        disabled={safetyLockEnabled}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {safetyLockEnabled ? '🔒 Start New Game (LOCKED)' : 'Start New Game'}
-                      </Button>
-                    )}
-                </div>
-            </Card>
-            
-            </div>
-
-            {/* MODERATE ZONE - Requires some caution */}
-            <div className="border-l-4 border-yellow-500 pl-4">
-              <h2 className="text-xl font-bold text-yellow-400 mb-4">🟡 MODERATE ZONE - Use With Caution</h2>
-
-            <Card title="AI Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+            {/* Turn Summary Generator */}
+            <Card title="📊 Turn Summary Generator" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
-                  <p className="text-neutral-400 leading-relaxed">Add computer-controlled tribes with different personalities. There are currently <span className="text-amber-400 font-semibold">{aiTribesCount}</span> AI tribes in the game.</p>
-
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-neutral-300">AI Personality</label>
-                    <select
-                      value={selectedAIType}
-                      onChange={(e) => setSelectedAIType(e.target.value as AIType)}
-                      className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value={AIType.Wanderer}>🚶 Wanderer - Random movement and exploration</option>
-                      <option value={AIType.Aggressive}>⚔️ Aggressive - Focuses on combat and attacking enemies</option>
-                      <option value={AIType.Defensive}>🛡️ Defensive - Builds fortifications and defends territory</option>
-                      <option value={AIType.Expansionist}>🏗️ Expansionist - Builds outposts and claims territory</option>
-                      <option value={AIType.Trader}>💰 Trader - Focuses on resource gathering and trading</option>
-                      <option value={AIType.Scavenger}>🔍 Scavenger - Prioritizes scavenging and resource collection</option>
-                    </select>
-                  </div>
-
-                  <Button
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
-                    onClick={() => setShowAddAIModal(true)}
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Add {selectedAIType} AI Tribe
-                  </Button>
-
-                  <div className="mt-4 p-3 bg-neutral-700/50 rounded-lg">
-                    <h4 className="text-sm font-medium text-neutral-300 mb-2">AI Personality Guide:</h4>
-                    <div className="text-xs text-neutral-400 space-y-1">
-                      <div><strong>Aggressive:</strong> Builds weapons, attacks enemies, focuses on combat</div>
-                      <div><strong>Defensive:</strong> Fortifies positions, recruits troops, defends territory</div>
-                      <div><strong>Expansionist:</strong> Builds outposts, scouts new areas, claims territory</div>
-                      <div><strong>Trader:</strong> Gathers resources, trades with other tribes, diplomatic</div>
-                      <div><strong>Scavenger:</strong> Focuses on scavenging, explores for resources</div>
-                      <div><strong>Wanderer:</strong> Random behavior, unpredictable movement</div>
-                    </div>
-                  </div>
+                <p className="text-neutral-400 leading-relaxed">
+                  Generate a summary of recent turns for newsletter content or player updates.
+                </p>
+                <Button
+                  onClick={() => setShowTurnSummary(true)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                >
+                  📊 Generate Turn Summary
+                </Button>
+                <Button
+                  onClick={() => setShowNewsletterSummary(true)}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                >
+                  📰 Generate Newsletter Data
+                </Button>
               </div>
             </Card>
+            </div>
+          )}
 
-            <Card title="Auto-Backup System" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+          {/* ⚙️ SYSTEM & DATA TAB */}
+          {activeTab === 'system' && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-green-400 mb-2">⚙️ System & Data</h2>
+                <p className="text-neutral-400">Manage backups, security, and game data</p>
+              </div>
+
+            {/* Auto-Backup System - moved here from below */}
+            <Card title="💾 Auto-Backup System" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -2114,83 +2255,8 @@ GAME STATISTICS:
               </div>
             </Card>
 
-            <Card title="Turn Deadline Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">Current Deadline:</span>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-600 text-white'
-                    }`}>
-                      {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn
-                        ? 'ACTIVE'
-                        : 'NONE SET'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium">Auto Deadlines:</span>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        gameState.autoDeadlineSettings?.enabled
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-600 text-white'
-                      }`}>
-                        {gameState.autoDeadlineSettings?.enabled ? 'ENABLED' : 'DISABLED'}
-                      </span>
-                      {gameState.autoDeadlineSettings?.enabled && (
-                        <span className="text-xs text-gray-400">
-                          @ {gameState.autoDeadlineSettings.timeOfDay}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={() => setShowDeadlineModal(true)}
-                      className="text-xs bg-blue-600 hover:bg-blue-700"
-                    >
-                      Set Deadline
-                    </Button>
-                    <Button
-                      onClick={() => setShowAutoDeadlineModal(true)}
-                      className="text-xs bg-purple-600 hover:bg-purple-700"
-                    >
-                      Auto Settings
-                    </Button>
-                  </div>
-                </div>
-
-                {gameState.turnDeadline?.isActive && gameState.turnDeadline.turn === gameState.turn && (
-                  <div className="p-3 rounded border bg-blue-900/20 border-blue-600">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">Turn {gameState.turnDeadline.turn} Deadline</p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(gameState.turnDeadline.deadline).toLocaleString()}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleClearTurnDeadline}
-                        className="bg-red-600 hover:bg-red-700 text-xs py-1 px-2"
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="text-sm text-neutral-400">
-                  <p>Set a deadline for the current turn to create urgency for players.</p>
-                  <p>Players will see a countdown timer in the header showing time remaining.</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card title="Security Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+            {/* Security Management - moved here from below */}
+            <Card title="🔒 Security Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                 <div className="p-3 rounded border bg-amber-900/20 border-amber-600">
                   <div className="flex items-center space-x-2 mb-2">
@@ -2254,7 +2320,8 @@ GAME STATISTICS:
               </div>
             </Card>
 
-            <Card title="Game Data Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
+            {/* Game Data Management - moved here from below */}
+            <Card title="💾 Game Data Management" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-4">
                   <p className="text-neutral-400 leading-relaxed">Save the entire game state, all users, passwords, and announcements to a file, or load a previous backup.</p>
                   <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={handleSaveBackup}>
@@ -2314,18 +2381,6 @@ GAME STATISTICS:
                       {safetyLockEnabled ? '🔒 Load Game Backup (LOCKED)' : 'Load Game Backup'}
                     </Button>
                   )}
-                  <Button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={() => setShowTurnSummary(true)}>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    View Turn Summary
-                  </Button>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200" onClick={() => setShowNewsletterSummary(true)}>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                    </svg>
-                    Newsletter Summary
-                  </Button>
 
                   {/* Help Documentation Export */}
                   <div className="border-t border-neutral-600 pt-4 mt-4">
@@ -2355,7 +2410,18 @@ GAME STATISTICS:
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
               </div>
             </Card>
+            </div>
+          )}
 
+          {/* 🔧 DEBUG & TOOLS TAB */}
+          {activeTab === 'debug' && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-red-400 mb-2">🔧 Debug & Tools</h2>
+                <p className="text-neutral-400">Technical tools and diagnostics</p>
+              </div>
+
+            {/* Debug & Diagnostics - moved here from below */}
             <Card title="🔧 Debug & Diagnostics" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
               <div className="space-y-6">
                 <p className="text-neutral-400 leading-relaxed">Debug tools for diagnosing database issues, analyzing tribe locations, and troubleshooting collision problems.</p>
@@ -2416,129 +2482,651 @@ GAME STATISTICS:
                         disabled={diagnosingSingleTribe || !singleTribeName.trim()}
                       >
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         </svg>
                         {diagnosingSingleTribe ? 'Analyzing...' : 'Location'}
                       </Button>
                       <Button
-                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                        className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
                         onClick={handleInvestigateTribeOrigin}
                         disabled={investigatingTribeOrigin || !singleTribeName.trim()}
                       >
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
-                        {investigatingTribeOrigin ? 'Checking...' : 'Origin'}
+                        {investigatingTribeOrigin ? 'Analyzing...' : 'Origin'}
                       </Button>
                       <Button
-                        className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                        className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
                         onClick={handleInvestigateAllLocationFields}
                         disabled={investigatingAllLocationFields || !singleTribeName.trim()}
                       >
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                         </svg>
-                        {investigatingAllLocationFields ? 'Showing...' : 'All Fields'}
+                        {investigatingAllLocationFields ? 'Analyzing...' : 'All Fields'}
                       </Button>
                     </div>
                   </div>
                 </div>
 
-                {/* Home Permanence System */}
-                <div className="bg-gradient-to-br from-purple-800 to-purple-900 rounded-xl p-4 border border-purple-700">
+                {/* Home Permanence Tool */}
+                <div className="bg-gradient-to-br from-amber-800 to-amber-900 rounded-xl p-4 border border-amber-700">
                   <h3 className="text-lg font-bold text-white mb-3 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
+                    <svg className="w-5 h-5 mr-2 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    Home Permanence System
+                    Home Permanence
                   </h3>
-                  <p className="text-purple-200 mb-3 text-sm">
-                    Backfill originalStartingLocation field for existing tribes using exploration pattern analysis.
-                  </p>
+                  <p className="text-amber-200 text-sm mb-3">Populate originalStartingLocation for all tribes based on exploration patterns:</p>
                   <Button
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     onClick={handleBackfillOriginalStartingLocations}
                     disabled={backfillingOriginalHomes}
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {backfillingOriginalHomes ? 'Backfilling...' : 'Backfill Original Home Locations'}
+                    {backfillingOriginalHomes ? 'Populating...' : 'Populate All Starting Locations'}
                   </Button>
                 </div>
 
-                {/* Tool Descriptions */}
+                {/* Legend */}
                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border border-gray-700">
-                  <h3 className="text-lg font-bold text-white mb-3 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Tool Reference
-                  </h3>
-                  <div className="text-sm text-gray-300 space-y-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="font-semibold text-purple-400 mb-1">Global Analysis:</p>
-                        <ul className="list-disc list-inside space-y-1 text-xs">
-                          <li><strong>All Tribes:</strong> Database vs game state comparison</li>
-                          <li><strong>Starting Locations:</strong> Displaced tribe detection</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-indigo-400 mb-1">Single Tribe:</p>
-                        <ul className="list-disc list-inside space-y-1 text-xs">
-                          <li><strong>Location:</strong> Focused tribe analysis</li>
-                          <li><strong>Origin:</strong> Database records & history</li>
-                          <li><strong>All Fields:</strong> Complete database dump</li>
-                        </ul>
-                      </div>
+                  <h3 className="text-lg font-bold text-white mb-3">📖 Tool Reference</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-semibold text-purple-400 mb-1">Global Analysis:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li><strong>All Tribes:</strong> Comprehensive location analysis</li>
+                        <li><strong>Starting Locations:</strong> Origin point verification</li>
+                      </ul>
                     </div>
-                    <div className="pt-2 border-t border-gray-600">
-                      <p className="font-semibold text-purple-400 mb-1">Home Permanence:</p>
-                      <p className="text-xs">Populates originalStartingLocation field using exploration pattern analysis</p>
+                    <div>
+                      <p className="font-semibold text-indigo-400 mb-1">Single Tribe:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li><strong>Location:</strong> Focused tribe analysis</li>
+                        <li><strong>Origin:</strong> Database records & history</li>
+                        <li><strong>All Fields:</strong> Complete database dump</li>
+                      </ul>
                     </div>
-                    <div className="pt-2 border-t border-gray-600">
-                      <p className="text-xs text-gray-400"><strong>Note:</strong> All results appear in server logs. Tools identify coordinate transformation issues and collision problems.</p>
-                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-gray-600">
+                    <p className="font-semibold text-purple-400 mb-1">Home Permanence:</p>
+                    <p className="text-xs">Populates originalStartingLocation field using exploration pattern analysis</p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-600">
+                    <p className="text-xs text-gray-400"><strong>Note:</strong> All results appear in server logs. Tools identify coordinate transformation issues and collision problems.</p>
                   </div>
                 </div>
               </div>
             </Card>
-
-             <Card title="All Tribes" className="bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 backdrop-blur-sm border-neutral-600/50">
-              {allTribes.length > 0 ? (
-                <div className="overflow-x-auto max-h-96 rounded-lg border border-neutral-700/50">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-neutral-600 sticky top-0 bg-gradient-to-r from-neutral-800 to-neutral-900">
-                        <th className="p-3 text-amber-300 font-semibold">Tribe Name</th>
-                        <th className="p-3 text-amber-300 font-semibold">Location</th>
-                        <th className="p-3 text-amber-300 font-semibold">Troops</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allTribes.map(tribe => (
-                        <tr key={tribe.id} className="border-b border-neutral-700/50 hover:bg-neutral-700/30 transition-colors">
-                          <td className="p-3 font-semibold text-white">
-                            {tribe.tribeName}
-                            {tribe.isAI && <span className="ml-2 px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full border border-blue-500/30">AI</span>}
-                          </td>
-                          <td className="p-3 font-mono text-neutral-300">{tribe.location}</td>
-                          <td className="p-3 text-amber-400 font-semibold">{Object.values(tribe.garrisons).reduce((total, garrison) => total + garrison.troops, 0)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-slate-400 text-center p-4">No tribes have been founded yet.</p>
-              )}
-            </Card>
-
-            </div> {/* End Danger Zone */}
-          </div>
+            </div>
+          )}
         </div>
       </div>
+      {userToRemove && (
+        <ConfirmationModal
+          title={`Remove ${userToRemove.username}?`}
+          message="This will permanently delete the user and their associated tribe. This action cannot be undone."
+          onConfirm={handleConfirmRemove}
+          onCancel={() => setUserToRemove(null)}
+        />
+      )}
+      {showNewGameConfirm && (
+        <ConfirmationModal
+            title="Start a New Game?"
+            message="This will remove ALL current tribes and requests, and reset the turn to 1. The map will be preserved. Are you sure?"
+            onConfirm={handleConfirmNewGame}
+            onCancel={() => setShowNewGameConfirm(false)}
+        />
+      )}
+
+      {showTurnSummary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-neutral-600">
+              <div>
+                <h2 className="text-2xl font-bold text-amber-400">
+                  Turn {gameState.turn - summaryTurnsBack} Results Summary
+                </h2>
+                <p className="text-sm text-neutral-300 mt-1">
+                  Current Turn: {gameState.turn} | Showing results from Turn {gameState.turn - summaryTurnsBack}
+                </p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <label className="text-sm text-neutral-300">Include previous turns:</label>
+                  <select
+                    value={summaryTurnsBack}
+                    onChange={(e) => setSummaryTurnsBack(Number(e.target.value))}
+                    className="bg-neutral-700 text-white rounded px-2 py-1 text-sm border border-neutral-600"
+                  >
+                    <option value={1}>Current turn only</option>
+                    <option value={2}>Last 2 turns</option>
+                    <option value={3}>Last 3 turns</option>
+                    <option value={5}>Last 5 turns</option>
+                    <option value={10}>Last 10 turns</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTurnSummary(false)}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-4">
+                <p className="text-neutral-300">Turn summary generation is currently being updated. Please check server logs for detailed turn information.</p>
+                <div className="bg-neutral-700 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-amber-300 mb-2">Current Game State</h3>
+                  <p className="text-neutral-300">Turn: {gameState.turn}</p>
+                  <p className="text-neutral-300">Active Tribes: {Object.keys(gameState.tribes).length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center p-6 border-t border-neutral-600">
+              <div className="text-sm text-neutral-400">
+                <p>Total Tribes: {generateTurnSummary(summaryTurnsBack).length} |
+                   Submitted: {generateTurnSummary(summaryTurnsBack).filter(t => t.turnSubmitted).length}/{generateTurnSummary(summaryTurnsBack).length} |
+                   New Chiefs: {generateTurnSummary(summaryTurnsBack).reduce((sum, t) => sum + t.chiefsAppearedThisTurn.length, 0)}
+                   {summaryTurnsBack > 1 ? ` | Showing ${summaryTurnsBack} turns` : ''}</p>
+              </div>
+              <div className="space-x-3">
+                <Button onClick={handleDownloadTurnSummary} className="bg-amber-600 hover:bg-amber-700">
+                  Download Summary
+                </Button>
+                <Button onClick={() => setShowTurnSummary(false)} variant="secondary">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {/* Password Reset Modal */}
+      {resetPasswordUserId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-amber-400 mb-4">Reset User Password</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button onClick={handleCancelPasswordReset} variant="secondary">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmPasswordReset}
+                  disabled={!newPassword.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Reset Password
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Login Announcement Modal */}
+      {/* Login Announcement Modal */}
+      {showLoginAnnouncementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-blue-400 mb-4">Edit Login Announcement</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center space-x-2 mb-4">
+                  <input
+                    type="checkbox"
+                    checked={announcementEnabled}
+                    onChange={(e) => setAnnouncementEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm font-medium text-neutral-300">Enable announcement</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Type
+                </label>
+                <select
+                  value={newAnnouncementType}
+                  onChange={(e) => setNewAnnouncementType(e.target.value as 'info' | 'warning' | 'success' | 'error')}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="info">📢 Info</option>
+                  <option value="success">✅ Success</option>
+                  <option value="warning">⚠️ Warning</option>
+                  <option value="error">🚨 Error</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={newAnnouncementTitle}
+                  onChange={(e) => setNewAnnouncementTitle(e.target.value)}
+                  placeholder="e.g., Welcome to Radix Tribes!"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Message (supports line breaks)
+                </label>
+                <textarea
+                  value={newAnnouncementMessage}
+                  onChange={(e) => setNewAnnouncementMessage(e.target.value)}
+                  placeholder="e.g., New features and improvements are being added regularly.&#10;&#10;Check back often for updates!"
+                  rows={4}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowLoginAnnouncementModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateLoginAnnouncement}
+                  disabled={!newAnnouncementTitle.trim() || !newAnnouncementMessage.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Update Announcement
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Add AI Tribe Modal */}
+      {/* Add AI Tribe Modal */}
+      {showAddAIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-[500px] border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">🤖 Add AI Tribe</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  AI Personality Type
+                </label>
+                <select
+                  value={selectedAIType}
+                  onChange={(e) => setSelectedAIType(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="Aggressive">⚔️ Aggressive - Warlike and expansionist</option>
+                  <option value="Defensive">🛡️ Defensive - Cautious and protective</option>
+                  <option value="Expansionist">🗺️ Expansionist - Territory focused</option>
+                  <option value="Trader">💰 Trader - Commerce and diplomacy</option>
+                  <option value="Scavenger">🔍 Scavenger - Resource gathering</option>
+                  <option value="Wanderer">🚶 Wanderer - Nomadic and unpredictable</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Spawn Location
+                </label>
+                <select
+                  value={selectedSpawnLocation}
+                  onChange={(e) => setSelectedSpawnLocation(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Select spawn location...</option>
+                  {gameState.mapData
+                    .filter(hex =>
+                      ['Plains', 'Forest', 'Wasteland', 'Desert'].includes(hex.terrain) &&
+                      !hex.poi &&
+                      !gameState.tribes.some(t => t.location === `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`)
+                    )
+                    .slice(0, 50) // Limit options for performance
+                    .map(hex => {
+                      const coords = `${String(50 + hex.q).padStart(3, '0')}.${String(50 + hex.r).padStart(3, '0')}`;
+                      return (
+                        <option key={coords} value={coords}>
+                          {coords} ({hex.terrain})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Custom Tribe Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={aiTribeName}
+                  onChange={(e) => setAITribeName(e.target.value)}
+                  placeholder="Leave empty for auto-generated name"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Backstory (Optional)
+                </label>
+                <textarea
+                  value={aiBackstory}
+                  onChange={(e) => setAIBackstory(e.target.value)}
+                  placeholder="A brief backstory for this AI tribe..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowAddAIModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddAITribe}
+                  disabled={!selectedSpawnLocation}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Add AI Tribe
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Turn Deadline Modal */}
+      {/* Turn Deadline Modal */}
+      {showDeadlineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-blue-400 mb-4">Set Turn Deadline</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Turn: {gameState.turn}
+                </label>
+                <p className="text-xs text-neutral-400">
+                  Setting deadline for the current turn
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Hours from now
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="168"
+                    value={deadlineHours}
+                    onChange={(e) => setDeadlineHours(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Minutes
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={deadlineMinutes}
+                    onChange={(e) => setDeadlineMinutes(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded bg-blue-900/20 border border-blue-600">
+                <p className="text-sm font-medium text-blue-300">
+                  Deadline will be set for:
+                </p>
+                <p className="text-sm text-blue-200">
+                  {new Date(Date.now() + (deadlineHours * 60 * 60 * 1000) + (deadlineMinutes * 60 * 1000)).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowDeadlineModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSetTurnDeadline}
+                  disabled={deadlineHours === 0 && deadlineMinutes === 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Set Deadline
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Password Modal */}
+      {/* Admin Password Modal */}
+      {showAdminPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-red-400 mb-4">🔒 Update Admin Password</h3>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-red-900/20 border border-red-600">
+                <p className="text-sm font-medium text-red-300 mb-2">
+                  ⚠️ Important Security Update
+                </p>
+                <p className="text-sm text-red-200">
+                  This will immediately update the admin password. Make sure you remember the new password!
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  New Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={newAdminPassword}
+                  onChange={(e) => setNewAdminPassword(e.target.value)}
+                  placeholder="Enter new secure password (min 6 characters)"
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="p-3 rounded bg-blue-900/20 border border-blue-600">
+                <p className="text-sm font-medium text-blue-300 mb-1">
+                  Next Steps After Update:
+                </p>
+                <ol className="text-sm text-blue-200 list-decimal list-inside space-y-1">
+                  <li>Test login with new password</li>
+                  <li>Set ADMIN_PASSWORD environment variable</li>
+                  <li>Restart server for full security</li>
+                </ol>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => {
+                    setShowAdminPasswordModal(false);
+                    setNewAdminPassword('');
+                  }}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateAdminPassword}
+                  disabled={newAdminPassword.length < 6}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Update Password
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Game Suspension Modal */}
+      {/* Game Suspension Modal */}
+      {showSuspensionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-red-400 mb-4">🚨 Suspend Game Access</h3>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-red-900/20 border border-red-600">
+                <p className="text-red-300 text-sm font-medium">⚠️ This will immediately block all player access</p>
+                <p className="text-red-200 text-xs mt-1">
+                  Players will see a maintenance message and cannot access any game features.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Maintenance Message for Players
+                </label>
+                <textarea
+                  value={suspensionMessage}
+                  onChange={(e) => setSuspensionMessage(e.target.value)}
+                  placeholder="Enter a message to display to players..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowSuspensionModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmSuspension}
+                  disabled={!suspensionMessage.trim()}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  🚨 Suspend Game
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto Deadline Settings Modal */}
+      {/* Auto Deadline Settings Modal */}
+      {showAutoDeadlineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-neutral-800 rounded-lg p-6 w-96 border border-neutral-600">
+            <h3 className="text-xl font-bold text-purple-400 mb-4">Auto Deadline Settings</h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="autoDeadlineEnabled"
+                  checked={autoDeadlineEnabled}
+                  onChange={(e) => setAutoDeadlineEnabled(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-neutral-700 border-neutral-600 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="autoDeadlineEnabled" className="text-sm font-medium text-white">
+                  Enable automatic turn deadlines
+                </label>
+              </div>
+
+              {autoDeadlineEnabled && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Daily deadline time (24-hour format):
+                  </label>
+                  <input
+                    type="time"
+                    value={autoDeadlineTime}
+                    onChange={(e) => setAutoDeadlineTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Deadlines will be set automatically for this time each day when turns advance
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 rounded bg-purple-900/20 border border-purple-600">
+                <p className="text-sm font-medium text-purple-300">
+                  Current Settings:
+                </p>
+                <p className="text-sm text-purple-200">
+                  Auto deadlines: {gameState.autoDeadlineSettings?.enabled ? 'Enabled' : 'Disabled'}
+                </p>
+                {gameState.autoDeadlineSettings?.enabled && (
+                  <p className="text-sm text-purple-200">
+                    Time: {gameState.autoDeadlineSettings.timeOfDay}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => setShowAutoDeadlineModal(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateAutoDeadlineSettings}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Update Settings
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {userToRemove && (
         <ConfirmationModal
           title={`Remove ${userToRemove.username}?`}

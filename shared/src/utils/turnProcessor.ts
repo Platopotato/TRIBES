@@ -4105,6 +4105,12 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         return `Insufficient troops at ${attackerLocation} for attack. Need ${troopsToAttack}, have ${attackerGarrison?.troops || 0}.`;
     }
 
+    // CRITICAL FIX: Get weapons to send from action data for instant attacks
+    const weaponsToSend = Math.max(0, action.actionData.weapons || 0);
+    if ((attackerGarrison.weapons || 0) < weaponsToSend) {
+        return `Insufficient weapons at ${attackerLocation}. Need ${weaponsToSend}, have ${attackerGarrison.weapons || 0}.`;
+    }
+
     // Find defending tribe - check both garrison presence AND outpost ownership
     let defendingTribe = state.tribes.find((t: any) =>
         t.id !== tribe.id && (t.garrisons[targetLocation] || t.garrisons[convertToStandardFormat(targetLocation)])
@@ -4147,7 +4153,8 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
 
     // Weapons provide 1.5x combat effectiveness
-    const attackerStrength = troopsToAttack + (attackerGarrison.weapons || 0) * 1.5;
+    // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
+    const attackerStrength = troopsToAttack + weaponsToSend * 1.5;
     const defenderStrength = (defenderGarrison.troops || 0) + ((defenderGarrison.weapons || 0) * 1.5);
 
     // Terrain-specific defense bonuses for defender
@@ -4196,8 +4203,9 @@ function processAttackAction(tribe: any, action: any, state: any): string {
 
         // Attacker wins — use casualty model for higher lethality, then occupy/capture
         const outpostHere = hasOutpostDefenses(defHex);
+        // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
-            troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
+            troopsToAttack, weaponsToSend, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
             { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
         );
         // Apply losses
@@ -4361,8 +4369,9 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     } else {
         // Defender wins — use casualty model
         const outpostHere = hasOutpostDefenses(defHex);
+        // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
         const { atkLosses: attackerLosses, defLosses: defenderLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
-            troopsToAttack, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
+            troopsToAttack, weaponsToSend, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
             { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
         );
         attackerGarrison.troops -= attackerLosses;

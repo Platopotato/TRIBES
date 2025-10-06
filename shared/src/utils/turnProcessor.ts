@@ -1958,9 +1958,11 @@ function resolveMoveArrival(journey: any, tribe: any, state: any): void {
     // CRITICAL FIX: Check if hex has an empty outpost to capture
     const { q, r } = parseHexCoords(destKey);
     const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
-    if (hasOutpostDefenses(hex) && occupantTribes.length === 0) {
-        const prevOwnerId = getOutpostOwnerTribeId(hex);
-        const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+    const currentOwnerId = getOutpostOwnerTribeId(hex);
+
+    // Only show capture message if: 1) has outpost, 2) no other tribes present, 3) NOT already owned by this tribe
+    if (hasOutpostDefenses(hex) && occupantTribes.length === 0 && currentOwnerId !== tribe.id) {
+        const prevOwner = state.tribes.find((t: any) => t.id === currentOwnerId);
 
         // Transfer outpost ownership to the arriving tribe
         setOutpostOwner(hex, tribe.id, destKey);
@@ -3266,10 +3268,11 @@ function processMoveAction(tribe: any, action: any, state: any): string {
         const { q, r } = parseHexCoords(destKey);
         const hex = state.mapData.find((h: any) => h.q === q && h.r === r);
         const occupantTribes = state.tribes.filter((t: any) => t.id !== tribe.id && t.garrisons[destKey]);
+        const currentOwnerId = getOutpostOwnerTribeId(hex);
 
-        if (hasOutpostDefenses(hex) && occupantTribes.length === 0) {
-            const prevOwnerId = getOutpostOwnerTribeId(hex);
-            const prevOwner = state.tribes.find((t: any) => t.id === prevOwnerId);
+        // Only show capture message if: 1) has outpost, 2) no other tribes present, 3) NOT already owned by this tribe
+        if (hasOutpostDefenses(hex) && occupantTribes.length === 0 && currentOwnerId !== tribe.id) {
+            const prevOwner = state.tribes.find((t: any) => t.id === currentOwnerId);
 
             // Transfer outpost ownership to the arriving tribe
             setOutpostOwner(hex, tribe.id, destKey);

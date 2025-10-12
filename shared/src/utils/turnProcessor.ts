@@ -2343,6 +2343,45 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     // Weapons provide 1.5x combat effectiveness
     const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0) * 1.5;
     const defenderGarrison = defenderTribe.garrisons[destKey];
+
+    // CRITICAL FIX: Ghost garrison check - garrisons with 0 troops cannot defend
+    if (defenderGarrison && defenderGarrison.troops <= 0) {
+        console.log(`👻 GHOST GARRISON ON ARRIVAL: ${defenderTribe.tribeName} has 0 troops at ${destKey} (${defenderGarrison.weapons || 0} weapons). Auto-capturing...`);
+
+        // Capture any weapons left behind
+        const capturedWeapons = defenderGarrison.weapons || 0;
+
+        // Transfer journey force to destination
+        if (!attackerTribe.garrisons[destKey]) {
+            attackerTribe.garrisons[destKey] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        attackerTribe.garrisons[destKey].troops += journey.force.troops;
+        attackerTribe.garrisons[destKey].weapons = (attackerTribe.garrisons[destKey].weapons || 0) + journey.force.weapons + capturedWeapons;
+        if (journey.force.chiefs) {
+            if (!attackerTribe.garrisons[destKey].chiefs) attackerTribe.garrisons[destKey].chiefs = [];
+            attackerTribe.garrisons[destKey].chiefs.push(...journey.force.chiefs);
+        }
+
+        // Delete the ghost garrison
+        delete defenderTribe.garrisons[destKey];
+
+        // Capture outpost if present
+        const defCoords = parseHexCoords(destKey);
+        const defHex = state.mapData.find((h: any) => h.q === defCoords.q && h.r === defCoords.r);
+        if (hasOutpostDefenses(defHex)) {
+            setOutpostOwner(defHex, attackerTribe.id, destKey);
+        }
+
+        attackerTribe.lastTurnResults.push({
+            id: `ghost-garrison-capture-${Date.now()}`,
+            actionType: ActionType.Attack,
+            actionData: {},
+            result: `⚔️ **GHOST GARRISON CAPTURED!** ${defenderTribe.tribeName} had abandoned ${destKey} (0 troops, ${capturedWeapons} weapons). You captured ${capturedWeapons} weapons without a fight!`
+        });
+
+        return; // Exit early - no combat needed
+    }
+
     const defenderStrength = (defenderGarrison?.troops || 0) + (defenderGarrison?.weapons || 0) * 1.5;
 
     // Terrain and ration effects
@@ -4143,6 +4182,37 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         defenderGarrison = { troops: 0, weapons: 0, chiefs: [] };
         // Store it in the defending tribe's garrisons so combat resolution works
         defendingTribe.garrisons[targetLocation] = defenderGarrison;
+    }
+
+    // CRITICAL FIX: Ghost garrison check - garrisons with 0 troops cannot defend
+    // Weapons alone cannot fight without troops to wield them
+    if (defenderGarrison.troops <= 0) {
+        console.log(`👻 GHOST GARRISON: ${defendingTribe.tribeName} has 0 troops at ${targetLocation} (${defenderGarrison.weapons || 0} weapons). Auto-capturing...`);
+
+        // Capture any weapons left behind
+        const capturedWeapons = defenderGarrison.weapons || 0;
+
+        // Move attacking troops to the location
+        if (!tribe.garrisons[targetLocation]) {
+            tribe.garrisons[targetLocation] = { troops: 0, weapons: 0, chiefs: [] };
+        }
+        tribe.garrisons[targetLocation].troops += troopsToAttack;
+        tribe.garrisons[targetLocation].weapons = (tribe.garrisons[targetLocation].weapons || 0) + capturedWeapons;
+
+        // Deduct troops from source
+        attackerGarrison.troops -= troopsToAttack;
+
+        // Delete the ghost garrison
+        delete defendingTribe.garrisons[targetLocation];
+
+        // Capture outpost if present
+        const targetCoords = parseHexCoords(targetLocation);
+        const targetHex = state.mapData.find((h: any) => h.q === targetCoords.q && h.r === targetCoords.r);
+        if (hasOutpostDefenses(targetHex)) {
+            setOutpostOwner(targetHex, tribe.id, targetLocation);
+        }
+
+        return `⚔️ **GHOST GARRISON CAPTURED!** ${defendingTribe.tribeName} had abandoned their position at ${targetLocation} (0 troops, ${capturedWeapons} weapons). You captured ${capturedWeapons} weapons without a fight!`;
     }
 
     // Simple combat resolution

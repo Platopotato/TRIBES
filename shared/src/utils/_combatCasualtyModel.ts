@@ -1,8 +1,11 @@
 // Rebalanced combat casualty model for epic battles
 export function computeCasualties(attTroops: number, attWeapons: number, defTroops: number, defWeapons: number, winner: 'attacker'|'defender', context: { terrainDefBonus: number, outpost?: boolean, homeBase?: boolean }) {
-  // Weapons provide multiplicative advantage (each weapon = 1.5 troops in combat effectiveness)
-  const atkStrength = Math.max(1, attTroops + (attWeapons || 0) * 1.5);
-  const defStrength = Math.max(1, defTroops + (defWeapons || 0) * 1.5);
+  // BALANCE FIX: Weapons require troops to wield them effectively
+  // Each troop can effectively use up to 2 weapons (primary + backup)
+  const effectiveAtkWeapons = Math.min(attWeapons || 0, attTroops * 2);
+  const effectiveDefWeapons = Math.min(defWeapons || 0, defTroops * 2);
+  const atkStrength = Math.max(1, attTroops + effectiveAtkWeapons * 0.5);
+  const defStrength = Math.max(1, defTroops + effectiveDefWeapons * 0.5);
   const ratio = atkStrength / defStrength; // >1 favors attacker
   const nearParity = Math.max(0, 1 - Math.abs(1 - ratio)); // 1 when equal, 0 when very lopsided
   // Higher base lethality for more epic battles

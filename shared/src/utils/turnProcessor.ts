@@ -1626,8 +1626,11 @@ function processColocatedEnemyBattles(state: any): void {
 
                 if (atWar) {
                     // Determine who attacks first (larger force attacks)
-                    const strength1 = tribe1.garrison.troops + (tribe1.garrison.weapons || 0) * 1.5;
-                    const strength2 = tribe2.garrison.troops + (tribe2.garrison.weapons || 0) * 1.5;
+                    // BALANCE FIX: Weapons require troops to wield them
+                    const effectiveWeapons1 = Math.min(tribe1.garrison.weapons || 0, tribe1.garrison.troops * 2);
+                    const effectiveWeapons2 = Math.min(tribe2.garrison.weapons || 0, tribe2.garrison.troops * 2);
+                    const strength1 = tribe1.garrison.troops + effectiveWeapons1 * 0.5;
+                    const strength2 = tribe2.garrison.troops + effectiveWeapons2 * 0.5;
 
                     if (strength1 >= strength2) {
                         conflicts.push({ attacker: tribe1, defender: tribe2 });
@@ -1665,8 +1668,16 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
     }
 
     // Combat strength calculation
-    const attackerStrength = (attackerGarrison.troops || 0) + (attackerGarrison.weapons || 0) * 1.5;
-    const defenderStrength = (defenderGarrison.troops || 0) + (defenderGarrison.weapons || 0) * 1.5;
+    // BALANCE FIX: Weapons require troops to wield them
+    const attackerTroops = attackerGarrison.troops || 0;
+    const attackerWeapons = attackerGarrison.weapons || 0;
+    const effectiveAttackerWeapons = Math.min(attackerWeapons, attackerTroops * 2);
+    const attackerStrength = attackerTroops + effectiveAttackerWeapons * 0.5;
+
+    const defenderTroops = defenderGarrison.troops || 0;
+    const defenderWeapons = defenderGarrison.weapons || 0;
+    const effectiveDefenderWeapons = Math.min(defenderWeapons, defenderTroops * 2);
+    const defenderStrength = defenderTroops + effectiveDefenderWeapons * 0.5;
 
     // Apply defensive bonuses
     const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0;
@@ -1807,8 +1818,16 @@ function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTrib
     }
 
     // Combat strength calculation
-    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0) * 1.5;
-    const defenderStrength = (defenderGarrison.troops || 0) + (defenderGarrison.weapons || 0) * 1.5;
+    // BALANCE FIX: Weapons require troops to wield them
+    const attackerTroops = journey.force.troops || 0;
+    const attackerWeapons = journey.force.weapons || 0;
+    const effectiveAttackerWeapons = Math.min(attackerWeapons, attackerTroops * 2);
+    const attackerStrength = attackerTroops + effectiveAttackerWeapons * 0.5;
+
+    const defenderTroops = defenderGarrison.troops || 0;
+    const defenderWeapons = defenderGarrison.weapons || 0;
+    const effectiveDefenderWeapons = Math.min(defenderWeapons, defenderTroops * 2);
+    const defenderStrength = defenderTroops + effectiveDefenderWeapons * 0.5;
 
     // Apply defensive bonuses
     const outpostDefBonus = hasOutpostDefenses(defHex) ? 1.25 : 1.0;
@@ -2340,8 +2359,11 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     const effects = getCombinedEffects(attackerTribe);
 
     // Compute base strengths from journey force and defending garrison
-    // Weapons provide 1.5x combat effectiveness
-    const attackerStrength = (journey.force.troops || 0) + (journey.force.weapons || 0) * 1.5;
+    // BALANCE FIX: Weapons require troops to wield them
+    const attackerTroops = journey.force.troops || 0;
+    const attackerWeapons = journey.force.weapons || 0;
+    const effectiveAttackerWeapons = Math.min(attackerWeapons, attackerTroops * 2);
+    const attackerStrength = attackerTroops + effectiveAttackerWeapons * 0.5;
     const defenderGarrison = defenderTribe.garrisons[destKey];
 
     // CRITICAL FIX: Ghost garrison check - garrisons with 0 troops cannot defend
@@ -2382,7 +2404,11 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
         return; // Exit early - no combat needed
     }
 
-    const defenderStrength = (defenderGarrison?.troops || 0) + (defenderGarrison?.weapons || 0) * 1.5;
+    // BALANCE FIX: Weapons require troops to wield them
+    const defenderTroops = defenderGarrison?.troops || 0;
+    const defenderWeapons = defenderGarrison?.weapons || 0;
+    const effectiveDefenderWeapons = Math.min(defenderWeapons, defenderTroops * 2);
+    const defenderStrength = defenderTroops + effectiveDefenderWeapons * 0.5;
 
     // Terrain and ration effects
     let terrainDefBonus = 0;
@@ -4222,10 +4248,18 @@ function processAttackAction(tribe: any, action: any, state: any): string {
     const atkMult = 1 + (effects.globalCombatAttackBonus || 0);
     const defMult = 1 + (effects.globalCombatDefenseBonus || 0);
 
-    // Weapons provide 1.5x combat effectiveness
-    // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
-    const attackerStrength = troopsToAttack + weaponsToSend * 1.5;
-    const defenderStrength = (defenderGarrison.troops || 0) + ((defenderGarrison.weapons || 0) * 1.5);
+    // BALANCE FIX: Weapons require troops to wield them effectively
+    // Each troop can effectively use up to 2 weapons (primary + backup)
+    // Excess weapons beyond 2 per troop provide no combat benefit
+    const attackerTroops = troopsToAttack;
+    const attackerWeapons = weaponsToSend;
+    const effectiveAttackerWeapons = Math.min(attackerWeapons, attackerTroops * 2);
+    const attackerStrength = attackerTroops + effectiveAttackerWeapons * 0.5;
+
+    const defenderTroops = defenderGarrison.troops || 0;
+    const defenderWeapons = defenderGarrison.weapons || 0;
+    const effectiveDefenderWeapons = Math.min(defenderWeapons, defenderTroops * 2);
+    const defenderStrength = defenderTroops + effectiveDefenderWeapons * 0.5;
 
     // Terrain-specific defense bonuses for defender
     let terrainDefBonus = 0;
@@ -4357,7 +4391,8 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             attacker: {
                 tribe: tribe.tribeName,
                 troops: troopsToAttack,
-                weapons: attackerGarrison.weapons || 0,
+                weapons: weaponsToSend,
+                effectiveWeapons: effectiveAttackerWeapons,
                 baseStrength: attackerStrength,
                 techBonus: atkMult,
                 rationBonus: attackerRationMod,
@@ -4368,6 +4403,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
                 tribe: defendingTribe.tribeName,
                 troops: defenderGarrison.troops + defLosses,
                 weapons: (defenderGarrison.weapons || 0) + defWeaponsLoss,
+                effectiveWeapons: effectiveDefenderWeapons,
                 baseStrength: defenderStrength,
                 techBonus: defMult,
                 rationBonus: defenderRationMod,
@@ -4454,7 +4490,8 @@ function processAttackAction(tribe: any, action: any, state: any): string {
             attacker: {
                 tribe: tribe.tribeName,
                 troops: troopsToAttack,
-                weapons: attackerGarrison.weapons || 0,
+                weapons: weaponsToSend,
+                effectiveWeapons: effectiveAttackerWeapons,
                 baseStrength: attackerStrength,
                 techBonus: atkMult,
                 rationBonus: attackerRationMod,
@@ -4465,6 +4502,7 @@ function processAttackAction(tribe: any, action: any, state: any): string {
                 tribe: defendingTribe.tribeName,
                 troops: defenderGarrison.troops + defenderLosses,
                 weapons: (defenderGarrison.weapons || 0) + defWeaponsLoss,
+                effectiveWeapons: effectiveDefenderWeapons,
                 baseStrength: defenderStrength,
                 techBonus: defMult,
                 rationBonus: defenderRationMod,
@@ -5567,6 +5605,7 @@ function generateCombatBreakdown(params: {
         tribe: string;
         troops: number;
         weapons: number;
+        effectiveWeapons: number;
         baseStrength: number;
         techBonus: number;
         rationBonus: number;
@@ -5577,6 +5616,7 @@ function generateCombatBreakdown(params: {
         tribe: string;
         troops: number;
         weapons: number;
+        effectiveWeapons: number;
         baseStrength: number;
         techBonus: number;
         rationBonus: number;
@@ -5597,18 +5637,26 @@ function generateCombatBreakdown(params: {
 
     const formatStrength = (value: number) => Math.round(value * 10) / 10;
 
+    // Show weapon effectiveness warning if excess weapons
+    const attackerWeaponNote = params.attacker.weapons > params.attacker.effectiveWeapons
+        ? ` (${params.attacker.effectiveWeapons} effective - max 2 per troop)`
+        : '';
+    const defenderWeaponNote = params.defender.weapons > params.defender.effectiveWeapons
+        ? ` (${params.defender.effectiveWeapons} effective - max 2 per troop)`
+        : '';
+
     return `
 📊 **COMBAT BREAKDOWN** at ${params.location}:
 
 **🗡️ ATTACKER (${params.attacker.tribe}):**
-• Base Force: ${params.attacker.troops} troops + ${params.attacker.weapons} weapons = ${formatStrength(params.attacker.baseStrength)} strength
+• Base Force: ${params.attacker.troops} troops + ${params.attacker.weapons} weapons${attackerWeaponNote} = ${formatStrength(params.attacker.baseStrength)} strength
 • Technology Bonus: ×${params.attacker.techBonus}${formatBonus(params.attacker.techBonus)}
 • Ration Effects: ×${params.attacker.rationBonus}${formatBonus(params.attacker.rationBonus)}
 • Sabotage Effects: ×${params.attacker.sabotageBonus}${formatBonus(params.attacker.sabotageBonus)}
 • **Final Strength: ${formatStrength(params.attacker.finalStrength)}**
 
 **🛡️ DEFENDER (${params.defender.tribe}):**
-• Base Force: ${params.defender.troops} troops + ${params.defender.weapons} weapons = ${formatStrength(params.defender.baseStrength)} strength
+• Base Force: ${params.defender.troops} troops + ${params.defender.weapons} weapons${defenderWeaponNote} = ${formatStrength(params.defender.baseStrength)} strength
 • Technology Bonus: ×${params.defender.techBonus}${formatBonus(params.defender.techBonus)}
 • Ration Effects: ×${params.defender.rationBonus}${formatBonus(params.defender.rationBonus)}${params.terrain ? `
 • Terrain Bonus (${params.terrain}): ×${1 + params.defender.terrainBonus}${formatBonus(1 + params.defender.terrainBonus)}` : ''}${params.defender.outpostBonus > 1 ? `

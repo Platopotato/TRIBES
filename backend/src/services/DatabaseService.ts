@@ -1784,6 +1784,16 @@ export class DatabaseService {
 
           const garrisons = (tribe.garrisons || []).reduce((acc: any, garrison: any) => {
             const hexKey = `${garrison.hexQ.toString().padStart(3, '0')}.${garrison.hexR.toString().padStart(3, '0')}`;
+
+            // CRITICAL FIX: Skip ghost garrisons (0 troops) during loading
+            // Ghost garrisons should have been cleaned up during combat, but if they persist in DB, don't load them
+            if (garrison.troops <= 0) {
+              console.log(`👻 GHOST GARRISON SKIPPED: ${tribe.tribeName} at ${hexKey} has 0 troops (${garrison.weapons} weapons) - not loading into game state`);
+              // Note: We don't delete from DB here to avoid async issues during conversion
+              // The garrison will be cleaned up next time the game state is saved
+              return acc;
+            }
+
             acc[hexKey] = {
               troops: garrison.troops,
               weapons: garrison.weapons,

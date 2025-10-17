@@ -4176,12 +4176,22 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         return `Insufficient weapons at ${attackerLocation}. Need ${weaponsToSend}, have ${attackerGarrison.weapons || 0}.`;
     }
 
-    // Find defending tribe - check both garrison presence AND outpost ownership
-    let defendingTribe = state.tribes.find((t: any) =>
-        t.id !== tribe.id && (t.garrisons[targetLocation] || t.garrisons[convertToStandardFormat(targetLocation)])
+    // CRITICAL FIX: Find defending tribe - prioritize enemy garrisons over own garrison
+    // When multiple tribes have garrisons at the same location, attack the enemy, not yourself!
+    const normalizedTarget = convertToStandardFormat(targetLocation);
+    const tribesAtLocation = state.tribes.filter((t: any) =>
+        t.id !== tribe.id && (t.garrisons[targetLocation] || t.garrisons[normalizedTarget])
     );
 
-    // If no garrison found, check if there's an outpost owned by another tribe
+    // Prioritize tribes you're at war with
+    let defendingTribe = tribesAtLocation.find((t: any) => isAtWar(tribe, t));
+
+    // If no war enemies, take any non-allied tribe
+    if (!defendingTribe) {
+        defendingTribe = tribesAtLocation.find((t: any) => !isAllied(tribe, t));
+    }
+
+    // If still no garrison found, check if there's an outpost owned by another tribe
     if (!defendingTribe) {
         const targetCoords = parseHexCoords(targetLocation);
         const targetHex = state.mapData.find((h: any) => h.q === targetCoords.q && h.r === targetCoords.r);

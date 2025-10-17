@@ -5825,21 +5825,27 @@ function processSabotageAction(tribe: any, action: any, state: any): string {
         return `❌ Sabotage failed: Not enough operatives at ${start_location}. Have ${sourceGarrison.troops}, need ${troops}.`;
     }
 
-    // Find target tribe
+    // CRITICAL FIX: Find target tribe - prioritize enemies over own garrison
+    // When multiple tribes have garrisons at same location, sabotage the enemy, not yourself!
     console.log(`🔍 SABOTAGE: Searching for target tribe with garrison at ${target_location}`);
-    const targetTribe = state.tribes.find((t: any) =>
-        t.garrisons && Object.keys(t.garrisons).includes(target_location)
+    const normalizedTarget = convertToStandardFormat(target_location);
+    const tribesAtLocation = state.tribes.filter((t: any) =>
+        t.id !== tribe.id && t.garrisons && (Object.keys(t.garrisons).includes(target_location) || Object.keys(t.garrisons).includes(normalizedTarget))
     );
 
+    // Prioritize tribes you're at war with
+    let targetTribe = tribesAtLocation.find((t: any) => isAtWar(tribe, t));
+
+    // If no war enemies, take any non-allied tribe
     if (!targetTribe) {
-        console.log(`❌ SABOTAGE: No target tribe found at ${target_location}`);
-        return `❌ Sabotage failed: No tribe found at target location ${target_location}.`;
+        targetTribe = tribesAtLocation.find((t: any) => !isAllied(tribe, t));
+    }
+
+    if (!targetTribe) {
+        console.log(`❌ SABOTAGE: No enemy tribe found at ${target_location}`);
+        return `❌ Sabotage failed: No enemy tribe found at target location ${target_location}.`;
     }
     console.log(`✅ SABOTAGE: Found target tribe ${targetTribe.tribeName} at ${target_location}`);
-
-    if (targetTribe.id === tribe.id) {
-        return `❌ Sabotage failed: Cannot sabotage your own tribe.`;
-    }
 
     // Calculate distance and mission difficulty
     console.log(`🗺️ SABOTAGE: Finding path from ${start_location} to ${target_location}`);

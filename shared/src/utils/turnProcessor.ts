@@ -1691,9 +1691,16 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
 
     if (attackerWins) {
         // Attacker wins - defender is eliminated from this hex
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             attackerGarrison.troops, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, hexLocation) }
+            {
+                terrainDefBonus,
+                outpost: hasOutpostDefenses(defHex),
+                homeBase: isHomeBase(defenderTribe, hexLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
 
         // Apply losses
@@ -1748,9 +1755,16 @@ function resolveColocatedBattle(attacker: any, defender: any, state: any, hexLoc
 
     } else {
         // Defender wins - attacker is eliminated from this hex
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             attackerGarrison.troops, attackerGarrison.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, hexLocation) }
+            {
+                terrainDefBonus,
+                outpost: hasOutpostDefenses(defHex),
+                homeBase: isHomeBase(defenderTribe, hexLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
 
         // Apply losses
@@ -1841,9 +1855,16 @@ function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTrib
 
     if (attackerWins) {
         // Attacker wins - continue movement after casualties
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, encounterLocation) }
+            {
+                terrainDefBonus,
+                outpost: hasOutpostDefenses(defHex),
+                homeBase: isHomeBase(defenderTribe, encounterLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
 
         // Apply losses
@@ -1905,9 +1926,16 @@ function resolveMovementEncounter(journey: any, attackerTribe: any, defenderTrib
 
     } else {
         // Defender wins - attacking force retreats or is destroyed
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: hasOutpostDefenses(defHex), homeBase: isHomeBase(defenderTribe, encounterLocation) }
+            {
+                terrainDefBonus,
+                outpost: hasOutpostDefenses(defHex),
+                homeBase: isHomeBase(defenderTribe, encounterLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
 
         // Apply losses
@@ -2461,9 +2489,16 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     if (attackerRoll > defenderRoll) {
         // Attacker wins: reduce both sides with higher lethality, capture hex
         const outpostHere = hasOutpostDefenses(defHex);
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defenderTribe, destKey) }
+            {
+                terrainDefBonus,
+                outpost: outpostHere,
+                homeBase: isHomeBase(defenderTribe, destKey),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
@@ -2542,9 +2577,16 @@ function resolveCombatOnArrival(journey: any, attackerTribe: any, defenderTribe:
     } else {
         // Defender wins: higher lethality against attackers; no capture
         const outpostHere = hasOutpostDefenses(defHex);
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             journey.force.troops, journey.force.weapons || 0, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defenderTribe, destKey) }
+            {
+                terrainDefBonus,
+                outpost: outpostHere,
+                homeBase: isHomeBase(defenderTribe, destKey),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
         journey.force.troops -= atkLosses;
         defenderGarrison.troops -= defLosses;
@@ -4318,9 +4360,16 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         // Attacker wins — use casualty model for higher lethality, then occupy/capture
         const outpostHere = hasOutpostDefenses(defHex);
         // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses, defLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             troopsToAttack, weaponsToSend, defenderGarrison.troops, defenderGarrison.weapons || 0, 'attacker',
-            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
+            {
+                terrainDefBonus,
+                outpost: outpostHere,
+                homeBase: isHomeBase(defendingTribe, targetLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
         // Apply losses
         attackerGarrison.troops -= atkLosses;
@@ -4486,9 +4535,16 @@ function processAttackAction(tribe: any, action: any, state: any): string {
         // Defender wins — use casualty model
         const outpostHere = hasOutpostDefenses(defHex);
         // CRITICAL FIX: Use weaponsToSend instead of all garrison weapons
+        // CRITICAL FIX: Pass final combat strengths to ensure casualties match actual battle outcome
         const { atkLosses: attackerLosses, defLosses: defenderLosses, atkWeaponsLoss, defWeaponsLoss } = computeCasualties(
             troopsToAttack, weaponsToSend, defenderGarrison.troops, defenderGarrison.weapons || 0, 'defender',
-            { terrainDefBonus, outpost: outpostHere, homeBase: isHomeBase(defendingTribe, targetLocation) }
+            {
+                terrainDefBonus,
+                outpost: outpostHere,
+                homeBase: isHomeBase(defendingTribe, targetLocation),
+                finalAttackerStrength,
+                finalDefenderStrength
+            }
         );
         attackerGarrison.troops -= attackerLosses;
         defenderGarrison.troops -= defenderLosses;

@@ -1,11 +1,36 @@
 // Rebalanced combat casualty model for epic battles
-export function computeCasualties(attTroops: number, attWeapons: number, defTroops: number, defWeapons: number, winner: 'attacker'|'defender', context: { terrainDefBonus: number, outpost?: boolean, homeBase?: boolean }) {
-  // BALANCE FIX: Weapons require troops to wield them effectively
-  // Each troop can effectively use up to 2 weapons (primary + backup)
-  const effectiveAtkWeapons = Math.min(attWeapons || 0, attTroops * 2);
-  const effectiveDefWeapons = Math.min(defWeapons || 0, defTroops * 2);
-  const atkStrength = Math.max(1, attTroops + effectiveAtkWeapons * 0.5);
-  const defStrength = Math.max(1, defTroops + effectiveDefWeapons * 0.5);
+export function computeCasualties(
+  attTroops: number,
+  attWeapons: number,
+  defTroops: number,
+  defWeapons: number,
+  winner: 'attacker'|'defender',
+  context: {
+    terrainDefBonus: number,
+    outpost?: boolean,
+    homeBase?: boolean,
+    // CRITICAL FIX: Accept final combat strengths (after all bonuses) for accurate casualty calculation
+    finalAttackerStrength?: number,
+    finalDefenderStrength?: number
+  }
+) {
+  // CRITICAL FIX: Use final combat strengths if provided, otherwise calculate base strength
+  // This ensures casualties are based on the ACTUAL battle outcome, not just raw troop counts
+  let atkStrength: number;
+  let defStrength: number;
+
+  if (context.finalAttackerStrength !== undefined && context.finalDefenderStrength !== undefined) {
+    // Use the final strengths that were actually used in combat resolution
+    atkStrength = Math.max(1, context.finalAttackerStrength);
+    defStrength = Math.max(1, context.finalDefenderStrength);
+  } else {
+    // Fallback to calculating base strength (for backwards compatibility)
+    const effectiveAtkWeapons = Math.min(attWeapons || 0, attTroops * 2);
+    const effectiveDefWeapons = Math.min(defWeapons || 0, defTroops * 2);
+    atkStrength = Math.max(1, attTroops + effectiveAtkWeapons * 0.5);
+    defStrength = Math.max(1, defTroops + effectiveDefWeapons * 0.5);
+  }
+
   const ratio = atkStrength / defStrength; // >1 favors attacker
   const nearParity = Math.max(0, 1 - Math.abs(1 - ratio)); // 1 when equal, 0 when very lopsided
   // Higher base lethality for more epic battles

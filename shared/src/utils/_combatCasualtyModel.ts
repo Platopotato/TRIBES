@@ -52,10 +52,40 @@ export function computeCasualties(
 
   if (winner === 'attacker') {
     defCasualtyFrac = intensityBase * (1.0 + Math.min(1.5, ratio - 1) * 0.8) * terrainMitigation * outpostMitigation * homeBaseMitigation * lopsidedBonus * rndA;
-    atkCasualtyFrac = (intensityBase * 0.4) * (1.0 - Math.min(0.8, ratio - 1) * 0.6) * rndB;
+
+    // CRITICAL FIX: For extremely lopsided battles, winner should lose almost nothing
+    const strengthAdvantage = ratio - 1; // How much stronger the attacker is
+    let casualtyReduction: number;
+
+    if (strengthAdvantage > 50) {
+      // For extreme advantages (>50:1), use exponential decay
+      casualtyReduction = Math.min(0.999, 1.0 - (1.0 / Math.sqrt(strengthAdvantage)));
+    } else {
+      // For moderate advantages, use the original formula
+      casualtyReduction = Math.min(0.8, strengthAdvantage * 0.6);
+    }
+
+    atkCasualtyFrac = (intensityBase * 0.4) * (1.0 - casualtyReduction) * rndB;
   } else {
     atkCasualtyFrac = intensityBase * (1.0 + Math.min(1.5, (1/ratio) - 1) * 0.8) * lopsidedBonus * rndA;
-    defCasualtyFrac = (intensityBase * 0.4) * (1.0 - Math.min(0.8, (1/ratio) - 1) * 0.6) * terrainMitigation * outpostMitigation * homeBaseMitigation * rndB;
+
+    // CRITICAL FIX: For extremely lopsided battles, winner should lose almost nothing
+    // Use exponential decay for very large strength ratios instead of capping at 0.8
+    const strengthAdvantage = (1/ratio) - 1; // How much stronger the defender is
+    let casualtyReduction: number;
+
+    if (strengthAdvantage > 50) {
+      // For extreme advantages (>50:1), use exponential decay
+      // This ensures casualties approach zero as strength advantage increases
+      // Formula: reduction = 1 - (1 / (advantage^0.5))
+      // Examples: 100:1 → 0.9, 1000:1 → 0.968, 10000:1 → 0.99
+      casualtyReduction = Math.min(0.999, 1.0 - (1.0 / Math.sqrt(strengthAdvantage)));
+    } else {
+      // For moderate advantages, use the original formula
+      casualtyReduction = Math.min(0.8, strengthAdvantage * 0.6);
+    }
+
+    defCasualtyFrac = (intensityBase * 0.4) * (1.0 - casualtyReduction) * terrainMitigation * outpostMitigation * homeBaseMitigation * rndB;
   }
   const atkLosses = Math.max(1, Math.min(attTroops, Math.floor(attTroops * atkCasualtyFrac)));
   const defLosses = Math.max(1, Math.min(defTroops, Math.floor(defTroops * defCasualtyFrac)));
